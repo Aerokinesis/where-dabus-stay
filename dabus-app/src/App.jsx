@@ -1,4 +1,16 @@
 import { useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix for default marker icon not showing in React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 function App() {
   const [stopNumber, setStopNumber] = useState("");
@@ -8,6 +20,8 @@ function App() {
   const [address, setAddress] = useState("");
   const [nearbyStops, setNearbyStops] = useState(null);
   const [searchingAddress, setSearchingAddress] = useState(false);
+  const [selectedBus, setSelectedBus] = useState(null);
+  const [busLocation, setBusLocation] = useState(null);
 
   const fetchArrivals = async (stop) => {
     setLoading(true);
@@ -60,6 +74,35 @@ function App() {
     if (diff <= 0) return "Arriving now";
     if (diff === 1) return "1 min";
     return `${diff} mins`;
+  };
+
+  const fetchBusLocation = async (bus) => {
+    if (bus.estimated !== "1") return;
+    if (selectedBus?.id === bus.id) {
+      setSelectedBus(null);
+      setBusLocation(null);
+      return;
+    }
+
+    setSelectedBus(bus);
+
+    if (
+      bus.latitude &&
+      bus.longitude &&
+      bus.latitude !== "0" &&
+      bus.longitude !== "0"
+    ) {
+      setBusLocation({
+        latitude: bus.latitude,
+        longitude: bus.longitude,
+        number: bus.vehicle,
+        route_short_name: bus.route,
+        headsign: bus.headsign,
+        adherence: null,
+      });
+    } else {
+      setError("No live location available for this bus.");
+    }
   };
 
   return (
@@ -123,7 +166,6 @@ function App() {
         </div>
       )}
 
-
       {/* Arrivals list */}
       {arrivals && (
         <div>
@@ -131,15 +173,60 @@ function App() {
           {arrivals.map((bus) => (
             <div key={bus.id}>
               <p>
-                Route {bus.route} — {bus.headsign}
+                Route {bus.route} — {bus.headsign} — {bus.direction}
               </p>
               <p>
                 {bus.estimated === "1" ? "🟢 Live" : "🕐 Scheduled"} —{" "}
                 {bus.stopTime} ({getMinutesUntil(bus.stopTime, bus.date)})
               </p>
               {bus.estimated === "1" && <p>Bus #{bus.vehicle}</p>}
+              {bus.estimated === "1" && (
+                <button onClick={() => fetchBusLocation(bus)}>
+                  {selectedBus?.id === bus.id ? "Hide Map" : "Show on Map"}
+                </button>
+              )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Bus location map */}
+      {busLocation && (
+        <div style={{ height: "400px", marginTop: "16px" }}>
+          <h2>
+            Bus Location — Route {selectedBus.route} {selectedBus.headsign}
+          </h2>
+          <MapContainer
+            center={[
+              parseFloat(busLocation.latitude),
+              parseFloat(busLocation.longitude),
+            ]}
+            zoom={15}
+            style={{ height: "350px", width: "100%" }}
+          >
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            />
+            <Marker
+              position={[
+                parseFloat(busLocation.latitude),
+                parseFloat(busLocation.longitude),
+              ]}
+            >
+              <Popup>
+                Route {selectedBus.route} — {selectedBus.headsign}
+                <br />
+                Bus #{busLocation.number}
+                <br />
+                {busLocation.adherence > 0
+                  ? `${busLocation.adherence} min early`
+                  : busLocation.adherence < 0
+                    ? `${Math.abs(busLocation.adherence)} min late`
+                    : "On time"}
+              </Popup>
+            </Marker>
+          </MapContainer>
         </div>
       )}
     </div>
