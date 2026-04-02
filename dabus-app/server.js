@@ -192,6 +192,21 @@ app.get("/api/nearby-stops-by-coords", (req, res) => {
     res.json({ stops: nearbyStops })
 })
 
+// Stop info endpoint
+app.get("/api/stop/:stopId", (req, res) => {
+    const stopId = req.params.stopId
+    const stop = stopsById[stopId]
+
+    if (!stop) {
+        return res.status(404).json({ error: "Stop not found" })
+    }
+
+    res.json({
+        stop_id: stop.stop_id,
+        stop_name: stop.stop_name
+    })
+})
+
 app.listen(3001, () => {
     console.log("Server running on http://localhost:3001")
 })
