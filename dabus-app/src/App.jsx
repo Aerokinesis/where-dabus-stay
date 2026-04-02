@@ -1,112 +1,90 @@
-import { useState } from "react";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  Polyline,
-  Circle,
-} from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-
+import { useState } from "react"
+import "leaflet/dist/leaflet.css"
+import L from "leaflet"
+import NearbyStopsMap from "./components/NearbyStopsMap"
+import StopSearch from "./components/StopSearch"
+import AddressSearch from "./components/AddressSearch"
+import ArrivalsList from "./components/ArrivalsList"
+import BusTrackingMap from "./components/BusTrackingMap"
 
 // Fix for default marker icon not showing in React
-delete L.Icon.Default.prototype._getIconUrl;
+delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+})
 
 function App() {
-  const [stopNumber, setStopNumber] = useState("");
-  const [arrivals, setArrivals] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [address, setAddress] = useState("");
-  const [nearbyStops, setNearbyStops] = useState(null);
-  const [searchingAddress, setSearchingAddress] = useState(false);
-  const [selectedBus, setSelectedBus] = useState(null);
-  const [busLocation, setBusLocation] = useState(null);
-  const [busShape, setBusShape] = useState(null);
-  const [satelliteView, setSatelliteView] = useState(false);
-  const [tripStops, setTripStops] = useState(null);
-  const [userLocation, setUserLocation] = useState(null);
-  const [nearbyStopsMap, setNearbyStopsMap] = useState(null);
+  const [stopNumber, setStopNumber] = useState("")
+  const [arrivals, setArrivals] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [address, setAddress] = useState("")
+  const [nearbyStops, setNearbyStops] = useState(null)
+  const [searchingAddress, setSearchingAddress] = useState(false)
+  const [selectedBus, setSelectedBus] = useState(null)
+  const [busLocation, setBusLocation] = useState(null)
+  const [busShape, setBusShape] = useState(null)
+  const [tripStops, setTripStops] = useState(null)
+  const [userLocation, setUserLocation] = useState(null)
+  const [nearbyStopsMap, setNearbyStopsMap] = useState(null)
 
   const fetchArrivals = async (stop) => {
-    setLoading(true);
-    setError(null);
-    setNearbyStops(null);
+    setLoading(true)
+    setError(null)
+    setNearbyStops(null)
 
-    const stopToFetch = stop || stopNumber;
-    const url = `http://localhost:3001/api/arrivals?stop=${stopToFetch}`;
+    const stopToFetch = stop || stopNumber
+    const url = `http://localhost:3001/api/arrivals?stop=${stopToFetch}`
 
     try {
-      const response = await fetch(url);
-      const data = await response.json();
-      setArrivals(data.arrivals);
+      const response = await fetch(url)
+      const data = await response.json()
+      setArrivals(data.arrivals)
     } catch (_err) {
-      setError(
-        "Could not fetch arrivals. Check your stop number and try again.",
-      );
+      setError("Could not fetch arrivals. Check your stop number and try again.")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const searchByAddress = async () => {
-    setSearchingAddress(true);
-    setError(null);
-    setArrivals(null);
-    setNearbyStops(null);
+    setSearchingAddress(true)
+    setError(null)
+    setArrivals(null)
+    setNearbyStops(null)
 
-    const url = `http://localhost:3001/api/nearby-stops?address=${encodeURIComponent(address)}`;
+    const url = `http://localhost:3001/api/nearby-stops?address=${encodeURIComponent(address)}`
 
     try {
-      const response = await fetch(url);
-      const data = await response.json();
+      const response = await fetch(url)
+      const data = await response.json()
       if (data.error) {
-        setError(data.error);
+        setError(data.error)
       } else {
-        setNearbyStops(data.stops);
+        setNearbyStops(data.stops)
       }
     } catch (_err) {
-      setError("Could not search for nearby stops. Try again.");
+      setError("Could not search for nearby stops. Try again.")
     } finally {
-      setSearchingAddress(false);
+      setSearchingAddress(false)
     }
-  };
-
-  const getMinutesUntil = (stopTime, date) => {
-    const now = new Date();
-    const arrival = new Date(`${date} ${stopTime}`);
-    const diff = Math.round((arrival - now) / 60000);
-    if (diff <= 0) return "Arriving now";
-    if (diff === 1) return "1 min";
-    return `${diff} mins`;
-  };
+  }
 
   const fetchBusLocation = async (bus) => {
-    if (bus.estimated !== "1") return;
+    if (bus.estimated !== "1") return
     if (selectedBus?.id === bus.id) {
-      setSelectedBus(null);
-      setBusLocation(null);
-      setBusShape(null);
-      setTripStops(null);
-      return;
+      setSelectedBus(null)
+      setBusLocation(null)
+      setBusShape(null)
+      setTripStops(null)
+      return
     }
 
-    setSelectedBus(bus);
+    setSelectedBus(bus)
 
-    if (
-      bus.latitude &&
-      bus.longitude &&
-      bus.latitude !== "0" &&
-      bus.longitude !== "0"
-    ) {
+    if (bus.latitude && bus.longitude && bus.latitude !== "0" && bus.longitude !== "0") {
       setBusLocation({
         latitude: bus.latitude,
         longitude: bus.longitude,
@@ -114,306 +92,102 @@ function App() {
         route_short_name: bus.route,
         headsign: bus.headsign,
         adherence: null,
-      });
+      })
 
-      // Fetch the route shape
       try {
-        const response = await fetch(
-          `http://localhost:3001/api/shape/${bus.shape}`,
-        );
-        const data = await response.json();
-        if (data.shape) setBusShape(data.shape);
-      } catch (_err) {
-        // Shape is optional, don't show error if it fails
-      }
+        const response = await fetch(`http://localhost:3001/api/shape/${bus.shape}`)
+        const data = await response.json()
+        if (data.shape) setBusShape(data.shape)
+      } catch (_err) {}
 
-      // Fetch the trip stops
       try {
-        const response = await fetch(
-          `http://localhost:3001/api/trip/${bus.trip}/stops`,
-        );
-        const data = await response.json();
-        if (data.stops) setTripStops(data.stops);
-      } catch (_err) {
-        // Trip stops are optional, don't show error if it fails
-      }
+        const response = await fetch(`http://localhost:3001/api/trip/${bus.trip}/stops`)
+        const data = await response.json()
+        if (data.stops) setTripStops(data.stops)
+      } catch (_err) {}
     } else {
-      setError("No live location available for this bus.");
+      setError("No live location available for this bus.")
     }
-  };
+  }
 
   const findNearbyStops = () => {
     if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser.");
-      return;
+      setError("Geolocation is not supported by your browser.")
+      return
     }
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        setUserLocation({ lat, lon });
+        const lat = position.coords.latitude
+        const lon = position.coords.longitude
+        setUserLocation({ lat, lon })
 
         try {
           const response = await fetch(
-            `http://localhost:3001/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}`,
-          );
-          const data = await response.json();
-          if (data.stops) setNearbyStopsMap(data.stops);
+            `http://localhost:3001/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}`
+          )
+          const data = await response.json()
+          if (data.stops) setNearbyStopsMap(data.stops)
         } catch (_err) {
-          setError("Could not find nearby stops.");
+          setError("Could not find nearby stops.")
         }
       },
       () => {
-        setError("Could not get your location. Please allow location access.");
-      },
-    );
-  };
+        setError("Could not get your location. Please allow location access.")
+      }
+    )
+  }
 
   return (
     <div>
       <h1>DaBus</h1>
-      {/* Nearby stops map */}
+
       <div>
         <h2>Nearby Stops</h2>
         <button onClick={findNearbyStops}>Find Stops Near Me</button>
-        {userLocation && nearbyStopsMap && (
-          <MapContainer
-            center={[userLocation.lat, userLocation.lon]}
-            zoom={15}
-            style={{ height: "400px", width: "100%", marginTop: "8px" }}
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            />
-            {/* User location marker */}
-            <Marker position={[userLocation.lat, userLocation.lon]}>
-              <Popup>You are here</Popup>
-            </Marker>
-            <Circle
-              center={[userLocation.lat, userLocation.lon]}
-              radius={402}
-              pathOptions={{
-                color: "#1d72b8",
-                fillColor: "#1d72b8",
-                fillOpacity: 0.1,
-              }}
-            />
-            {/* Nearby stop markers */}
-            {nearbyStopsMap.map((stop) => (
-              <Marker
-                key={stop.stop_id}
-                position={[
-                  parseFloat(stop.stop_lat),
-                  parseFloat(stop.stop_lon),
-                ]}
-                icon={L.divIcon({
-                  className: "",
-                  html: `<div style="
-                    width: 12px;
-                    height: 12px;
-                    background: #1d72b8;
-                    border: 2px solid white;
-                    border-radius: 50%;
-                    cursor: pointer;
-                  "></div>`,
-                  iconSize: [12, 12],
-                  iconAnchor: [6, 6],
-                })}
-              >
-                <Popup>
-                  <strong>
-                    {stop.stop_name
-                      .toLowerCase()
-                      .replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </strong>
-                  <br />
-                  Stop #{stop.stop_id}
-                  <br />
-                  {stop.distance.toFixed(2)} mi away
-                  <br />
-                  <button onClick={() => fetchArrivals(stop.stop_id)}>
-                    Get Arrivals
-                  </button>
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
-        )}
-      </div>
-
-      {/* Search by stop number */}
-      <div>
-        <h2>Search by Stop Number</h2>
-        <input
-          type="number"
-          placeholder="Enter stop number"
-          value={stopNumber}
-          onChange={(e) => setStopNumber(e.target.value)}
+        <NearbyStopsMap
+          userLocation={userLocation}
+          nearbyStopsMap={nearbyStopsMap}
+          onSelectStop={fetchArrivals}
         />
-        <button onClick={() => fetchArrivals()}>Get Arrivals</button>
       </div>
 
-      {/* Search by address */}
-      <div>
-        <h2>Search by Address</h2>
-        <input
-          type="text"
-          placeholder="Enter a street address"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-        />
-        <button onClick={searchByAddress}>Find Nearby Stops</button>
-      </div>
+      <StopSearch
+        stopNumber={stopNumber}
+        setStopNumber={setStopNumber}
+        onSearch={() => fetchArrivals()}
+      />
 
-      {searchingAddress && <p>Searching...</p>}
+      <AddressSearch
+        address={address}
+        setAddress={setAddress}
+        onSearch={searchByAddress}
+        searching={searchingAddress}
+        nearbyStops={nearbyStops}
+        onSelectStop={fetchArrivals}
+      />
+
       {loading && <p>Loading arrivals...</p>}
       {error && <p>{error}</p>}
 
-      {/* Nearby stops list */}
-      {nearbyStops && (
-        <div>
-          <h2>Nearby Stops</h2>
-          {nearbyStops.length === 0 && <p>No stops found within 0.25 miles.</p>}
-          {nearbyStops.map((stop) => (
-            <div
-              key={stop.stop_id}
-              onClick={() => fetchArrivals(stop.stop_id)}
-              style={{
-                cursor: "pointer",
-                padding: "8px",
-                borderBottom: "1px solid #ccc",
-              }}
-            >
-              <strong>
-                {stop.stop_name
-                  .toLowerCase()
-                  .replace(/\b\w/g, (c) => c.toUpperCase())}
-              </strong>
-              <span>
-                {" "}
-                — Stop #{stop.stop_id} — {stop.distance.toFixed(2)} mi away
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Arrivals list */}
       {arrivals && (
-        <div>
-          <h2>Arrivals</h2>
-          {arrivals.map((bus) => (
-            <div key={bus.id}>
-              <p>
-                Route {bus.route} — {bus.headsign} — {bus.direction}
-              </p>
-              <p>
-                {bus.estimated === "1" ? "🟢 Live" : "🕐 Scheduled"} —{" "}
-                {bus.stopTime} ({getMinutesUntil(bus.stopTime, bus.date)})
-              </p>
-              {bus.estimated === "1" && <p>Bus #{bus.vehicle}</p>}
-              {bus.estimated === "1" && (
-                <button onClick={() => fetchBusLocation(bus)}>
-                  {selectedBus?.id === bus.id ? "Hide Map" : "Show on Map"}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+        <ArrivalsList
+          arrivals={arrivals}
+          selectedBus={selectedBus}
+          onShowMap={fetchBusLocation}
+        />
       )}
 
-      {/* Bus location map */}
       {busLocation && (
-        <div style={{ height: "400px", marginTop: "16px" }}>
-          <h2>
-            Bus Location — Route {selectedBus.route} {selectedBus.headsign}
-          </h2>
-          <button onClick={() => setSatelliteView(!satelliteView)}>
-            {satelliteView ? "Switch to Map" : "Switch to Satellite"}
-          </button>
-          <MapContainer
-            center={[
-              parseFloat(busLocation.latitude),
-              parseFloat(busLocation.longitude),
-            ]}
-            zoom={15}
-            style={{ height: "350px", width: "100%" }}
-          >
-            {satelliteView ? (
-              <TileLayer
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                attribution="Tiles &copy; Esri"
-              />
-            ) : (
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              />
-            )}
-            <Marker
-              position={[
-                parseFloat(busLocation.latitude),
-                parseFloat(busLocation.longitude),
-              ]}
-            >
-              <Popup>
-                Route {selectedBus.route} — {selectedBus.headsign}
-                <br />
-                Bus #{busLocation.number}
-                <br />
-                {busLocation.adherence > 0
-                  ? `${busLocation.adherence} min early`
-                  : busLocation.adherence < 0
-                    ? `${Math.abs(busLocation.adherence)} min late`
-                    : "On time"}
-              </Popup>
-            </Marker>
-            {busShape && (
-              <Polyline
-                positions={busShape}
-                color="blue"
-                weight={3}
-                opacity={0.7}
-              />
-            )}
-            {tripStops &&
-              tripStops.map((stop) => (
-                <Marker
-                  key={stop.stop_id}
-                  position={[stop.stop_lat, stop.stop_lon]}
-                  icon={L.divIcon({
-                    className: "",
-                    html: `<div style="
-                      width: 10px;
-                      height: 10px;
-                      background: white;
-                      border: 2px solid blue;
-                      border-radius: 50%;
-                    "></div>`,
-                    iconSize: [10, 10],
-                    iconAnchor: [5, 5],
-                  })}
-                >
-                  <Popup>
-                    <strong>
-                      {stop.stop_name
-                        .toLowerCase()
-                        .replace(/\b\w/g, (c) => c.toUpperCase())}
-                    </strong>
-                    <br />
-                    Stop #{stop.stop_id}
-                    <br />
-                    {stop.arrival_time}
-                  </Popup>
-                </Marker>
-              ))}
-          </MapContainer>
-        </div>
+        <BusTrackingMap
+          busLocation={busLocation}
+          selectedBus={selectedBus}
+          busShape={busShape}
+          tripStops={tripStops}
+        />
       )}
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
