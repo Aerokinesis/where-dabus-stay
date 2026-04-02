@@ -5,9 +5,11 @@ import {
   Marker,
   Popup,
   Polyline,
+  Circle,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+
 
 // Fix for default marker icon not showing in React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -31,6 +33,8 @@ function App() {
   const [busShape, setBusShape] = useState(null);
   const [satelliteView, setSatelliteView] = useState(false);
   const [tripStops, setTripStops] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const [nearbyStopsMap, setNearbyStopsMap] = useState(null);
 
   const fetchArrivals = async (stop) => {
     setLoading(true);
@@ -138,9 +142,106 @@ function App() {
     }
   };
 
+  const findNearbyStops = () => {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        setUserLocation({ lat, lon });
+
+        try {
+          const response = await fetch(
+            `http://localhost:3001/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}`,
+          );
+          const data = await response.json();
+          if (data.stops) setNearbyStopsMap(data.stops);
+        } catch (_err) {
+          setError("Could not find nearby stops.");
+        }
+      },
+      () => {
+        setError("Could not get your location. Please allow location access.");
+      },
+    );
+  };
+
   return (
     <div>
       <h1>DaBus</h1>
+      {/* Nearby stops map */}
+      <div>
+        <h2>Nearby Stops</h2>
+        <button onClick={findNearbyStops}>Find Stops Near Me</button>
+        {userLocation && nearbyStopsMap && (
+          <MapContainer
+            center={[userLocation.lat, userLocation.lon]}
+            zoom={15}
+            style={{ height: "400px", width: "100%", marginTop: "8px" }}
+          >
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            />
+            {/* User location marker */}
+            <Marker position={[userLocation.lat, userLocation.lon]}>
+              <Popup>You are here</Popup>
+            </Marker>
+            <Circle
+              center={[userLocation.lat, userLocation.lon]}
+              radius={402}
+              pathOptions={{
+                color: "#1d72b8",
+                fillColor: "#1d72b8",
+                fillOpacity: 0.1,
+              }}
+            />
+            {/* Nearby stop markers */}
+            {nearbyStopsMap.map((stop) => (
+              <Marker
+                key={stop.stop_id}
+                position={[
+                  parseFloat(stop.stop_lat),
+                  parseFloat(stop.stop_lon),
+                ]}
+                icon={L.divIcon({
+                  className: "",
+                  html: `<div style="
+                    width: 12px;
+                    height: 12px;
+                    background: #1d72b8;
+                    border: 2px solid white;
+                    border-radius: 50%;
+                    cursor: pointer;
+                  "></div>`,
+                  iconSize: [12, 12],
+                  iconAnchor: [6, 6],
+                })}
+              >
+                <Popup>
+                  <strong>
+                    {stop.stop_name
+                      .toLowerCase()
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </strong>
+                  <br />
+                  Stop #{stop.stop_id}
+                  <br />
+                  {stop.distance.toFixed(2)} mi away
+                  <br />
+                  <button onClick={() => fetchArrivals(stop.stop_id)}>
+                    Get Arrivals
+                  </button>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        )}
+      </div>
 
       {/* Search by stop number */}
       <div>
