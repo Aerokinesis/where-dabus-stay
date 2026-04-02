@@ -1,4 +1,5 @@
 function StopSearch({ stopNumber, setStopNumber, onSearch }) {
+    
   return (
     <div>
       <h2>Search by Stop Number</h2>

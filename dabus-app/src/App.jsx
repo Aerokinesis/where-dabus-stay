@@ -6,6 +6,7 @@ import StopSearch from "./components/StopSearch"
 import AddressSearch from "./components/AddressSearch"
 import ArrivalsList from "./components/ArrivalsList"
 import BusTrackingMap from "./components/BusTrackingMap"
+import ErrorBoundary from "./components/ErrorBoundary"
 
 // Fix for default marker icon not showing in React
 delete L.Icon.Default.prototype._getIconUrl
@@ -142,52 +143,61 @@ function App() {
     <div>
       <h1>DaBus</h1>
 
-      <div>
-        <h2>Nearby Stops</h2>
-        <button onClick={findNearbyStops}>Find Stops Near Me</button>
-        <NearbyStopsMap
-          userLocation={userLocation}
-          nearbyStopsMap={nearbyStopsMap}
+      <ErrorBoundary>
+        <div>
+          <h2>Nearby Stops</h2>
+          <button onClick={findNearbyStops}>Find Stops Near Me</button>
+          <NearbyStopsMap
+            userLocation={userLocation}
+            nearbyStopsMap={nearbyStopsMap}
+            onSelectStop={fetchArrivals}
+          />
+        </div>
+      </ErrorBoundary>
+
+      <ErrorBoundary>
+        <StopSearch
+          stopNumber={stopNumber}
+          setStopNumber={setStopNumber}
+          onSearch={() => fetchArrivals()}
+        />
+      </ErrorBoundary>
+
+      <ErrorBoundary>
+        <AddressSearch
+          address={address}
+          setAddress={setAddress}
+          onSearch={searchByAddress}
+          searching={searchingAddress}
+          nearbyStops={nearbyStops}
           onSelectStop={fetchArrivals}
         />
-      </div>
-
-      <StopSearch
-        stopNumber={stopNumber}
-        setStopNumber={setStopNumber}
-        onSearch={() => fetchArrivals()}
-      />
-
-      <AddressSearch
-        address={address}
-        setAddress={setAddress}
-        onSearch={searchByAddress}
-        searching={searchingAddress}
-        nearbyStops={nearbyStops}
-        onSelectStop={fetchArrivals}
-      />
+      </ErrorBoundary>
 
       {loading && <p>Loading arrivals...</p>}
       {error && <p>{error}</p>}
 
-      {arrivals && (
-        <ArrivalsList
-          arrivals={arrivals}
-          selectedBus={selectedBus}
-          onShowMap={fetchBusLocation}
-        />
-      )}
+      <ErrorBoundary>
+        {arrivals && (
+          <ArrivalsList
+            arrivals={arrivals}
+            selectedBus={selectedBus}
+            onShowMap={fetchBusLocation}
+          />
+        )}
+      </ErrorBoundary>
 
-      {busLocation && (
-        <BusTrackingMap
-          busLocation={busLocation}
-          selectedBus={selectedBus}
-          busShape={busShape}
-          tripStops={tripStops}
-        />
-      )}
+      <ErrorBoundary>
+        {busLocation && (
+          <BusTrackingMap
+            busLocation={busLocation}
+            selectedBus={selectedBus}
+            busShape={busShape}
+            tripStops={tripStops}
+          />
+        )}
+      </ErrorBoundary>
     </div>
-  )
-}
+  )}
 
 export default App
