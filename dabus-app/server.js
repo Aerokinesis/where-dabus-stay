@@ -133,39 +133,25 @@ app.get("/api/trip/:tripId/stops", (req, res) => {
 })
 
 // Nearby stops endpoint
-app.get("/api/nearby-stops", async (req, res) => {
-    const address = req.query.address
+// Stop name search endpoint
+app.get("/api/search-stops", (req, res) => {
+    const query = req.query.q?.toLowerCase()
 
-    try {
-        const geocodeUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address + ", Honolulu, HI")}&format=json&limit=1`
-        const geocodeResponse = await fetch(geocodeUrl, {
-            headers: { "User-Agent": "DaBusApp/1.0" }
-        })
-        const geocodeData = await geocodeResponse.json()
-
-        if (!geocodeData.length) {
-            return res.status(404).json({ error: "Address not found" })
-        }
-
-        const lat = parseFloat(geocodeData[0].lat)
-        const lon = parseFloat(geocodeData[0].lon)
-
-        const nearbyStops = stops
-            .map(stop => ({
-                stop_id: stop.stop_id,
-                stop_name: stop.stop_name,
-                stop_lat: stop.stop_lat,
-                stop_lon: stop.stop_lon,
-                distance: getDistance(lat, lon, parseFloat(stop.stop_lat), parseFloat(stop.stop_lon))
-            }))
-            .filter(stop => stop.distance <= 0.25)
-            .sort((a, b) => a.distance - b.distance)
-            .slice(0, 10)
-
-        res.json({ lat, lon, stops: nearbyStops })
-    } catch (_err) {
-        res.status(500).json({ error: "Failed to find nearby stops" })
+    if (!query) {
+        return res.status(400).json({ error: "No search query provided" })
     }
+
+    const results = stops
+        .filter(stop => stop.stop_name.toLowerCase().includes(query))
+        .map(stop => ({
+            stop_id: stop.stop_id,
+            stop_name: stop.stop_name,
+            stop_lat: stop.stop_lat,
+            stop_lon: stop.stop_lon,
+        }))
+        .slice(0, 20)
+
+    res.json({ stops: results })
 })
 
 // Nearby stops by coordinates endpoint

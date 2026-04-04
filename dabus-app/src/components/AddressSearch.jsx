@@ -12,8 +12,8 @@ function AddressSearch({ address, setAddress, onSearch, searching, nearbyStops, 
       {searching && <p>Searching...</p>}
       {nearbyStops && (
         <div>
-          <h2>Nearby Stops</h2>
-          {nearbyStops.length === 0 && <p>No stops found within 0.25 miles.</p>}
+          <h2>Matching Stops</h2>
+          {nearbyStops.length === 0 && <p>No stops found.</p>}
           {nearbyStops.map((stop) => (
             <div
               key={stop.stop_id}
@@ -23,7 +23,7 @@ function AddressSearch({ address, setAddress, onSearch, searching, nearbyStops, 
               <strong>
                 {stop.stop_name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
               </strong>
-              <span> — Stop #{stop.stop_id} — {stop.distance.toFixed(2)} mi away</span>
+              <span> — Stop #{stop.stop_id}</span>
             </div>
           ))}
         </div>

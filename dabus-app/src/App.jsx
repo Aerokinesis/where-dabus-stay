@@ -9,17 +9,18 @@ import BusTrackingMap from "./components/BusTrackingMap";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Favorites from "./components/Favorites";
 import SaveStopModal from "./components/SaveStopModal";
+import StopHistory from "./components/StopHistory";
 import { useArrivals } from "./hooks/useArrivals";
 import { useFavorites } from "./hooks/useFavorites";
 import { useNearbyStops } from "./hooks/useNearbyStops";
 import { useBusTracking } from "./hooks/useBusTracking";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
+import { useStopHistory } from "./hooks/useStopHistory";
 
 // Fix for default marker icon not showing in React
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
@@ -29,15 +30,8 @@ function App() {
   const [address, setAddress] = useState("");
   const [showSaveModal, setShowSaveModal] = useState(false);
 
-  const {
-    arrivals,
-    currentStop,
-    loading,
-    error,
-    setError,
-    fetchArrivals,
-    lastUpdated,
-  } = useArrivals();
+  const { arrivals, currentStop, loading, error, setError, fetchArrivals, lastUpdated } =
+    useArrivals();
 
   const { favorites, saveToFavorites, removeFavorite, isCurrentStopFavorited } =
     useFavorites();
@@ -54,9 +48,16 @@ function App() {
   const { selectedBus, busLocation, busShape, tripStops, fetchBusLocation } =
     useBusTracking(setError);
 
+  const { stopHistory, addToHistory, clearHistory } = useStopHistory();
+
+  const handleFetchArrivals = (stopId) => {
+    fetchArrivals(stopId);
+    addToHistory(stopId);
+  };
+
   const { isPulling, pullDistance } = usePullToRefresh(
     () => fetchArrivals(currentStop.id),
-    !!arrivals,
+    !!arrivals
   );
 
   return (
@@ -65,8 +66,14 @@ function App() {
 
       <Favorites
         favorites={favorites}
-        onSelectStop={fetchArrivals}
+        onSelectStop={handleFetchArrivals}
         onRemoveFavorite={removeFavorite}
+      />
+
+      <StopHistory
+        stopHistory={stopHistory}
+        onSelectStop={handleFetchArrivals}
+        onClearHistory={clearHistory}
       />
 
       <ErrorBoundary>
@@ -76,7 +83,7 @@ function App() {
           <NearbyStopsMap
             userLocation={userLocation}
             nearbyStopsMap={nearbyStopsMap}
-            onSelectStop={fetchArrivals}
+            onSelectStop={handleFetchArrivals}
           />
         </div>
       </ErrorBoundary>
@@ -85,7 +92,7 @@ function App() {
         <StopSearch
           stopNumber={stopNumber}
           setStopNumber={setStopNumber}
-          onSearch={() => fetchArrivals(stopNumber)}
+          onSearch={() => handleFetchArrivals(stopNumber)}
         />
       </ErrorBoundary>
 
@@ -96,7 +103,7 @@ function App() {
           onSearch={() => searchByAddress(address)}
           searching={searchingAddress}
           nearbyStops={nearbyStops}
-          onSelectStop={fetchArrivals}
+          onSelectStop={handleFetchArrivals}
         />
       </ErrorBoundary>
 

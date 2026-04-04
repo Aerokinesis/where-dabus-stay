@@ -8,27 +8,27 @@ export function useNearbyStops(setError) {
   const [userLocation, setUserLocation] = useState(null);
   const [searchingAddress, setSearchingAddress] = useState(false);
 
-  const searchByAddress = async (address) => {
-    setSearchingAddress(true);
-    setError(null);
-    setNearbyStops(null);
+  const searchByAddress = async (query) => {
+  setSearchingAddress(true);
+  setError(null);
+  setNearbyStops(null);
 
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/nearby-stops?address=${encodeURIComponent(address)}`
-      );
-      const data = await res.json();
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setNearbyStops(data.stops);
-      }
-    } catch (_err) {
-      setError("Could not search for nearby stops. Try again.");
-    } finally {
-      setSearchingAddress(false);
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/search-stops?q=${encodeURIComponent(query)}`
+    );
+    const data = await res.json();
+    if (data.error) {
+      setError(data.error);
+    } else {
+      setNearbyStops(data.stops);
     }
-  };
+  } catch (_err) {
+    setError("Could not search for stops. Try again.");
+  } finally {
+    setSearchingAddress(false);
+  }
+};
 
   const findNearbyStops = () => {
     if (!navigator.geolocation) {
