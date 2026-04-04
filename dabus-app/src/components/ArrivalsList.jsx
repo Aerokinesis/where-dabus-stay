@@ -5,6 +5,7 @@ function ArrivalsList({
   currentStop,
   isFavorited,
   onSaveStop,
+  lastUpdated,
 }) {
   const getMinutesUntil = (stopTime, date) => {
     const now = new Date();
@@ -12,8 +13,20 @@ function ArrivalsList({
     const diff = Math.round((arrival - now) / 60000);
     if (diff <= 0) return "Arriving now";
     if (diff === 1) return "1 min";
-    return `${diff} mins`;
+    if (diff < 60) return `${diff} mins`;
+    const hours = Math.floor(diff / 60);
+    const mins = diff % 60;
+    if (mins === 0) return `${hours} hr`;
+    return `${hours} hr ${mins} min`;
   };
+
+  // Build a map of { direction -> Set of route numbers }
+  const routesByDirection = arrivals.reduce((acc, bus) => {
+    if (!bus.direction) return acc;
+    if (!acc[bus.direction]) acc[bus.direction] = new Set();
+    acc[bus.direction].add(bus.route);
+    return acc;
+  }, {});
 
   return (
     <div>
@@ -35,6 +48,8 @@ function ArrivalsList({
           </button>
         </div>
       )}
+      {lastUpdated && <p>Last updated: {lastUpdated.toLocaleTimeString()}</p>}
+
       {arrivals.map((bus) => (
         <div key={bus.id}>
           <p>
@@ -51,6 +66,18 @@ function ArrivalsList({
               {selectedBus?.id === bus.id ? "Hide Map" : "Show on Map"}
             </button>
           )}
+        </div>
+      ))}
+
+      {/* Routes-by-direction summary */}
+      {Object.entries(routesByDirection).map(([direction, routes]) => (
+        <div key={direction}>
+          <h3>Buses Traveling {direction}</h3>
+          <p>
+            {[...routes]
+              .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+              .join(", ")}
+          </p>
         </div>
       ))}
     </div>

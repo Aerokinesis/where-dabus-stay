@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import NearbyStopsMap from "./components/NearbyStopsMap";
@@ -9,6 +9,11 @@ import BusTrackingMap from "./components/BusTrackingMap";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Favorites from "./components/Favorites";
 import SaveStopModal from "./components/SaveStopModal";
+import { useArrivals } from "./hooks/useArrivals";
+import { useFavorites } from "./hooks/useFavorites";
+import { useNearbyStops } from "./hooks/useNearbyStops";
+import { useBusTracking } from "./hooks/useBusTracking";
+import { usePullToRefresh } from "./hooks/usePullToRefresh";
 
 // Fix for default marker icon not showing in React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -21,195 +26,43 @@ L.Icon.Default.mergeOptions({
 
 function App() {
   const [stopNumber, setStopNumber] = useState("");
-  const [arrivals, setArrivals] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [address, setAddress] = useState("");
-  const [nearbyStops, setNearbyStops] = useState(null);
-  const [searchingAddress, setSearchingAddress] = useState(false);
-  const [selectedBus, setSelectedBus] = useState(null);
-  const [busLocation, setBusLocation] = useState(null);
-  const [busShape, setBusShape] = useState(null);
-  const [tripStops, setTripStops] = useState(null);
-  const [userLocation, setUserLocation] = useState(null);
-  const [nearbyStopsMap, setNearbyStopsMap] = useState(null);
-  const [currentStop, setCurrentStop] = useState(null);
-  const [favorites, setFavorites] = useState(() => {
-    const saved = localStorage.getItem("dabus-favorites");
-    return saved ? JSON.parse(saved) : [];
-  });
   const [showSaveModal, setShowSaveModal] = useState(false);
 
-  useEffect(() => {
-    if (!currentStop) return;
+  const {
+    arrivals,
+    currentStop,
+    loading,
+    error,
+    setError,
+    fetchArrivals,
+    lastUpdated,
+  } = useArrivals();
 
-    const interval = setInterval(() => {
-      fetchArrivals(currentStop.id);
-    }, 30000);
+  const { favorites, saveToFavorites, removeFavorite, isCurrentStopFavorited } =
+    useFavorites();
 
-    return () => clearInterval(interval);
-  }, [currentStop]);
+  const {
+    nearbyStops,
+    nearbyStopsMap,
+    userLocation,
+    searchingAddress,
+    searchByAddress,
+    findNearbyStops,
+  } = useNearbyStops(setError);
 
-  const fetchArrivals = async (stop) => {
-    setLoading(true);
-    setError(null);
-    setNearbyStops(null);
+  const { selectedBus, busLocation, busShape, tripStops, fetchBusLocation } =
+    useBusTracking(setError);
 
-    const stopToFetch = stop || stopNumber;
-
-    try {
-      const [arrivalsResponse, stopResponse] = await Promise.all([
-        fetch(`http://localhost:3001/api/arrivals?stop=${stopToFetch}`),
-        fetch(`http://localhost:3001/api/stop/${stopToFetch}`),
-      ]);
-
-      const arrivalsData = await arrivalsResponse.json();
-      const stopData = await stopResponse.json();
-
-      setArrivals(arrivalsData.arrivals);
-      setCurrentStop({
-        id: stopToFetch,
-        name: stopData.stop_name
-          ? stopData.stop_name
-              .toLowerCase()
-              .replace(/\b\w/g, (c) => c.toUpperCase())
-          : `Stop #${stopToFetch}`,
-      });
-    } catch (_err) {
-      setError(
-        "Could not fetch arrivals. Check your stop number and try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const searchByAddress = async () => {
-    setSearchingAddress(true);
-    setError(null);
-    setArrivals(null);
-    setNearbyStops(null);
-
-    const url = `http://localhost:3001/api/nearby-stops?address=${encodeURIComponent(address)}`;
-
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setNearbyStops(data.stops);
-      }
-    } catch (_err) {
-      setError("Could not search for nearby stops. Try again.");
-    } finally {
-      setSearchingAddress(false);
-    }
-  };
-
-  const fetchBusLocation = async (bus) => {
-    if (bus.estimated !== "1") return;
-    if (selectedBus?.id === bus.id) {
-      setSelectedBus(null);
-      setBusLocation(null);
-      setBusShape(null);
-      setTripStops(null);
-      return;
-    }
-
-    setSelectedBus(bus);
-
-    if (
-      bus.latitude &&
-      bus.longitude &&
-      bus.latitude !== "0" &&
-      bus.longitude !== "0"
-    ) {
-      setBusLocation({
-        latitude: bus.latitude,
-        longitude: bus.longitude,
-        number: bus.vehicle,
-        route_short_name: bus.route,
-        headsign: bus.headsign,
-        adherence: null,
-      });
-
-      try {
-        const response = await fetch(
-          `http://localhost:3001/api/shape/${bus.shape}`,
-        );
-        const data = await response.json();
-        if (data.shape) setBusShape(data.shape);
-      } catch (_err) {}
-
-      try {
-        const response = await fetch(
-          `http://localhost:3001/api/trip/${bus.trip}/stops`,
-        );
-        const data = await response.json();
-        if (data.stops) setTripStops(data.stops);
-      } catch (_err) {}
-    } else {
-      setError("No live location available for this bus.");
-    }
-  };
-
-  const findNearbyStops = () => {
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser.");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        setUserLocation({ lat, lon });
-
-        try {
-          const response = await fetch(
-            `http://localhost:3001/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}`,
-          );
-          const data = await response.json();
-          if (data.stops) setNearbyStopsMap(data.stops);
-        } catch (_err) {
-          setError("Could not find nearby stops.");
-        }
-      },
-      () => {
-        setError("Could not get your location. Please allow location access.");
-      },
-    );
-  };
-
-  const saveToFavorites = (customName) => {
-    const newFavorite = {
-      stop_id: currentStop.id,
-      name: currentStop.name,
-      custom_name: customName,
-    };
-    const updated = [
-      ...favorites.filter((f) => f.stop_id !== currentStop.id),
-      newFavorite,
-    ];
-    setFavorites(updated);
-    localStorage.setItem("dabus-favorites", JSON.stringify(updated));
-    setShowSaveModal(false);
-  };
-
-  const removeFavorite = (stopId) => {
-    const updated = favorites.filter((f) => f.stop_id !== stopId);
-    setFavorites(updated);
-    localStorage.setItem("dabus-favorites", JSON.stringify(updated));
-  };
-
-  const isCurrentStopFavorited = () => {
-    return favorites.some((f) => f.stop_id === currentStop?.id);
-  };
+  const { isPulling, pullDistance } = usePullToRefresh(
+    () => fetchArrivals(currentStop.id),
+    !!arrivals,
+  );
 
   return (
     <div>
       <h1>DaBus</h1>
+
       <Favorites
         favorites={favorites}
         onSelectStop={fetchArrivals}
@@ -232,7 +85,7 @@ function App() {
         <StopSearch
           stopNumber={stopNumber}
           setStopNumber={setStopNumber}
-          onSearch={() => fetchArrivals()}
+          onSearch={() => fetchArrivals(stopNumber)}
         />
       </ErrorBoundary>
 
@@ -240,13 +93,16 @@ function App() {
         <AddressSearch
           address={address}
           setAddress={setAddress}
-          onSearch={searchByAddress}
+          onSearch={() => searchByAddress(address)}
           searching={searchingAddress}
           nearbyStops={nearbyStops}
           onSelectStop={fetchArrivals}
         />
       </ErrorBoundary>
 
+      {isPulling && (
+        <p>Refreshing... ({Math.round((pullDistance / 80) * 100)}%)</p>
+      )}
       {loading && <p>Loading arrivals...</p>}
       {error && <p>{error}</p>}
 
@@ -257,8 +113,9 @@ function App() {
             selectedBus={selectedBus}
             onShowMap={fetchBusLocation}
             currentStop={currentStop}
-            isFavorited={isCurrentStopFavorited()}
+            isFavorited={isCurrentStopFavorited(currentStop)}
             onSaveStop={() => setShowSaveModal(true)}
+            lastUpdated={lastUpdated}
           />
         )}
       </ErrorBoundary>
@@ -277,7 +134,10 @@ function App() {
       {showSaveModal && currentStop && (
         <SaveStopModal
           stop={currentStop}
-          onSave={saveToFavorites}
+          onSave={(customName) => {
+            saveToFavorites(currentStop, customName);
+            setShowSaveModal(false);
+          }}
           onCancel={() => setShowSaveModal(false)}
         />
       )}
