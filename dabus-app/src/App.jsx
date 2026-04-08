@@ -29,6 +29,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [activeTab, setActiveTab] = useState("nearby");
+  const [trackingView, setTrackingView] = useState(false);
 
   const {
     arrivals,
@@ -55,13 +56,21 @@ function App() {
     clearNearbyStops,
   } = useNearbyStops(setError);
 
-  const { selectedBus, busLocation, busShape, tripStops, fetchBusLocation } =
-    useBusTracking(setError);
+  const {
+    selectedBus,
+    busLocation,
+    busShape,
+    tripStops,
+    fetchBusLocation,
+    clearBusTracking,
+  } = useBusTracking(setError);
 
   const { stopHistory, addToHistory, removeFromHistory, clearHistory } =
     useStopHistory();
 
   const handleFetchArrivals = async (stopId, tab) => {
+    clearBusTracking();
+    setTrackingView(false);
     const stopName = await fetchArrivals(stopId);
     addToHistory(stopId, stopName);
     setArrivalsTab(tab);
@@ -92,6 +101,10 @@ function App() {
               handleFetchArrivals(stopId, activeTab);
               clearNearbyStops();
               setSearchQuery("");
+            }}
+            onClear={() => {
+              setSearchQuery("");
+              clearNearbyStops();
             }}
           />
         </div>
@@ -147,7 +160,10 @@ function App() {
             <ArrivalsList
               arrivals={arrivals}
               selectedBus={selectedBus}
-              onShowMap={fetchBusLocation}
+              onShowMap={(bus) => {
+                fetchBusLocation(bus);
+                setTrackingView(true);
+              }}
               currentStop={currentStop}
               isFavorited={isCurrentStopFavorited(currentStop)}
               onSaveStop={() => setShowSaveModal(true)}
@@ -163,13 +179,62 @@ function App() {
         </ErrorBoundary>
 
         <ErrorBoundary>
-          {busLocation && (
-            <BusTrackingMap
-              busLocation={busLocation}
-              selectedBus={selectedBus}
-              busShape={busShape}
-              tripStops={tripStops}
-            />
+          {trackingView && busLocation && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "var(--bg)",
+                zIndex: 200,
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <div
+                style={{
+                  padding: "12px 16px",
+                  background: "var(--surface)",
+                  borderBottom: "1px solid var(--border)",
+                  flexShrink: 0,
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setTrackingView(false);
+                    clearBusTracking();
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--primary)",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  ← Back to arrivals
+                </button>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: "var(--text-muted)",
+                    marginTop: "4px",
+                  }}
+                >
+                  Route {busLocation.route_short_name} — {busLocation.headsign}
+                </p>
+              </div>
+              <div style={{ flex: 1, height: 0 }}>
+                <ErrorBoundary>
+                  <BusTrackingMap
+                    busLocation={busLocation}
+                    selectedBus={selectedBus}
+                    busShape={busShape}
+                    tripStops={tripStops}
+                  />
+                </ErrorBoundary>
+              </div>
+            </div>
           )}
         </ErrorBoundary>
       </main>

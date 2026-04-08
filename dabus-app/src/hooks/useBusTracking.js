@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+
 const API_BASE = "http://localhost:3001";
 
 export function useBusTracking(setError) {
@@ -7,6 +8,7 @@ export function useBusTracking(setError) {
   const [busLocation, setBusLocation] = useState(null);
   const [busShape, setBusShape] = useState(null);
   const [tripStops, setTripStops] = useState(null);
+  
 
   const fetchBusLocation = async (bus) => {
     // Live buses only
@@ -58,5 +60,12 @@ export function useBusTracking(setError) {
     }
   };
 
-  return { selectedBus, busLocation, busShape, tripStops, fetchBusLocation };
+  const clearBusTracking = () => {
+    setSelectedBus(null);
+    setBusLocation(null);
+    setBusShape(null);
+    setTripStops(null);
+  };
+
+  return { selectedBus, busLocation, busShape, tripStops, fetchBusLocation, clearBusTracking };
 }
