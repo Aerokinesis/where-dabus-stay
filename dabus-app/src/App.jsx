@@ -1,4 +1,5 @@
 import { useState } from "react";
+import styles from "./App.module.css";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import NearbyStopsMap from "./components/NearbyStopsMap";
@@ -28,6 +29,7 @@ L.Icon.Default.mergeOptions({
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("nearby");
 
   const {
     arrivals,
@@ -67,25 +69,32 @@ function App() {
     !!arrivals,
   );
 
-  return (
-    <div>
-      <h1>DaBus</h1>
-
-      <Favorites
-        favorites={favorites}
-        onSelectStop={handleFetchArrivals}
-        onRemoveFavorite={removeFavorite}
+return (
+  <div className={styles.shell}>
+    <div className={styles.topBar}>
+      <AddressSearch
+        query={searchQuery}
+        setQuery={setSearchQuery}
+        onSearch={() => {
+          if (/^\d+$/.test(searchQuery.trim())) {
+            handleFetchArrivals(searchQuery.trim());
+          } else {
+            searchByAddress(searchQuery);
+          }
+        }}
+        searching={searchingAddress}
+        nearbyStops={nearbyStops}
+        onSelectStop={(stopId) => {
+          handleFetchArrivals(stopId);
+          clearNearbyStops();
+          setSearchQuery("");
+        }}
       />
+    </div>
 
-      <StopHistory
-        stopHistory={stopHistory}
-        onSelectStop={handleFetchArrivals}
-        onClearHistory={clearHistory}
-      />
-
-      <ErrorBoundary>
+    <main className={styles.main}>
+      {activeTab === "nearby" && (
         <div>
-          <h2>Nearby Stops</h2>
           <button onClick={findNearbyStops}>Find Stops Near Me</button>
           <NearbyStopsMap
             userLocation={userLocation}
@@ -93,34 +102,27 @@ function App() {
             onSelectStop={handleFetchArrivals}
           />
         </div>
-      </ErrorBoundary>
-
-      <ErrorBoundary>
-        <AddressSearch
-          query={searchQuery}
-          setQuery={setSearchQuery}
-          onSearch={() => {
-            if (/^\d+$/.test(searchQuery.trim())) {
-              handleFetchArrivals(searchQuery.trim());
-            } else {
-              searchByAddress(searchQuery);
-            }
-          }}
-          searching={searchingAddress}
-          nearbyStops={nearbyStops}
-          onSelectStop={(stopId) => {
-            handleFetchArrivals(stopId);
-            clearNearbyStops();
-            setSearchQuery("");
-          }}
+      )}
+      {activeTab === "history" && (
+        <StopHistory
+          stopHistory={stopHistory}
+          onSelectStop={handleFetchArrivals}
+          onClearHistory={clearHistory}
         />
-      </ErrorBoundary>
+      )}
+      {activeTab === "favorites" && (
+        <Favorites
+          favorites={favorites}
+          onSelectStop={handleFetchArrivals}
+          onRemoveFavorite={removeFavorite}
+        />
+      )}
 
+      {loading && <p>Loading arrivals...</p>}
+      {error && <p>{error}</p>}
       {isPulling && (
         <p>Refreshing... ({Math.round((pullDistance / 80) * 100)}%)</p>
       )}
-      {loading && <p>Loading arrivals...</p>}
-      {error && <p>{error}</p>}
 
       <ErrorBoundary>
         {arrivals && (
@@ -146,19 +148,41 @@ function App() {
           />
         )}
       </ErrorBoundary>
+    </main>
 
-      {showSaveModal && currentStop && (
-        <SaveStopModal
-          stop={currentStop}
-          onSave={(customName) => {
-            saveToFavorites(currentStop, customName);
-            setShowSaveModal(false);
-          }}
-          onCancel={() => setShowSaveModal(false)}
-        />
-      )}
-    </div>
-  );
+    <nav className={styles.bottomNav}>
+      <button
+        className={`${styles.navBtn} ${activeTab === "nearby" ? styles.active : ""}`}
+        onClick={() => setActiveTab("nearby")}
+      >
+        <span>Nearby Stops</span>
+      </button>
+      <button
+        className={`${styles.navBtn} ${activeTab === "history" ? styles.active : ""}`}
+        onClick={() => setActiveTab("history")}
+      >
+        <span>Recent</span>
+      </button>
+      <button
+        className={`${styles.navBtn} ${activeTab === "favorites" ? styles.active : ""}`}
+        onClick={() => setActiveTab("favorites")}
+      >
+        <span>Favorites</span>
+      </button>
+    </nav>
+
+    {showSaveModal && currentStop && (
+      <SaveStopModal
+        stop={currentStop}
+        onSave={(customName) => {
+          saveToFavorites(currentStop, customName);
+          setShowSaveModal(false);
+        }}
+        onCancel={() => setShowSaveModal(false)}
+      />
+    )}
+  </div>
+);
 }
 
 export default App;
