@@ -9,10 +9,11 @@ export function useStopHistory() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const addToHistory = (stopId) => {
+  const addToHistory = (stopId, stopName) => {
+    const entry = { stopId, stopName: stopName || null };
     const updated = [
-      stopId,
-      ...stopHistory.filter((id) => id !== stopId),
+      entry,
+      ...stopHistory.filter((s) => s.stopId !== stopId),
     ].slice(0, MAX_HISTORY);
     setStopHistory(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
@@ -23,5 +24,11 @@ export function useStopHistory() {
     localStorage.removeItem(STORAGE_KEY);
   };
 
-  return { stopHistory, addToHistory, clearHistory };
+  const removeFromHistory = (stopId) => {
+    const updated = stopHistory.filter((s) => s.stopId !== stopId);
+    setStopHistory(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  };
+
+  return { stopHistory, addToHistory, removeFromHistory, clearHistory };
 }

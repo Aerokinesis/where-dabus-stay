@@ -28,15 +28,17 @@ export function useArrivals() {
 
       const arrivalsData = await arrivalsRes.json();
       const stopData = await stopRes.json();
+      const stopName = formatStopName(stopData.stop_name, stopId);
 
       setArrivals(arrivalsData.arrivals);
-      setCurrentStop({
-        id: stopId,
-        name: formatStopName(stopData.stop_name, stopId),
-      });
+      setCurrentStop({ id: stopId, name: stopName });
       setLastUpdated(new Date());
+
+      return stopName;
     } catch (_err) {
-      setError("Could not fetch arrivals. Check your stop number and try again.");
+      setError(
+        "Could not fetch arrivals. Check your stop number and try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -49,5 +51,13 @@ export function useArrivals() {
     return () => clearInterval(interval);
   }, [currentStop, fetchArrivals]);
 
-  return { arrivals, currentStop, loading, error, setError, fetchArrivals, lastUpdated };
+  return {
+    arrivals,
+    currentStop,
+    loading,
+    error,
+    setError,
+    fetchArrivals,
+    lastUpdated,
+  };
 }

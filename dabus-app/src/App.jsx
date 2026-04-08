@@ -58,11 +58,12 @@ function App() {
   const { selectedBus, busLocation, busShape, tripStops, fetchBusLocation } =
     useBusTracking(setError);
 
-  const { stopHistory, addToHistory, clearHistory } = useStopHistory();
+  const { stopHistory, addToHistory, removeFromHistory, clearHistory } =
+    useStopHistory();
 
-  const handleFetchArrivals = (stopId, tab) => {
-    fetchArrivals(stopId);
-    addToHistory(stopId);
+  const handleFetchArrivals = async (stopId, tab) => {
+    const stopName = await fetchArrivals(stopId);
+    addToHistory(stopId, stopName);
     setArrivalsTab(tab);
   };
 
@@ -73,26 +74,28 @@ function App() {
 
   return (
     <div className={styles.shell}>
-      <div className={styles.topBar}>
-        <AddressSearch
-          query={searchQuery}
-          setQuery={setSearchQuery}
-          onSearch={() => {
-            if (/^\d+$/.test(searchQuery.trim())) {
-              handleFetchArrivals(searchQuery.trim(), activeTab);
-            } else {
-              searchByAddress(searchQuery);
-            }
-          }}
-          searching={searchingAddress}
-          nearbyStops={nearbyStops}
-          onSelectStop={(stopId) => {
-            handleFetchArrivals(stopId, activeTab);
-            clearNearbyStops();
-            setSearchQuery("");
-          }}
-        />
-      </div>
+      {activeTab === "nearby" && (
+        <div className={styles.topBar}>
+          <AddressSearch
+            query={searchQuery}
+            setQuery={setSearchQuery}
+            onSearch={() => {
+              if (/^\d+$/.test(searchQuery.trim())) {
+                handleFetchArrivals(searchQuery.trim(), activeTab);
+              } else {
+                searchByAddress(searchQuery);
+              }
+            }}
+            searching={searchingAddress}
+            nearbyStops={nearbyStops}
+            onSelectStop={(stopId) => {
+              handleFetchArrivals(stopId, activeTab);
+              clearNearbyStops();
+              setSearchQuery("");
+            }}
+          />
+        </div>
+      )}
 
       <main className={styles.main}>
         {activeTab === "nearby" && (
@@ -103,12 +106,20 @@ function App() {
             onMount={findNearbyStops}
           />
         )}
+
         {activeTab === "history" && (
-          <StopHistory
-            stopHistory={stopHistory}
-            onSelectStop={(stopId) => handleFetchArrivals(stopId, "history")}
-            onClearHistory={clearHistory}
-          />
+          <>
+            {(!arrivals || arrivalsTab !== "history") && (
+              <StopHistory
+                stopHistory={stopHistory}
+                onSelectStop={(stopId) =>
+                  handleFetchArrivals(stopId, "history")
+                }
+                onRemoveStop={removeFromHistory}
+                onClearHistory={clearHistory}
+              />
+            )}
+          </>
         )}
 
         {activeTab === "favorites" && (
