@@ -17,7 +17,6 @@ import { useBusTracking } from "./hooks/useBusTracking";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import { useStopHistory } from "./hooks/useStopHistory";
 
-// Fix for default marker icon not showing in React
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -44,6 +43,8 @@ function App() {
   const { favorites, saveToFavorites, removeFavorite, isCurrentStopFavorited } =
     useFavorites();
 
+  const [arrivalsTab, setArrivalsTab] = useState(null);
+
   const {
     nearbyStops,
     nearbyStopsMap,
@@ -59,9 +60,10 @@ function App() {
 
   const { stopHistory, addToHistory, clearHistory } = useStopHistory();
 
-  const handleFetchArrivals = (stopId) => {
+  const handleFetchArrivals = (stopId, tab) => {
     fetchArrivals(stopId);
     addToHistory(stopId);
+    setArrivalsTab(tab);
   };
 
   const { isPulling, pullDistance } = usePullToRefresh(
@@ -69,120 +71,162 @@ function App() {
     !!arrivals,
   );
 
-return (
-  <div className={styles.shell}>
-    <div className={styles.topBar}>
-      <AddressSearch
-        query={searchQuery}
-        setQuery={setSearchQuery}
-        onSearch={() => {
-          if (/^\d+$/.test(searchQuery.trim())) {
-            handleFetchArrivals(searchQuery.trim());
-          } else {
-            searchByAddress(searchQuery);
-          }
-        }}
-        searching={searchingAddress}
-        nearbyStops={nearbyStops}
-        onSelectStop={(stopId) => {
-          handleFetchArrivals(stopId);
-          clearNearbyStops();
-          setSearchQuery("");
-        }}
-      />
-    </div>
+  return (
+    <div className={styles.shell}>
+      <div className={styles.topBar}>
+        <AddressSearch
+          query={searchQuery}
+          setQuery={setSearchQuery}
+          onSearch={() => {
+            if (/^\d+$/.test(searchQuery.trim())) {
+              handleFetchArrivals(searchQuery.trim(), activeTab);
+            } else {
+              searchByAddress(searchQuery);
+            }
+          }}
+          searching={searchingAddress}
+          nearbyStops={nearbyStops}
+          onSelectStop={(stopId) => {
+            handleFetchArrivals(stopId, activeTab);
+            clearNearbyStops();
+            setSearchQuery("");
+          }}
+        />
+      </div>
 
-    <main className={styles.main}>
-      {activeTab === "nearby" && (
-        <div>
-          <button onClick={findNearbyStops}>Find Stops Near Me</button>
+      <main className={styles.main}>
+        {activeTab === "nearby" && (
           <NearbyStopsMap
             userLocation={userLocation}
             nearbyStopsMap={nearbyStopsMap}
-            onSelectStop={handleFetchArrivals}
-          />
-        </div>
-      )}
-      {activeTab === "history" && (
-        <StopHistory
-          stopHistory={stopHistory}
-          onSelectStop={handleFetchArrivals}
-          onClearHistory={clearHistory}
-        />
-      )}
-      {activeTab === "favorites" && (
-        <Favorites
-          favorites={favorites}
-          onSelectStop={handleFetchArrivals}
-          onRemoveFavorite={removeFavorite}
-        />
-      )}
-
-      {loading && <p>Loading arrivals...</p>}
-      {error && <p>{error}</p>}
-      {isPulling && (
-        <p>Refreshing... ({Math.round((pullDistance / 80) * 100)}%)</p>
-      )}
-
-      <ErrorBoundary>
-        {arrivals && (
-          <ArrivalsList
-            arrivals={arrivals}
-            selectedBus={selectedBus}
-            onShowMap={fetchBusLocation}
-            currentStop={currentStop}
-            isFavorited={isCurrentStopFavorited(currentStop)}
-            onSaveStop={() => setShowSaveModal(true)}
-            lastUpdated={lastUpdated}
+            onSelectStop={(stopId) => handleFetchArrivals(stopId, "nearby")}
+            onMount={findNearbyStops}
           />
         )}
-      </ErrorBoundary>
-
-      <ErrorBoundary>
-        {busLocation && (
-          <BusTrackingMap
-            busLocation={busLocation}
-            selectedBus={selectedBus}
-            busShape={busShape}
-            tripStops={tripStops}
+        {activeTab === "history" && (
+          <StopHistory
+            stopHistory={stopHistory}
+            onSelectStop={(stopId) => handleFetchArrivals(stopId, "history")}
+            onClearHistory={clearHistory}
           />
         )}
-      </ErrorBoundary>
-    </main>
 
-    <nav className={styles.bottomNav}>
-      <button
-        className={`${styles.navBtn} ${activeTab === "nearby" ? styles.active : ""}`}
-        onClick={() => setActiveTab("nearby")}
-      >
-        <span>Nearby Stops</span>
-      </button>
-      <button
-        className={`${styles.navBtn} ${activeTab === "history" ? styles.active : ""}`}
-        onClick={() => setActiveTab("history")}
-      >
-        <span>Recent</span>
-      </button>
-      <button
-        className={`${styles.navBtn} ${activeTab === "favorites" ? styles.active : ""}`}
-        onClick={() => setActiveTab("favorites")}
-      >
-        <span>Favorites</span>
-      </button>
-    </nav>
+        {activeTab === "favorites" && (
+          <>
+            {(!arrivals || arrivalsTab !== "favorites") && (
+              <Favorites
+                favorites={favorites}
+                onSelectStop={(stopId) =>
+                  handleFetchArrivals(stopId, "favorites")
+                }
+                onRemoveFavorite={removeFavorite}
+              />
+            )}
+          </>
+        )}
 
-    {showSaveModal && currentStop && (
-      <SaveStopModal
-        stop={currentStop}
-        onSave={(customName) => {
-          saveToFavorites(currentStop, customName);
-          setShowSaveModal(false);
-        }}
-        onCancel={() => setShowSaveModal(false)}
-      />
-    )}
-  </div>
-);
+        {loading && <p>Loading arrivals...</p>}
+        {error && <p>{error}</p>}
+        {isPulling && (
+          <p>Refreshing... ({Math.round((pullDistance / 80) * 100)}%)</p>
+        )}
+
+        <ErrorBoundary>
+          {arrivals && arrivalsTab === activeTab && (
+            <ArrivalsList
+              arrivals={arrivals}
+              selectedBus={selectedBus}
+              onShowMap={fetchBusLocation}
+              currentStop={currentStop}
+              isFavorited={isCurrentStopFavorited(currentStop)}
+              onSaveStop={() => setShowSaveModal(true)}
+              lastUpdated={lastUpdated}
+              arrivalsTab={arrivalsTab}
+              onBack={
+                arrivalsTab === "favorites" || arrivalsTab === "history"
+                  ? () => setArrivalsTab(null)
+                  : null
+              }
+            />
+          )}
+        </ErrorBoundary>
+
+        <ErrorBoundary>
+          {busLocation && (
+            <BusTrackingMap
+              busLocation={busLocation}
+              selectedBus={selectedBus}
+              busShape={busShape}
+              tripStops={tripStops}
+            />
+          )}
+        </ErrorBoundary>
+      </main>
+
+      <nav className={styles.bottomNav}>
+        <button
+          className={`${styles.navBtn} ${activeTab === "nearby" ? styles.active : ""}`}
+          onClick={() => setActiveTab("nearby")}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+          </svg>
+          <span>Nearby</span>
+        </button>
+
+        <button
+          className={`${styles.navBtn} ${activeTab === "history" ? styles.active : ""}`}
+          onClick={() => setActiveTab("history")}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span>Recent</span>
+        </button>
+
+        <button
+          className={`${styles.navBtn} ${activeTab === "favorites" ? styles.active : ""}`}
+          onClick={() => setActiveTab("favorites")}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+          <span>Favorites</span>
+        </button>
+      </nav>
+
+      {showSaveModal && currentStop && (
+        <SaveStopModal
+          stop={currentStop}
+          onSave={(customName) => {
+            saveToFavorites(currentStop, customName);
+            setShowSaveModal(false);
+          }}
+          onCancel={() => setShowSaveModal(false)}
+        />
+      )}
+    </div>
+  );
 }
 
 export default App;

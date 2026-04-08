@@ -1,3 +1,5 @@
+import styles from "./ArrivalsList.module.css";
+
 function ArrivalsList({
   arrivals,
   selectedBus,
@@ -6,12 +8,14 @@ function ArrivalsList({
   isFavorited,
   onSaveStop,
   lastUpdated,
+  onBack,
+  arrivalsTab,
 }) {
   const getMinutesUntil = (stopTime, date) => {
     const now = new Date();
     const arrival = new Date(`${date} ${stopTime}`);
     const diff = Math.round((arrival - now) / 60000);
-    if (diff <= 0) return "Arriving now";
+    if (diff <= 0) return "Now";
     if (diff === 1) return "1 min";
     if (diff < 60) return `${diff} mins`;
     const hours = Math.floor(diff / 60);
@@ -20,7 +24,6 @@ function ArrivalsList({
     return `${hours} hr ${mins} min`;
   };
 
-  // Build a map of { direction -> Set of route numbers }
   const routesByDirection = arrivals.reduce((acc, bus) => {
     if (!bus.direction) return acc;
     if (!acc[bus.direction]) acc[bus.direction] = new Set();
@@ -29,57 +32,86 @@ function ArrivalsList({
   }, {});
 
   return (
-    <div>
-      <h2>Arrivals</h2>
+    <div className={styles.container}>
+    {onBack && (
+      <button className={styles.backBtn} onClick={onBack}>
+        ← {arrivalsTab === "history" ? "Recent" : "Favorites"}
+      </button>
+    )}
       {currentStop && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-          }}
-        >
-          <p>
-            {currentStop.name} — Stop #{currentStop.id}
-          </p>
-          <button onClick={onSaveStop}>
-            {isFavorited ? "⭐ Saved" : "☆ Save Stop"}
+        <div className={styles.stopHeader}>
+          <div className={styles.stopInfo}>
+            <span className={styles.stopName}>{currentStop.name}</span>
+            <span className={styles.stopId}>Stop #{currentStop.id}</span>
+          </div>
+          <button
+            className={`${styles.saveBtn} ${isFavorited ? styles.saved : ""}`}
+            onClick={onSaveStop}
+          >
+            {isFavorited ? "★ Saved" : "☆ Save"}
           </button>
         </div>
       )}
-      {lastUpdated && <p>Last updated: {lastUpdated.toLocaleTimeString()}</p>}
+      {lastUpdated && (
+        <p className={styles.lastUpdated}>
+          Updated {lastUpdated.toLocaleTimeString()}
+        </p>
+      )}
+      <div className={styles.list}>
+        {arrivals.map((bus) => (
+          <div
+            key={bus.id}
+            className={`${styles.card} ${bus.canceled === "1" ? styles.canceled : ""}`}
+          >
+            <div className={styles.cardTop}>
+              <div className={styles.routeBadge}>{bus.route}</div>
+              <div className={styles.headsign}>
+                {bus.canceled === "1" && (
+                  <span className={styles.canceledTag}>Canceled</span>
+                )}
+                {bus.headsign}
+              </div>
+              <div className={styles.time}>
+                {getMinutesUntil(bus.stopTime, bus.date)}
+              </div>
+            </div>
 
-      {arrivals.map((bus) => (
-        <div key={bus.id}>
-          <p>
-            {bus.canceled === "1" && "❌ CANCELED — "}
-            Route {bus.route} — {bus.headsign} — {bus.direction}
-          </p>
-          <p>
-            {bus.estimated === "1" ? "🟢 Live" : "🕐 Scheduled"} —{" "}
-            {bus.stopTime} ({getMinutesUntil(bus.stopTime, bus.date)})
-          </p>
-          {bus.estimated === "1" && <p>Bus #{bus.vehicle}</p>}
-          {bus.estimated === "1" && (
-            <button onClick={() => onShowMap(bus)}>
-              {selectedBus?.id === bus.id ? "Hide Map" : "Show on Map"}
-            </button>
-          )}
-        </div>
-      ))}
-
-      {/* Routes-by-direction summary */}
-      {Object.entries(routesByDirection).map(([direction, routes]) => (
-        <div key={direction}>
-          <h3>Buses Traveling {direction}</h3>
-          <p>
-            {[...routes]
-              .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-              .join(", ")}
-          </p>
-        </div>
-      ))}
+            <div className={styles.cardBottom}>
+              <span
+                className={`${styles.liveTag} ${bus.estimated === "1" ? styles.live : styles.scheduled}`}
+              >
+                {bus.estimated === "1" ? "● Live" : "○ Scheduled"}
+              </span>
+              <span className={styles.scheduledTime}>{bus.stopTime}</span>
+              {bus.estimated === "1" && (
+                <span className={styles.vehicle}>Bus #{bus.vehicle}</span>
+              )}
+              {bus.estimated === "1" && (
+                <button
+                  className={styles.mapBtn}
+                  onClick={() => onShowMap(bus)}
+                >
+                  {selectedBus?.id === bus.id ? "Hide map" : "Track"}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className={styles.summary}>
+        {Object.entries(routesByDirection).map(([direction, routes]) => (
+          <div key={direction} className={styles.summaryRow}>
+            <span className={styles.summaryDirection}>{direction}</span>
+            <span className={styles.summaryRoutes}>
+              {[...routes]
+                .sort((a, b) =>
+                  a.localeCompare(b, undefined, { numeric: true }),
+                )
+                .join(" · ")}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

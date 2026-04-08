@@ -1,0 +1,195 @@
+.container {
+  margin-top: 16px;
+}
+
+.stopHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.stopInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stopName {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.stopId {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.saveBtn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.saveBtn.saved {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.lastUpdated {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card.canceled {
+  opacity: 0.5;
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.routeBadge {
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.headsign {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.canceledTag {
+  font-size: 11px;
+  background: #3a1a1a;
+  color: #f87171;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.time {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.cardBottom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.liveTag {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.live {
+  background: #0f2e1a;
+  color: #4ade80;
+}
+
+.scheduled {
+  background: #1a1a2e;
+  color: var(--text-muted);
+}
+
+.scheduledTime {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.vehicle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.mapBtn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--primary);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.mapBtn:active {
+  background: var(--border);
+}
+
+.summary {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.summaryDirection {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+  width: 80px;
+}
+
+.summaryRoutes {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 0 12px 0;
+  display: block;
+}

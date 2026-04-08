@@ -1,0 +1,23 @@
+.mapWrapper {
+  margin-top: 12px;
+  height: 380px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.popupBtn {
+  margin-top: 6px;
+  background: #1a6faf;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.popupBtn:active {
+  opacity: 0.85;
+}
