@@ -65,5 +65,6 @@ export function useNearbyStops(setError) {
     searchingAddress,
     searchByAddress,
     findNearbyStops,
+    clearNearbyStops: () => setNearbyStops(null),
   };
 }

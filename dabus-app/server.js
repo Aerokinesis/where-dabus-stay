@@ -80,6 +80,27 @@ function getDistance(lat1, lon1, lat2, lon2) {
     return R * c
 }
 
+const abbreviations = {
+    "street": "st",
+    "road": "rd",
+    "avenue": "ave",
+    "highway": "hwy",
+    "drive": "dr",
+    "place": "pl",
+    "boulevard": "bl",
+    "parkway": "pkwy",
+    "loop": "lp",
+    "lane": "ln",
+}
+
+const normalizeQuery = (query) => {
+    let q = query.toLowerCase()
+    Object.entries(abbreviations).forEach(([full, abbr]) => {
+        q = q.replace(new RegExp(`\\b${full}\\b`, "g"), abbr)
+    })
+    return q
+}
+
 // Arrivals endpoint
 app.get("/api/arrivals", async (req, res) => {
     const stop = req.query.stop
@@ -132,17 +153,22 @@ app.get("/api/trip/:tripId/stops", (req, res) => {
     res.json({ stops: tripStops })
 })
 
-// Nearby stops endpoint
 // Stop name search endpoint
 app.get("/api/search-stops", (req, res) => {
-    const query = req.query.q?.toLowerCase()
+    const query = normalizeQuery(req.query.q ?? "")
 
     if (!query) {
         return res.status(400).json({ error: "No search query provided" })
     }
 
+    const terms = query.split(/\s+/).filter(Boolean)
+
     const results = stops
-        .filter(stop => stop.stop_name.toLowerCase().includes(query))
+        .filter(stop =>
+            terms.every(term =>
+                new RegExp(`\\b${term}(\\s|$)`, "i").test(stop.stop_name)
+            )
+        )
         .map(stop => ({
             stop_id: stop.stop_id,
             stop_name: stop.stop_name,

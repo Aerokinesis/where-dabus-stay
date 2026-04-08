@@ -1,19 +1,23 @@
-function AddressSearch({ address, setAddress, onSearch, searching, nearbyStops, onSelectStop }) {
+function AddressSearch({ query, setQuery, onSearch, searching, nearbyStops, onSelectStop }) {
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") onSearch();
+  };
+
   return (
     <div>
-      <h2>Search by Address</h2>
+      <h2>Find a Stop</h2>
       <input
         type="text"
-        placeholder="Enter a street address"
-        value={address}
-        onChange={(e) => setAddress(e.target.value)}
+        placeholder="Stop number or street name"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={handleKeyDown}
       />
-      <button onClick={onSearch}>Find Nearby Stops</button>
+      <button onClick={onSearch}>Search</button>
       {searching && <p>Searching...</p>}
-      {nearbyStops && (
+      {nearbyStops && nearbyStops.length === 0 && <p>No stops found.</p>}
+      {nearbyStops && nearbyStops.length > 0 && (
         <div>
-          <h2>Matching Stops</h2>
-          {nearbyStops.length === 0 && <p>No stops found.</p>}
           {nearbyStops.map((stop) => (
             <div
               key={stop.stop_id}
@@ -29,7 +33,7 @@ function AddressSearch({ address, setAddress, onSearch, searching, nearbyStops, 
         </div>
       )}
     </div>
-  )
+  );
 }
 
-export default AddressSearch
+export default AddressSearch;

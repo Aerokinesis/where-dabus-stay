@@ -2,7 +2,6 @@ import { useState } from "react";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import NearbyStopsMap from "./components/NearbyStopsMap";
-import StopSearch from "./components/StopSearch";
 import AddressSearch from "./components/AddressSearch";
 import ArrivalsList from "./components/ArrivalsList";
 import BusTrackingMap from "./components/BusTrackingMap";
@@ -20,18 +19,25 @@ import { useStopHistory } from "./hooks/useStopHistory";
 // Fix for default marker icon not showing in React
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
 function App() {
-  const [stopNumber, setStopNumber] = useState("");
-  const [address, setAddress] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showSaveModal, setShowSaveModal] = useState(false);
 
-  const { arrivals, currentStop, loading, error, setError, fetchArrivals, lastUpdated } =
-    useArrivals();
+  const {
+    arrivals,
+    currentStop,
+    loading,
+    error,
+    setError,
+    fetchArrivals,
+    lastUpdated,
+  } = useArrivals();
 
   const { favorites, saveToFavorites, removeFavorite, isCurrentStopFavorited } =
     useFavorites();
@@ -43,6 +49,7 @@ function App() {
     searchingAddress,
     searchByAddress,
     findNearbyStops,
+    clearNearbyStops,
   } = useNearbyStops(setError);
 
   const { selectedBus, busLocation, busShape, tripStops, fetchBusLocation } =
@@ -57,7 +64,7 @@ function App() {
 
   const { isPulling, pullDistance } = usePullToRefresh(
     () => fetchArrivals(currentStop.id),
-    !!arrivals
+    !!arrivals,
   );
 
   return (
@@ -89,21 +96,23 @@ function App() {
       </ErrorBoundary>
 
       <ErrorBoundary>
-        <StopSearch
-          stopNumber={stopNumber}
-          setStopNumber={setStopNumber}
-          onSearch={() => handleFetchArrivals(stopNumber)}
-        />
-      </ErrorBoundary>
-
-      <ErrorBoundary>
         <AddressSearch
-          address={address}
-          setAddress={setAddress}
-          onSearch={() => searchByAddress(address)}
+          query={searchQuery}
+          setQuery={setSearchQuery}
+          onSearch={() => {
+            if (/^\d+$/.test(searchQuery.trim())) {
+              handleFetchArrivals(searchQuery.trim());
+            } else {
+              searchByAddress(searchQuery);
+            }
+          }}
           searching={searchingAddress}
           nearbyStops={nearbyStops}
-          onSelectStop={handleFetchArrivals}
+          onSelectStop={(stopId) => {
+            handleFetchArrivals(stopId);
+            clearNearbyStops();
+            setSearchQuery("");
+          }}
         />
       </ErrorBoundary>
 
