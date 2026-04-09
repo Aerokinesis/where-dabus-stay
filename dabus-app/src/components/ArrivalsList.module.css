@@ -196,8 +196,3 @@
   padding: 0 0 12px 0;
   display: block;
 }
-
-.mapBtn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
