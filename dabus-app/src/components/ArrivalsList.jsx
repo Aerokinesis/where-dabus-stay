@@ -3,6 +3,7 @@ import styles from "./ArrivalsList.module.css";
 function ArrivalsList({
   arrivals,
   selectedBus,
+  trackingLoading,
   onShowMap,
   currentStop,
   isFavorited,
@@ -33,11 +34,12 @@ function ArrivalsList({
 
   return (
     <div className={styles.container}>
-    {onBack && (
-      <button className={styles.backBtn} onClick={onBack}>
-        ← {arrivalsTab === "history" ? "Recent" : "Favorites"}
-      </button>
-    )}
+      {onBack && (
+        <button className={styles.backBtn} onClick={onBack}>
+          ← {arrivalsTab === "history" ? "Recent" : "Favorites"}
+        </button>
+      )}
+
       {currentStop && (
         <div className={styles.stopHeader}>
           <div className={styles.stopInfo}>
@@ -52,11 +54,28 @@ function ArrivalsList({
           </button>
         </div>
       )}
+
       {lastUpdated && (
         <p className={styles.lastUpdated}>
           Updated {lastUpdated.toLocaleTimeString()}
         </p>
       )}
+
+      <div className={styles.summary}>
+        {Object.entries(routesByDirection).map(([direction, routes]) => (
+          <div key={direction} className={styles.summaryRow}>
+            <span className={styles.summaryDirection}>{direction}</span>
+            <span className={styles.summaryRoutes}>
+              {[...routes]
+                .sort((a, b) =>
+                  a.localeCompare(b, undefined, { numeric: true }),
+                )
+                .join(" · ")}
+            </span>
+          </div>
+        ))}
+      </div>
+
       <div className={styles.list}>
         {arrivals.map((bus) => (
           <div
@@ -90,25 +109,16 @@ function ArrivalsList({
                 <button
                   className={styles.mapBtn}
                   onClick={() => onShowMap(bus)}
+                  disabled={trackingLoading && selectedBus?.id === bus.id}
                 >
-                  {selectedBus?.id === bus.id ? "Hide map" : "Track"}
+                  {trackingLoading && selectedBus?.id === bus.id
+                    ? "Loading..."
+                    : selectedBus?.id === bus.id
+                      ? "Hide map"
+                      : "Track"}
                 </button>
               )}
             </div>
-          </div>
-        ))}
-      </div>
-      <div className={styles.summary}>
-        {Object.entries(routesByDirection).map(([direction, routes]) => (
-          <div key={direction} className={styles.summaryRow}>
-            <span className={styles.summaryDirection}>{direction}</span>
-            <span className={styles.summaryRoutes}>
-              {[...routes]
-                .sort((a, b) =>
-                  a.localeCompare(b, undefined, { numeric: true }),
-                )
-                .join(" · ")}
-            </span>
           </div>
         ))}
       </div>

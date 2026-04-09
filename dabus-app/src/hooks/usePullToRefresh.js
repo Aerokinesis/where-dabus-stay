@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-const THRESHOLD = 80; // px to pull before triggering refresh
-
+const THRESHOLD = 80;
 export function usePullToRefresh(onRefresh, enabled) {
   const [isPulling, setIsPulling] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
@@ -11,7 +10,6 @@ export function usePullToRefresh(onRefresh, enabled) {
     if (!enabled) return;
 
     const handleTouchStart = (e) => {
-      // Only start tracking if we're at the top of the page
       if (window.scrollY !== 0) return;
       startY.current = e.touches[0].clientY;
     };

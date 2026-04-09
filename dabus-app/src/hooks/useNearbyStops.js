@@ -7,34 +7,31 @@ export function useNearbyStops(setError) {
   const [nearbyStopsMap, setNearbyStopsMap] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [searchingAddress, setSearchingAddress] = useState(false);
+  const [locating, setLocating] = useState(false);        // add this
 
   const searchByAddress = async (query) => {
-  setSearchingAddress(true);
-  setError(null);
-  setNearbyStops(null);
-
-  try {
-    const res = await fetch(
-      `${API_BASE}/api/search-stops?q=${encodeURIComponent(query)}`
-    );
-    const data = await res.json();
-    if (data.error) {
-      setError(data.error);
-    } else {
-      setNearbyStops(data.stops);
+    setSearchingAddress(true);
+    setError(null);
+    setNearbyStops(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/search-stops?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (data.error) setError(data.error);
+      else setNearbyStops(data.stops);
+    } catch (_err) {
+      setError("Could not search for stops. Try again.");
+    } finally {
+      setSearchingAddress(false);
     }
-  } catch (_err) {
-    setError("Could not search for stops. Try again.");
-  } finally {
-    setSearchingAddress(false);
-  }
-};
+  };
 
   const findNearbyStops = () => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
       return;
     }
+
+    setLocating(true);
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -43,16 +40,17 @@ export function useNearbyStops(setError) {
         setUserLocation({ lat, lon });
 
         try {
-          const res = await fetch(
-            `${API_BASE}/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}`
-          );
+          const res = await fetch(`${API_BASE}/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}`);
           const data = await res.json();
           if (data.stops) setNearbyStopsMap(data.stops);
         } catch (_err) {
           setError("Could not find nearby stops.");
+        } finally {
+          setLocating(false);
         }
       },
       () => {
+        setLocating(false);
         setError("Could not get your location. Please allow location access.");
       }
     );
@@ -63,6 +61,7 @@ export function useNearbyStops(setError) {
     nearbyStopsMap,
     userLocation,
     searchingAddress,
+    locating,
     searchByAddress,
     findNearbyStops,
     clearNearbyStops: () => setNearbyStops(null),

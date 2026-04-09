@@ -158,9 +158,9 @@
 }
 
 .summary {
-  margin-top: 16px;
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -168,7 +168,8 @@
 
 .summaryRow {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: center;
   gap: 10px;
 }
 
@@ -194,4 +195,9 @@
   cursor: pointer;
   padding: 0 0 12px 0;
   display: block;
+}
+
+.mapBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }

@@ -52,6 +52,7 @@ function App() {
     userLocation,
     searchingAddress,
     searchByAddress,
+    locating,
     findNearbyStops,
     clearNearbyStops,
   } = useNearbyStops(setError);
@@ -61,6 +62,7 @@ function App() {
     busLocation,
     busShape,
     tripStops,
+    trackingLoading,
     fetchBusLocation,
     clearBusTracking,
   } = useBusTracking(setError);
@@ -83,7 +85,7 @@ function App() {
 
   return (
     <div className={styles.shell}>
-      {activeTab === "nearby" && (
+      {activeTab === "nearby" && !trackingView && (
         <div className={styles.topBar}>
           <AddressSearch
             query={searchQuery}
@@ -115,6 +117,7 @@ function App() {
           <NearbyStopsMap
             userLocation={userLocation}
             nearbyStopsMap={nearbyStopsMap}
+            locating={locating} // add this
             onSelectStop={(stopId) => handleFetchArrivals(stopId, "nearby")}
             onMount={findNearbyStops}
           />
@@ -160,6 +163,7 @@ function App() {
             <ArrivalsList
               arrivals={arrivals}
               selectedBus={selectedBus}
+              trackingLoading={trackingLoading}
               onShowMap={(bus) => {
                 fetchBusLocation(bus);
                 setTrackingView(true);
@@ -180,61 +184,16 @@ function App() {
 
         <ErrorBoundary>
           {trackingView && busLocation && (
-            <div
-              style={{
-                position: "fixed",
-                inset: 0,
-                background: "var(--bg)",
-                zIndex: 200,
-                display: "flex",
-                flexDirection: "column",
+            <BusTrackingMap
+              busLocation={busLocation}
+              selectedBus={selectedBus}
+              busShape={busShape}
+              tripStops={tripStops}
+              onBack={() => {
+                setTrackingView(false);
+                clearBusTracking();
               }}
-            >
-              <div
-                style={{
-                  padding: "12px 16px",
-                  background: "var(--surface)",
-                  borderBottom: "1px solid var(--border)",
-                  flexShrink: 0,
-                }}
-              >
-                <button
-                  onClick={() => {
-                    setTrackingView(false);
-                    clearBusTracking();
-                  }}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "var(--primary)",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
-                >
-                  ← Back to arrivals
-                </button>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    color: "var(--text-muted)",
-                    marginTop: "4px",
-                  }}
-                >
-                  Route {busLocation.route_short_name} — {busLocation.headsign}
-                </p>
-              </div>
-              <div style={{ flex: 1, height: 0 }}>
-                <ErrorBoundary>
-                  <BusTrackingMap
-                    busLocation={busLocation}
-                    selectedBus={selectedBus}
-                    busShape={busShape}
-                    tripStops={tripStops}
-                  />
-                </ErrorBoundary>
-              </div>
-            </div>
+            />
           )}
         </ErrorBoundary>
       </main>

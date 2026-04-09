@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-
 const API_BASE = "http://localhost:3001";
 
 export function useBusTracking(setError) {
@@ -8,13 +7,11 @@ export function useBusTracking(setError) {
   const [busLocation, setBusLocation] = useState(null);
   const [busShape, setBusShape] = useState(null);
   const [tripStops, setTripStops] = useState(null);
-  
+  const [trackingLoading, setTrackingLoading] = useState(false);
 
   const fetchBusLocation = async (bus) => {
-    // Live buses only
     if (bus.estimated !== "1") return;
 
-    // Toggle off if already selected
     if (selectedBus?.id === bus.id) {
       setSelectedBus(null);
       setBusLocation(null);
@@ -24,6 +21,7 @@ export function useBusTracking(setError) {
     }
 
     setSelectedBus(bus);
+    setTrackingLoading(true);
 
     const hasCoords =
       bus.latitude && bus.longitude &&
@@ -31,6 +29,7 @@ export function useBusTracking(setError) {
 
     if (!hasCoords) {
       setError("No live location available for this bus.");
+      setTrackingLoading(false);
       return;
     }
 
@@ -43,7 +42,6 @@ export function useBusTracking(setError) {
       adherence: null,
     });
 
-    // Fetch shape and trip stops in parallel — failures are non-fatal
     const [shapeRes, tripRes] = await Promise.allSettled([
       fetch(`${API_BASE}/api/shape/${bus.shape}`),
       fetch(`${API_BASE}/api/trip/${bus.trip}/stops`),
@@ -58,6 +56,8 @@ export function useBusTracking(setError) {
       const data = await tripRes.value.json();
       if (data.stops) setTripStops(data.stops);
     }
+
+    setTrackingLoading(false);
   };
 
   const clearBusTracking = () => {
@@ -65,7 +65,8 @@ export function useBusTracking(setError) {
     setBusLocation(null);
     setBusShape(null);
     setTripStops(null);
+    setTrackingLoading(false);
   };
 
-  return { selectedBus, busLocation, busShape, tripStops, fetchBusLocation, clearBusTracking };
+  return { selectedBus, busLocation, busShape, tripStops, trackingLoading, fetchBusLocation, clearBusTracking };
 }

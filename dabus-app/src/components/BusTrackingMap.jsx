@@ -2,20 +2,67 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet"
 import { useState } from "react";
 import L from "leaflet";
 
-function BusTrackingMap({ busLocation, selectedBus, busShape, tripStops }) {
+function BusTrackingMap({ busLocation, selectedBus, busShape, tripStops, onBack }) {
   const [satelliteView, setSatelliteView] = useState(false);
 
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ padding: "8px 16px", background: "var(--surface)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+    <div style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 1100,        // well above nav (200) and everything else
+      display: "flex",
+      flexDirection: "column",
+      background: "var(--bg)",
+    }}>
+      {/* Header — rendered first in DOM, always on top within this stacking context */}
+      <div style={{
+        flexShrink: 0,
+        padding: "12px 16px",
+        background: "var(--surface)",
+        borderBottom: "1px solid var(--border)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "4px",
+        zIndex: 501,
+        position: "relative",
+      }}>
+        <button
+          onClick={onBack}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--primary)",
+            fontSize: "14px",
+            cursor: "pointer",
+            padding: 0,
+            textAlign: "left",
+          }}
+        >
+          ← Back to arrivals
+        </button>
+        <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+          Route {busLocation.route_short_name} — {busLocation.headsign}
+        </p>
         <button
           onClick={() => setSatelliteView(!satelliteView)}
-          style={{ background: "none", border: "1px solid var(--border)", borderRadius: "6px", color: "var(--text)", fontSize: "13px", padding: "4px 10px", cursor: "pointer" }}
+          style={{
+            alignSelf: "flex-start",
+            background: "none",
+            border: "1px solid var(--border)",
+            borderRadius: "6px",
+            color: "var(--text)",
+            fontSize: "13px",
+            padding: "4px 10px",
+            cursor: "pointer",
+            marginTop: "4px",
+          }}
         >
           {satelliteView ? "Map view" : "Satellite view"}
         </button>
       </div>
-      <div style={{ flex: 1 }}>
+
+      {/* Map fills remaining space */}
+      <div style={{ flex: 1, height: 0, position: "relative", zIndex: 500 }}>
         <MapContainer
           center={[parseFloat(busLocation.latitude), parseFloat(busLocation.longitude)]}
           zoom={15}

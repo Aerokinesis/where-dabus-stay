@@ -1,5 +1,12 @@
 import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Circle,
+  useMap,
+} from "react-leaflet";
 import L from "leaflet";
 import styles from "./NearbyStopsMap.module.css";
 
@@ -11,7 +18,13 @@ function MapRecenter({ center }) {
   return null;
 }
 
-function NearbyStopsMap({ userLocation, nearbyStopsMap, onSelectStop, onMount }) {
+function NearbyStopsMap({
+  userLocation,
+  nearbyStopsMap,
+  locating,
+  onSelectStop,
+  onMount,
+}) {
   useEffect(() => {
     onMount();
   }, []);
@@ -23,6 +36,12 @@ function NearbyStopsMap({ userLocation, nearbyStopsMap, onSelectStop, onMount })
 
   return (
     <div className={styles.mapWrapper}>
+      {locating && (
+        <div className={styles.locatingOverlay}>
+          <span className={styles.locatingDot} />
+          Finding your location…
+        </div>
+      )}
       <MapContainer
         center={center}
         zoom={15}
