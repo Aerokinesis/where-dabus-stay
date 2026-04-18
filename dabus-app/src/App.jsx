@@ -33,6 +33,7 @@ function App() {
   const [trackingView, setTrackingView] = useState(false);
   const [toast, setToast] = useState(null);
   const [toastFading, setToastFading] = useState(false);
+  const [toastType, setToastType] = useState("add");
   const [routes, setRoutes] = useState(null);
   const [routesLoading, setRoutesLoading] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState(null);
@@ -86,18 +87,18 @@ function App() {
     setArrivalsTab(tab);
   };
 
-  const showToast = (message) => {
+  const showToast = (message, type = "add") => {
     setToast(message);
+    setToastType(type);
     setToastFading(false);
     setTimeout(() => setToastFading(true), 2000);
     setTimeout(() => setToast(null), 3200);
   };
 
   const fetchRoutes = async () => {
-    if (routes) return;
     setRoutesLoading(true);
     try {
-      const res = await fetch("http://localhost:3001/api/routes");
+      const res = await fetch("http://192.168.4.27:3001/api/routes");
       const data = await res.json();
       setRoutes(data.routes);
     } catch {
@@ -168,7 +169,7 @@ function App() {
         </div>
       )}
 
-      {activeTab === "routes" && (
+      {activeTab === "routes" && arrivalsTab !== "routes" && (
         <div className={styles.topBar}>
           <div
             style={{
@@ -236,7 +237,7 @@ function App() {
           />
         )}
 
-        {activeTab === "routes" && (
+        {activeTab === "routes" && arrivalsTab !== "routes" && (
           <div>
             {selectedRoute ? (
               <>
@@ -316,7 +317,7 @@ function App() {
                         textTransform: "uppercase",
                         letterSpacing: "0.06em",
                         color: "var(--text-muted)",
-                        marginBottom: "4px",
+                        marginBottom: "6px",
                       }}
                     >
                       Stops on this route
@@ -443,6 +444,17 @@ function App() {
                         <div style={{ fontSize: "13px", color: "var(--text)" }}>
                           {route.route_long_name}
                         </div>
+                        {route.route_description && (
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              color: "var(--text-muted)",
+                              marginTop: "2px",
+                            }}
+                          >
+                            {route.route_description}
+                          </div>
+                        )}
                       </div>
                       <span
                         style={{ color: "var(--text-muted)", fontSize: "16px" }}
@@ -465,7 +477,10 @@ function App() {
                 onSelectStop={(stopId) =>
                   handleFetchArrivals(stopId, "favorites")
                 }
-                onRemoveFavorite={removeFavorite}
+                onRemoveFavorite={(stopId) => {
+                  removeFavorite(stopId);
+                  showToast("Removed from favorites", "remove");
+                }}
               />
             )}
           </>
@@ -586,10 +601,10 @@ function App() {
               }}
               currentStop={currentStop}
               isFavorited={isCurrentStopFavorited(currentStop)}
-              onSaveStop={() => {
-                if (isCurrentStopFavorited(currentStop)) {
+              onSaveStop={(alreadySaved) => {
+                if (alreadySaved) {
                   removeFavorite(currentStop.id);
-                  showToast("Removed from favorites");
+                  showToast("Removed from favorites", "remove");
                 } else {
                   setShowSaveModal(true);
                 }
@@ -705,7 +720,7 @@ function App() {
           onSave={(customName) => {
             saveToFavorites(currentStop, customName);
             setShowSaveModal(false);
-            showToast(`Saved "${customName}"`);
+            showToast(`Added "${customName}" to favorites`);
           }}
           onCancel={() => setShowSaveModal(false)}
         />
@@ -735,7 +750,37 @@ function App() {
               : "fadeIn 0.4s ease",
           }}
         >
-          <span style={{ color: "var(--accent)" }}>★</span>
+          {toastType === "remove" ? (
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ color: "#f87171", flexShrink: 0 }}
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+          ) : (
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ color: "#f87171", flexShrink: 0 }}
+            >
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+          )}
           {toast}
         </div>
       )}

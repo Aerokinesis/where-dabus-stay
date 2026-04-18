@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const API_BASE = "http://localhost:3001";
+const API_BASE = "http://192.168.4.27:3001"
 
 export function useNearbyStops(setError) {
   const [nearbyStops, setNearbyStops] = useState(null);
@@ -26,6 +26,7 @@ export function useNearbyStops(setError) {
   };
 
   const findNearbyStops = () => {
+    if (locating || userLocation) return;
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
       return;
@@ -42,7 +43,10 @@ export function useNearbyStops(setError) {
         try {
           const res = await fetch(`${API_BASE}/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}`);
           const data = await res.json();
-          if (data.stops) setNearbyStopsMap(data.stops);
+          if (data.stops) {
+            setNearbyStopsMap(data.stops);
+            setError(null);       // clear any stale error on success
+          }
         } catch (_err) {
           setError("Could not find nearby stops.");
         } finally {

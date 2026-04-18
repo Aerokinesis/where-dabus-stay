@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const API_BASE = "http://localhost:3001";
+const API_BASE = "http://192.168.4.27:3001"
 
 export function useBusTracking(setError) {
   const [selectedBus, setSelectedBus] = useState(null);

@@ -33,7 +33,7 @@ function SaveStopModal({ stop, onSave, onCancel }) {
       >
         <div>
           <p style={{ fontSize: "16px", fontWeight: 500, marginBottom: "4px" }}>
-            Save stop
+            Add to favorites
           </p>
           <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
             Stop #{stop.id}

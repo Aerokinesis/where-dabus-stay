@@ -12,17 +12,11 @@ app.use(cors())
 
 // Load stops from GTFS stops.txt
 const stopsData = fs.readFileSync("./data/stops.txt", "utf8")
-const stops = parse(stopsData, {
-    columns: true,
-    skip_empty_lines: true
-})
+const stops = parse(stopsData, { columns: true, skip_empty_lines: true })
 
-// Loads shapes from GTFS shapes.txt
+// Load shapes from GTFS shapes.txt
 const shapesData = fs.readFileSync("./data/shapes.txt", "utf8")
-const shapesRaw = parse(shapesData, {
-    columns: true,
-    skip_empty_lines: true
-})
+const shapesRaw = parse(shapesData, { columns: true, skip_empty_lines: true })
 
 // Group shapes by shape_id sorted by sequence
 const shapes = shapesRaw.reduce((acc, row) => {
@@ -34,18 +28,24 @@ const shapes = shapesRaw.reduce((acc, row) => {
     return acc
 }, {})
 
-// Load trips and stop_times from GTFS
-const tripsData = fs.readFileSync("./data/trips.txt", "utf8")
-const tripsRaw = parse(tripsData, {
-    columns: true,
-    skip_empty_lines: true
+// Sort each shape by sequence and extract just the coordinates
+Object.keys(shapes).forEach(id => {
+    shapes[id] = shapes[id]
+        .sort((a, b) => a.seq - b.seq)
+        .map(p => p.coords)
 })
 
+// Load trips from GTFS trips.txt
+const tripsData = fs.readFileSync("./data/trips.txt", "utf8")
+const tripsRaw = parse(tripsData, { columns: true, skip_empty_lines: true })
+
+// Load stop_times from GTFS stop_times.txt
 const stopTimesData = fs.readFileSync("./data/stop_times.txt", "utf8")
-const stopTimesRaw = parse(stopTimesData, {
-    columns: true,
-    skip_empty_lines: true
-})
+const stopTimesRaw = parse(stopTimesData, { columns: true, skip_empty_lines: true })
+
+// Load routes from GTFS routes.txt
+const routesData = fs.readFileSync("./data/routes.txt", "utf8")
+const routesRaw = parse(routesData, { columns: true, skip_empty_lines: true })
 
 // Index stop times by trip_id
 const stopTimesByTrip = stopTimesRaw.reduce((acc, row) => {
@@ -60,12 +60,60 @@ const stopsById = stops.reduce((acc, stop) => {
     return acc
 }, {})
 
-// Sort each shape by sequence and extract just the coordinates
-Object.keys(shapes).forEach(id => {
-    shapes[id] = shapes[id]
-        .sort((a, b) => a.seq - b.seq)
-        .map(p => p.coords)
+// Index trips by route_id
+const tripsByRoute = tripsRaw.reduce((acc, trip) => {
+    if (!acc[trip.route_id]) acc[trip.route_id] = []
+    acc[trip.route_id].push(trip)
+    return acc
+}, {})
+
+// Build one entry per direction per route
+const routeDirections = []
+
+Object.entries(tripsByRoute).forEach(([routeId, trips]) => {
+    const route = routesRaw.find(r => r.route_id === routeId)
+    if (!route) return
+
+    const directions = {}
+    trips.forEach(trip => {
+        const dir = trip.direction_id ?? "0"
+        if (!directions[dir]) directions[dir] = trip
+    })
+
+    Object.entries(directions).forEach(([directionId, trip]) => {
+        const stopTimes = stopTimesByTrip[trip.trip_id] || []
+        const seen = new Set()
+        const dirStops = stopTimes
+            .sort((a, b) => parseInt(a.stop_sequence) - parseInt(b.stop_sequence))
+            .filter(st => {
+                if (seen.has(st.stop_id)) return false
+                seen.add(st.stop_id)
+                return true
+            })
+            .map(st => {
+                const stop = stopsById[st.stop_id]
+                return {
+                    stop_id: st.stop_id,
+                    stop_name: stop?.stop_name || "Unknown",
+                }
+            })
+
+        routeDirections.push({
+            id: `${routeId}-${directionId}`,
+            route_id: routeId,
+            direction_id: directionId,
+            route_short_name: route.route_short_name,
+            route_long_name: route.route_long_name,
+            headsign: trip.trip_headsign,
+            stops: dirStops,
+        })
+    })
 })
+
+// Sort by route number then direction
+routeDirections.sort((a, b) =>
+    a.route_short_name.localeCompare(b.route_short_name, undefined, { numeric: true })
+)
 
 // Calculate distance between two lat/lon points in miles
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -81,16 +129,9 @@ function getDistance(lat1, lon1, lat2, lon2) {
 }
 
 const abbreviations = {
-    "street": "st",
-    "road": "rd",
-    "avenue": "ave",
-    "highway": "hwy",
-    "drive": "dr",
-    "place": "pl",
-    "boulevard": "bl",
-    "parkway": "pkwy",
-    "loop": "lp",
-    "lane": "ln",
+    "street": "st", "road": "rd", "avenue": "ave", "highway": "hwy",
+    "drive": "dr", "place": "pl", "boulevard": "bl", "parkway": "pkwy",
+    "loop": "lp", "lane": "ln",
 }
 
 const normalizeQuery = (query) => {
@@ -106,7 +147,6 @@ app.get("/api/arrivals", async (req, res) => {
     const stop = req.query.stop
     const apiKey = process.env.VITE_THEBUS_API_KEY
     const url = `http://api.thebus.org/arrivalsJSON/?key=${apiKey}&stop=${stop}`
-
     try {
         const response = await fetch(url)
         const data = await response.json()
@@ -120,9 +160,7 @@ app.get("/api/arrivals", async (req, res) => {
 app.get("/api/shape/:shapeId", (req, res) => {
     const shapeId = req.params.shapeId
     const shape = shapes[shapeId]
-    if (!shape) {
-        return res.status(404).json({ error: "Shape not found" })
-    }
+    if (!shape) return res.status(404).json({ error: "Shape not found" })
     res.json({ shape })
 })
 
@@ -130,10 +168,7 @@ app.get("/api/shape/:shapeId", (req, res) => {
 app.get("/api/trip/:tripId/stops", (req, res) => {
     const tripId = req.params.tripId
     const stopTimes = stopTimesByTrip[tripId]
-
-    if (!stopTimes) {
-        return res.status(404).json({ error: "Trip not found" })
-    }
+    if (!stopTimes) return res.status(404).json({ error: "Trip not found" })
 
     const tripStops = stopTimes
         .sort((a, b) => parseInt(a.stop_sequence) - parseInt(b.stop_sequence))
@@ -153,16 +188,33 @@ app.get("/api/trip/:tripId/stops", (req, res) => {
     res.json({ stops: tripStops })
 })
 
+// All routes endpoint — one entry per direction
+app.get("/api/routes", (req, res) => {
+    res.json({
+        routes: routeDirections.map(({ id, route_short_name, route_long_name, headsign }) => ({
+            route_id: id,
+            route_short_name: route_short_name || "–",
+            route_long_name: headsign
+                ? headsign.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+                : route_long_name,
+            route_description: route_long_name,
+        }))
+    })
+})
+
+// Stops for a specific route direction
+app.get("/api/route/:routeId/stops", (req, res) => {
+    const entry = routeDirections.find(r => r.id === req.params.routeId)
+    if (!entry) return res.status(404).json({ error: "Route not found" })
+    res.json({ stops: entry.stops })
+})
+
 // Stop name search endpoint
 app.get("/api/search-stops", (req, res) => {
     const query = normalizeQuery(req.query.q ?? "")
-
-    if (!query) {
-        return res.status(400).json({ error: "No search query provided" })
-    }
+    if (!query) return res.status(400).json({ error: "No search query provided" })
 
     const terms = query.split(/\s+/).filter(Boolean)
-
     const results = stops
         .filter(stop =>
             terms.every(term =>
@@ -184,10 +236,7 @@ app.get("/api/search-stops", (req, res) => {
 app.get("/api/nearby-stops-by-coords", (req, res) => {
     const lat = parseFloat(req.query.lat)
     const lon = parseFloat(req.query.lon)
-
-    if (isNaN(lat) || isNaN(lon)) {
-        return res.status(400).json({ error: "Invalid coordinates" })
-    }
+    if (isNaN(lat) || isNaN(lon)) return res.status(400).json({ error: "Invalid coordinates" })
 
     const nearbyStops = stops
         .map(stop => ({
@@ -208,15 +257,8 @@ app.get("/api/nearby-stops-by-coords", (req, res) => {
 app.get("/api/stop/:stopId", (req, res) => {
     const stopId = req.params.stopId
     const stop = stopsById[stopId]
-
-    if (!stop) {
-        return res.status(404).json({ error: "Stop not found" })
-    }
-
-    res.json({
-        stop_id: stop.stop_id,
-        stop_name: stop.stop_name
-    })
+    if (!stop) return res.status(404).json({ error: "Stop not found" })
+    res.json({ stop_id: stop.stop_id, stop_name: stop.stop_name })
 })
 
 app.listen(3001, () => {
