@@ -31,5 +31,11 @@ export function useFavorites() {
     return favorites.some((f) => f.stop_id === currentStop?.id);
   };
 
-  return { favorites, saveToFavorites, removeFavorite, isCurrentStopFavorited };
+  const clearFavorites = () => {
+    persist([]);
+  };
+
+  return { favorites, saveToFavorites, removeFavorite, clearFavorites, isCurrentStopFavorited };
 }
+
+

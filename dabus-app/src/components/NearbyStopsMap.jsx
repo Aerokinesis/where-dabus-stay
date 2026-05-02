@@ -22,6 +22,7 @@ function NearbyStopsMap({
   userLocation,
   nearbyStopsMap,
   locating,
+  searchRadius,
   onSelectStop,
   onMount,
 }) {
@@ -59,35 +60,45 @@ function NearbyStopsMap({
             </Marker>
             <Circle
               center={[userLocation.lat, userLocation.lon]}
-              radius={402}
-              pathOptions={{ color: "#1a6faf", fillColor: "#1a6faf", fillOpacity: 0.1 }}
+              radius={searchRadius * 1609.34}
+              pathOptions={{
+                color: "#1a6faf",
+                fillColor: "#1a6faf",
+                fillOpacity: 0.1,
+              }}
             />
           </>
         )}
-        {nearbyStopsMap && nearbyStopsMap.map((stop) => (
-          <Marker
-            key={stop.stop_id}
-            position={[parseFloat(stop.stop_lat), parseFloat(stop.stop_lon)]}
-            icon={L.divIcon({
-              className: "",
-              html: `<div style="width:12px;height:12px;background:#e8b84b;border:2px solid #0a0a0a;border-radius:50%;cursor:pointer;"></div>`,
-              iconSize: [12, 12],
-              iconAnchor: [6, 6],
-            })}
-          >
-            <Popup>
-              <strong>
-                {stop.stop_name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
-              </strong>
-              <br />
-              Stop #{stop.stop_id} — {stop.distance.toFixed(2)} mi away
-              <br />
-              <button className={styles.popupBtn} onClick={() => onSelectStop(stop.stop_id)}>
-                Get Arrivals
-              </button>
-            </Popup>
-          </Marker>
-        ))}
+        {nearbyStopsMap &&
+          nearbyStopsMap.map((stop) => (
+            <Marker
+              key={stop.stop_id}
+              position={[parseFloat(stop.stop_lat), parseFloat(stop.stop_lon)]}
+              icon={L.divIcon({
+                className: "",
+                html: `<div style="width:12px;height:12px;background:#e8b84b;border:2px solid #0a0a0a;border-radius:50%;cursor:pointer;"></div>`,
+                iconSize: [12, 12],
+                iconAnchor: [6, 6],
+              })}
+            >
+              <Popup>
+                <strong>
+                  {stop.stop_name
+                    .toLowerCase()
+                    .replace(/\b\w/g, (c) => c.toUpperCase())}
+                </strong>
+                <br />
+                Stop #{stop.stop_id} — {stop.distance.toFixed(2)} mi away
+                <br />
+                <button
+                  className={styles.popupBtn}
+                  onClick={() => onSelectStop(stop.stop_id)}
+                >
+                  Get Arrivals
+                </button>
+              </Popup>
+            </Marker>
+          ))}
       </MapContainer>
     </div>
   );

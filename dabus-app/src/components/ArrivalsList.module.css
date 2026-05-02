@@ -4,17 +4,16 @@
 
 .stopHeader {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
   margin-bottom: 4px;
 }
 
 .stopInfo {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 2px;
+  align-items: flex-start;
 }
 
 .stopName {
@@ -172,7 +171,6 @@
 .summaryRow {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 10px;
 }
 

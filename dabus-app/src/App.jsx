@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styles from "./App.module.css";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -10,12 +10,18 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Favorites from "./components/Favorites";
 import SaveStopModal from "./components/SaveStopModal";
 import StopHistory from "./components/StopHistory";
+import RoutesTab from "./components/RoutesTab";
+import Toast from "./components/Toast";
+import PullToRefreshIndicator from "./components/PullToRefreshIndicator";
 import { useArrivals } from "./hooks/useArrivals";
 import { useFavorites } from "./hooks/useFavorites";
 import { useNearbyStops } from "./hooks/useNearbyStops";
 import { useBusTracking } from "./hooks/useBusTracking";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import { useStopHistory } from "./hooks/useStopHistory";
+import { API_BASE } from "./constants";
+import { useSettings } from "./hooks/useSettings";
+import SettingsTab from "./components/SettingsTab";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -39,6 +45,7 @@ function App() {
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [routeStops, setRouteStops] = useState(null);
   const [routeStopsLoading, setRouteStopsLoading] = useState(false);
+  const { settings, updateSetting } = useSettings();
 
   const {
     arrivals,
@@ -50,8 +57,13 @@ function App() {
     lastUpdated,
   } = useArrivals();
 
-  const { favorites, saveToFavorites, removeFavorite, isCurrentStopFavorited } =
-    useFavorites();
+  const {
+    favorites,
+    saveToFavorites,
+    removeFavorite,
+    clearFavorites,
+    isCurrentStopFavorited,
+  } = useFavorites();
 
   const [arrivalsTab, setArrivalsTab] = useState(null);
 
@@ -63,8 +75,9 @@ function App() {
     searchByAddress,
     locating,
     findNearbyStops,
+    refindNearbyStops,
     clearNearbyStops,
-  } = useNearbyStops(setError);
+  } = useNearbyStops(setError, settings.searchRadius);
 
   const {
     selectedBus,
@@ -78,6 +91,22 @@ function App() {
 
   const { stopHistory, addToHistory, removeFromHistory, clearHistory } =
     useStopHistory();
+
+  useEffect(() => {
+    console.log(
+      "useEffect fired",
+      activeTab,
+      settings.searchRadius,
+      userLocation,
+    );
+    if (activeTab === "nearby" && userLocation) {
+      refindNearbyStops(
+        userLocation.lat,
+        userLocation.lon,
+        settings.searchRadius,
+      );
+    }
+  }, [activeTab, settings.searchRadius]);
 
   const handleFetchArrivals = async (stopId, tab) => {
     clearBusTracking();
@@ -98,7 +127,7 @@ function App() {
   const fetchRoutes = async () => {
     setRoutesLoading(true);
     try {
-      const res = await fetch("http://192.168.4.27:3001/api/routes");
+      const res = await fetch(`${API_BASE}/api/routes`);
       const data = await res.json();
       setRoutes(data.routes);
     } catch {
@@ -113,9 +142,7 @@ function App() {
     setRouteStops(null);
     setRouteStopsLoading(true);
     try {
-      const res = await fetch(
-        `http://localhost:3001/api/route/${route.route_id}/stops`,
-      );
+      const res = await fetch(`${API_BASE}/api/route/${route.route_id}/stops`);
       const data = await res.json();
       setRouteStops(data.stops);
     } catch {
@@ -232,241 +259,37 @@ function App() {
             userLocation={userLocation}
             nearbyStopsMap={nearbyStopsMap}
             locating={locating}
+            searchRadius={settings.searchRadius}
             onSelectStop={(stopId) => handleFetchArrivals(stopId, "nearby")}
-            onMount={findNearbyStops}
+            onMount={() => {
+              if (userLocation) {
+                refindNearbyStops(
+                  userLocation.lat,
+                  userLocation.lon,
+                  settings.searchRadius,
+                );
+              } else {
+                findNearbyStops();
+              }
+            }}
           />
         )}
 
         {activeTab === "routes" && arrivalsTab !== "routes" && (
-          <div>
-            {selectedRoute ? (
-              <>
-                <button
-                  onClick={() => {
-                    setSelectedRoute(null);
-                    setRouteStops(null);
-                  }}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "var(--primary)",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                    padding: "0 0 12px 0",
-                    display: "block",
-                  }}
-                >
-                  ← Routes
-                </button>
-                <div
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius)",
-                    padding: "12px 14px",
-                    marginBottom: "12px",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "inline-block",
-                      background: "var(--primary)",
-                      color: "#fff",
-                      fontSize: "15px",
-                      fontWeight: 500,
-                      padding: "4px 12px",
-                      borderRadius: "6px",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    {selectedRoute.route_short_name}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "14px",
-                      color: "var(--text)",
-                      fontWeight: 500,
-                    }}
-                  >
-                    {selectedRoute.route_long_name}
-                  </div>
-                </div>
-                {routeStopsLoading && (
-                  <p
-                    style={{
-                      fontSize: "14px",
-                      color: "var(--text-muted)",
-                      padding: "16px 0",
-                    }}
-                  >
-                    Loading stops…
-                  </p>
-                )}
-                {routeStops && (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "6px",
-                    }}
-                  >
-                    <p
-                      style={{
-                        fontSize: "10px",
-                        fontWeight: 500,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                        color: "var(--text-muted)",
-                        marginBottom: "6px",
-                      }}
-                    >
-                      Stops on this route
-                    </p>
-                    {routeStops.map((stop) => (
-                      <div
-                        key={stop.stop_id}
-                        style={{
-                          background: "var(--surface)",
-                          border: "1px solid var(--border)",
-                          borderRadius: "var(--radius)",
-                          padding: "10px 14px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <div>
-                          <div
-                            style={{
-                              fontSize: "13px",
-                              color: "var(--text)",
-                              fontWeight: 500,
-                            }}
-                          >
-                            {stop.stop_name
-                              .toLowerCase()
-                              .replace(/\b\w/g, (c) => c.toUpperCase())}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: "11px",
-                              color: "var(--text-muted)",
-                              marginTop: "2px",
-                            }}
-                          >
-                            Stop #{stop.stop_id}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() =>
-                            handleFetchArrivals(stop.stop_id, "routes")
-                          }
-                          style={{
-                            background: "var(--primary)",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: "6px",
-                            padding: "5px 10px",
-                            fontSize: "11px",
-                            cursor: "pointer",
-                            flexShrink: 0,
-                          }}
-                        >
-                          Arrivals
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                {routesLoading && (
-                  <p
-                    style={{
-                      fontSize: "14px",
-                      color: "var(--text-muted)",
-                      padding: "16px 0",
-                    }}
-                  >
-                    Loading routes…
-                  </p>
-                )}
-                {!routesLoading && routes && filteredRoutes.length === 0 && (
-                  <p
-                    style={{
-                      fontSize: "14px",
-                      color: "var(--text-muted)",
-                      padding: "16px 0",
-                    }}
-                  >
-                    No routes found.
-                  </p>
-                )}
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "6px",
-                  }}
-                >
-                  {filteredRoutes.map((route) => (
-                    <div
-                      key={route.route_id}
-                      onClick={() => fetchRouteStops(route)}
-                      style={{
-                        background: "var(--surface)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "var(--radius)",
-                        padding: "12px 14px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <div
-                        style={{
-                          background: "var(--primary)",
-                          color: "#fff",
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          padding: "4px 10px",
-                          borderRadius: "6px",
-                          flexShrink: 0,
-                          minWidth: "40px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {route.route_short_name}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: "13px", color: "var(--text)" }}>
-                          {route.route_long_name}
-                        </div>
-                        {route.route_description && (
-                          <div
-                            style={{
-                              fontSize: "11px",
-                              color: "var(--text-muted)",
-                              marginTop: "2px",
-                            }}
-                          >
-                            {route.route_description}
-                          </div>
-                        )}
-                      </div>
-                      <span
-                        style={{ color: "var(--text-muted)", fontSize: "16px" }}
-                      >
-                        ›
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          <RoutesTab
+            routes={routes}
+            routesLoading={routesLoading}
+            filteredRoutes={filteredRoutes}
+            selectedRoute={selectedRoute}
+            routeStops={routeStops}
+            routeStopsLoading={routeStopsLoading}
+            onSelectRoute={fetchRouteStops}
+            onClearRoute={() => {
+              setSelectedRoute(null);
+              setRouteStops(null);
+            }}
+            onSelectStop={(stopId) => handleFetchArrivals(stopId, "routes")}
+          />
         )}
 
         {activeTab === "favorites" && (
@@ -499,6 +322,20 @@ function App() {
               />
             )}
           </>
+        )}
+
+        {activeTab === "settings" && (
+          <SettingsTab
+            settings={settings}
+            onUpdateSetting={(key, value) => {
+              updateSetting(key, value);
+              if (key === "searchRadius" && userLocation) {
+                refindNearbyStops(userLocation.lat, userLocation.lon, value);
+              }
+            }}
+            onClearHistory={clearHistory}
+            onClearFavorites={clearFavorites}
+          />
         )}
 
         {loading && <p>Loading arrivals...</p>}
@@ -537,57 +374,11 @@ function App() {
           </div>
         )}
 
-        {(isPulling || triggered) && (
-          <div
-            style={{
-              position: "fixed",
-              top: "60px",
-              left: "50%",
-              transform: triggered
-                ? "translateX(-50%) translateY(48px)"
-                : `translateX(-50%) translateY(${Math.min(pullDistance * 0.6, 48)}px)`,
-              zIndex: 100,
-              width: "36px",
-              height: "36px",
-              borderRadius: "50%",
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              pointerEvents: "none",
-              transition: triggered
-                ? "transform 0.2s ease, opacity 0.5s ease 0.2s"
-                : "transform 0.05s ease",
-              opacity: triggered ? 0 : 1,
-            }}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--primary)"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{
-                transform: triggered
-                  ? "rotate(360deg)"
-                  : `rotate(${(pullDistance / 80) * 360}deg)`,
-                transition: triggered
-                  ? "transform 0.5s ease"
-                  : "transform 0.05s ease",
-                animation: triggered ? "spin 0.6s linear" : "none",
-              }}
-            >
-              <path d="M23 4v6h-6" />
-              <path d="M1 20v-6h6" />
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-            </svg>
-          </div>
-        )}
+        <PullToRefreshIndicator
+          isPulling={isPulling}
+          pullDistance={pullDistance}
+          triggered={triggered}
+        />
 
         <ErrorBoundary>
           {arrivals && arrivalsTab === activeTab && (
@@ -712,6 +503,25 @@ function App() {
           </svg>
           <span>Recent</span>
         </button>
+
+        <button
+          className={`${styles.navBtn} ${activeTab === "settings" ? styles.active : ""}`}
+          onClick={() => setActiveTab("settings")}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          <span>Settings</span>
+        </button>
       </nav>
 
       {showSaveModal && currentStop && (
@@ -726,64 +536,7 @@ function App() {
         />
       )}
 
-      {toast && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "80px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: "20px",
-            padding: "10px 18px",
-            fontSize: "13px",
-            color: "var(--text)",
-            zIndex: 2000,
-            whiteSpace: "nowrap",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-            animation: toastFading
-              ? "fadeOut 1.2s ease forwards"
-              : "fadeIn 0.4s ease",
-          }}
-        >
-          {toastType === "remove" ? (
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{ color: "#f87171", flexShrink: 0 }}
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="15" y1="9" x2="9" y2="15" />
-              <line x1="9" y1="9" x2="15" y2="15" />
-            </svg>
-          ) : (
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{ color: "#f87171", flexShrink: 0 }}
-            >
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-          )}
-          {toast}
-        </div>
-      )}
+      {toast && <Toast message={toast} type={toastType} fading={toastFading} />}
     </div>
   );
 }

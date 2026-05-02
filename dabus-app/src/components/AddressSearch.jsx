@@ -1,6 +1,7 @@
 import { createPortal } from "react-dom";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import styles from "./AddressSearch.module.css";
+import "../dabus-portal.css";
 
 function AddressSearch({
   query,
@@ -13,6 +14,19 @@ function AddressSearch({
 }) {
   const containerRef = useRef(null);
   const resultsRef = useRef(null);
+  const [portalStyle, setPortalStyle] = useState({});
+
+  useEffect(() => {
+    if (nearbyStops && nearbyStops.length > 0 && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setPortalStyle({
+        position: "fixed",
+        top: `${rect.bottom}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+      });
+    }
+  }, [nearbyStops]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -34,17 +48,6 @@ function AddressSearch({
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter") onSearch();
-  };
-
-  const getPortalStyle = () => {
-    if (!containerRef || !containerRef.current) return {};
-    const rect = containerRef.current.getBoundingClientRect();
-    return {
-      position: "fixed",
-      top: `${rect.bottom}px`,
-      left: `${rect.left}px`,
-      width: `${rect.width}px`,
-    };
   };
 
   return (
@@ -86,36 +89,26 @@ function AddressSearch({
       {nearbyStops &&
         nearbyStops.length > 0 &&
         createPortal(
-          <>
-            <style>{`
-              .dabus-results { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; max-height: 60vh; overflow-y: auto; z-index: 9999; }
-              .dabus-result-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
-              .dabus-result-item:last-child { border-bottom: none; }
-              .dabus-result-item:active { background: var(--border); }
-              .dabus-stop-name { font-size: 14px; color: var(--text); }
-              .dabus-stop-id { font-size: 12px; color: var(--accent); margin-top: 2px; }
-            `}</style>
-            <div
-              className="dabus-results"
-              ref={resultsRef}
-              style={getPortalStyle()}
-            >
-              {nearbyStops.map((stop) => (
-                <div
-                  key={stop.stop_id}
-                  className="dabus-result-item"
-                  onClick={() => onSelectStop(stop.stop_id)}
-                >
-                  <div className="dabus-stop-name">
-                    {stop.stop_name
-                      .toLowerCase()
-                      .replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </div>
-                  <div className="dabus-stop-id">Stop #{stop.stop_id}</div>
+          <div
+            className="dabus-results"
+            ref={resultsRef}
+            style={portalStyle}
+          >
+            {nearbyStops.map((stop) => (
+              <div
+                key={stop.stop_id}
+                className="dabus-result-item"
+                onClick={() => onSelectStop(stop.stop_id)}
+              >
+                <div className="dabus-stop-name">
+                  {stop.stop_name
+                    .toLowerCase()
+                    .replace(/\b\w/g, (c) => c.toUpperCase())}
                 </div>
-              ))}
-            </div>
-          </>,
+                <div className="dabus-stop-id">Stop #{stop.stop_id}</div>
+              </div>
+            ))}
+          </div>,
           document.body,
         )}
     </div>

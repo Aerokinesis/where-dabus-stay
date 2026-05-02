@@ -1,0 +1,123 @@
+.backBtn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 0 12px 0;
+  display: block;
+}
+
+.routeHeader {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.routeBadge {
+  display: inline-block;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.routeName {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.status {
+  font-size: 14px;
+  color: var(--text-muted);
+  padding: 16px 0;
+}
+
+.stopList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stopListLabel {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.stopRow {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stopName {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.stopId {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.arrivalsBtn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.routeList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.routeRow {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.routeRowName {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.routeRowDesc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.arrow {
+  color: var(--text-muted);
+  font-size: 16px;
+}

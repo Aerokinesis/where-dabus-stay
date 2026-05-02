@@ -1,8 +1,7 @@
 import { useState } from "react";
+import { API_BASE } from "../constants";
 
-const API_BASE = "http://192.168.4.27:3001"
-
-export function useNearbyStops(setError) {
+export function useNearbyStops(setError, searchRadius = 0.25) {
   const [nearbyStops, setNearbyStops] = useState(null);
   const [nearbyStopsMap, setNearbyStopsMap] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
@@ -41,7 +40,7 @@ export function useNearbyStops(setError) {
         setUserLocation({ lat, lon });
 
         try {
-          const res = await fetch(`${API_BASE}/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}`);
+          const res = await fetch(`${API_BASE}/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}&radius=${searchRadius}`);
           const data = await res.json();
           if (data.stops) {
             setNearbyStopsMap(data.stops);
@@ -60,14 +59,29 @@ export function useNearbyStops(setError) {
     );
   };
 
-  return {
-    nearbyStops,
-    nearbyStopsMap,
-    userLocation,
-    searchingAddress,
-    locating,
-    searchByAddress,
-    findNearbyStops,
-    clearNearbyStops: () => setNearbyStops(null),
+  const refindNearbyStops = async (lat, lon, radius) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}&radius=${radius}`);
+      console.log("refindNearbyStops called", lat, lon, radius);
+      const data = await res.json();
+      if (data.stops) {
+        setNearbyStopsMap(data.stops);
+        setError(null);
+      }
+    } catch (_err) {
+      setError("Could not find nearby stops.");
+    }
   };
+
+  return {
+  nearbyStops,
+  nearbyStopsMap,
+  userLocation,
+  searchingAddress,
+  locating,
+  searchByAddress,
+  findNearbyStops,
+  refindNearbyStops,
+  clearNearbyStops: () => setNearbyStops(null),
+};
 }

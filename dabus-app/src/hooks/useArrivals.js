@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
-const API_BASE = "http://192.168.4.27:3001"
+import { API_BASE } from "../constants";
 
 function formatStopName(raw, stopId) {
   return raw

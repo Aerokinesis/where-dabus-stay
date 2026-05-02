@@ -4,6 +4,7 @@ import fetch from "node-fetch"
 import dotenv from "dotenv"
 import fs from "fs"
 import { parse } from "csv-parse/sync"
+import https from "https"
 
 dotenv.config()
 
@@ -236,6 +237,8 @@ app.get("/api/search-stops", (req, res) => {
 app.get("/api/nearby-stops-by-coords", (req, res) => {
     const lat = parseFloat(req.query.lat)
     const lon = parseFloat(req.query.lon)
+    const radius = parseFloat(req.query.radius) || 0.25   // add this
+    console.log("nearby stops request — radius:", radius, "raw:", req.query.radius)
     if (isNaN(lat) || isNaN(lon)) return res.status(400).json({ error: "Invalid coordinates" })
 
     const nearbyStops = stops
@@ -246,7 +249,7 @@ app.get("/api/nearby-stops-by-coords", (req, res) => {
             stop_lon: stop.stop_lon,
             distance: getDistance(lat, lon, parseFloat(stop.stop_lat), parseFloat(stop.stop_lon))
         }))
-        .filter(stop => stop.distance <= 0.25)
+        .filter(stop => stop.distance <= radius)           // was: <= 0.25
         .sort((a, b) => a.distance - b.distance)
         .slice(0, 20)
 
@@ -261,6 +264,12 @@ app.get("/api/stop/:stopId", (req, res) => {
     res.json({ stop_id: stop.stop_id, stop_name: stop.stop_name })
 })
 
-app.listen(3001, () => {
-    console.log("Server running on http://localhost:3001")
+// Start HTTPS server with mkcert certificates
+const httpsOptions = {
+    key: fs.readFileSync("./192.168.4.27+2-key.pem"),
+    cert: fs.readFileSync("./192.168.4.27+2.pem"),
+}
+
+https.createServer(httpsOptions, app).listen(3001, () => {
+    console.log("Server running on https://localhost:3001")
 })
