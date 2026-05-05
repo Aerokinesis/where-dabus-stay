@@ -3347,7 +3347,7 @@ stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,locatio
 4322,4322,ARIZONA MEMORIAL,,21.366533,-157.93796,,http://hea.thebus.org/nextbus.asp?s=4322,,,4434
 4325,4325,ENTERPRISE AVE + ROOSEVELT AVE,,21.324651,-158.0676,,http://hea.thebus.org/nextbus.asp?s=4325,,,4437
 4328,4328,DOLE ST + FRANK ST,,21.292592,-157.810536,,http://hea.thebus.org/nextbus.asp?s=4328,,,4439
-4329,4329,DOLE ST + HALE ALOHA RD,,21.295851,-157.812973,,http://hea.thebus.org/nextbus.asp?s=4329,,,4440
+4329,4329,DOLE ST + HALE ALOHA RD,,21.295941,-157.812958,,http://hea.thebus.org/nextbus.asp?s=4329,,,4440
 4330,4330,DOLE ST + LOWER CAMPUS RD,,21.296821,-157.819715,,http://hea.thebus.org/nextbus.asp?s=4330,,,4441
 4331,4331,NAKINI ST + OPP HULI ST,,21.328969,-157.696713,,http://hea.thebus.org/nextbus.asp?s=4331,,,4450
 4334,4334,PIIKOI ST + WAIMANU ST,,21.292447,-157.847108,,http://hea.thebus.org/nextbus.asp?s=4334,,,4451
@@ -3733,7 +3733,7 @@ stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,locatio
 4805,4805,KUPUNA LP + KIME ST,,21.392836,-158.024555,,http://hea.thebus.org/nextbus.asp?s=4805,,,4953
 4806,4806,ROOSEVELT AVE + BOXER RD,,21.324814,-158.085552,,http://hea.thebus.org/nextbus.asp?s=4806,,,4954
 4807,4807,ROOSEVELT AVE + HORNET AVE,,21.32287,-158.078221,,http://hea.thebus.org/nextbus.asp?s=4807,,,4955
-4808,4808,ROOSEVELT AVE + LEXINGTON ST,,21.322744,-158.073899,,http://hea.thebus.org/nextbus.asp?s=4808,,,4956
+4808,4808,ROOSEVELT AVE + LEXINGTON ST,,21.322871,-158.073534,,http://hea.thebus.org/nextbus.asp?s=4808,,,4956
 4809,4809,OPP KA MAKANA ALII CENTER - WEST,,21.331997,-158.051581,,http://hea.thebus.org/nextbus.asp?s=4809,,,4957
 4810,4810,KAPOLEI PKWY + OPP KUALAKAI PKWY,,21.335369,-158.050267,,http://hea.thebus.org/nextbus.asp?s=4810,,,4958
 4811,4811,KAPOLEI PKWY + RENTON RD,,21.334904,-158.040781,,http://hea.thebus.org/nextbus.asp?s=4811,,,4959
@@ -3749,7 +3749,7 @@ stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,locatio
 4821,4821,KA MAKANA ALII MAIN DRWY + OPP KUALAKAI PKWY,,21.335429,-158.051353,,http://hea.thebus.org/nextbus.asp?s=4821,,,4969
 4822,4822,KA MAKANA ALII CENTER - EAST,,21.333322,-158.05006,,http://hea.thebus.org/nextbus.asp?s=4822,,,4970
 4823,4823,KA MAKANA ALII CENTER - WEST,,21.332426,-158.051924,,http://hea.thebus.org/nextbus.asp?s=4823,,,4971
-4824,4824,ROOSEVELT AVE + OPP LEXINGTON ST,,21.323146,-158.073306,,http://hea.thebus.org/nextbus.asp?s=4824,,,4972
+4824,4824,ROOSEVELT AVE + OPP LEXINGTON ST,,21.323022,-158.073529,,http://hea.thebus.org/nextbus.asp?s=4824,,,4972
 4825,4825,ROOSEVELT AVE + OPP HORNET AVE,,21.323213,-158.078377,,http://hea.thebus.org/nextbus.asp?s=4825,,,4973
 4826,4826,ROOSEVELT AVE + KAMOKILA BL,,21.325282,-158.0865,,http://hea.thebus.org/nextbus.asp?s=4826,,,4974
 4827,4827,KUALAKAI PKWY + KUMAAIKU ST,,21.34194,-158.053945,,http://hea.thebus.org/nextbus.asp?s=4827,,,4975
@@ -3775,7 +3775,7 @@ stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,locatio
 4847,4847,PATTERSON RD + OPP SPARK MATSUNAGA VA MEDICAL CENT,,21.361568,-157.888958,,http://hea.thebus.org/nextbus.asp?s=4847,,,4996
 4848,4848,LELEPAUA AIRPORT STATION,,21.334317,-157.920808,,http://hea.thebus.org/nextbus.asp?s=4848,,,4997
 4849,4849,85-908 WAIANAE VALLEY RD,,21.456765,-158.172353,,http://hea.thebus.org/nextbus.asp?s=4849,,,4998
-4850,4850,LAGOON DR + UALENA ST,,21.333012,-157.901874,,http://hea.thebus.org/nextbus.asp?s=4850,,,4999
+4850,4850,LAGOON DR + UALENA ST (NEARSIDE),,21.333012,-157.901874,,http://hea.thebus.org/nextbus.asp?s=4850,,,4999
 4851,4851,KALEWA ST TERMINUS,,21.327639,-157.900972,,http://hea.thebus.org/nextbus.asp?s=4851,,,5000
 4852,4852,LAGOON DR + WAIWAI LP (NEARSIDE),,21.332651,-157.901702,,http://hea.thebus.org/nextbus.asp?s=4852,,,5001
 4853,4853,LAGOON DR + WAIWAI LP (FARSIDE),,21.332987,-157.901651,,http://hea.thebus.org/nextbus.asp?s=4853,,,5002
@@ -3816,3 +3816,7 @@ stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,locatio
 10032,10032,LELEPAUA DANIEL K. INOUYE INTERNATIONAL AIRPORT STATION,,21.333777,-157.920954,,http://hea.thebus.org/nextbus.asp?s=10032,,,
 10031,10031,AHUA LAGOON DRIVE STATION,,21.332778,-157.901383,,http://hea.thebus.org/nextbus.asp?s=10031,,,
 10030,10030,KAHAUIKI KALIHI TRANSIT CENTER STATION,,21.33274,-157.888805,,http://hea.thebus.org/nextbus.asp?s=10030,,,
+4329_merge,4329,DOLE ST + HALE ALOHA RD,,21.295851,-157.812973,,http://hea.thebus.org/nextbus.asp?s=4329,,,4440
+4808_merge,4808,ROOSEVELT AVE + LEXINGTON ST,,21.322744,-158.073899,,http://hea.thebus.org/nextbus.asp?s=4808,,,4956
+4824_merge,4824,ROOSEVELT AVE + OPP LEXINGTON ST,,21.323146,-158.073306,,http://hea.thebus.org/nextbus.asp?s=4824,,,4972
+4850_merge,4850,LAGOON DR + UALENA ST,,21.333012,-157.901874,,http://hea.thebus.org/nextbus.asp?s=4850,,,4999

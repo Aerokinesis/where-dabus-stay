@@ -35,7 +35,7 @@ export function useFavorites() {
     persist([]);
   };
 
-  return { favorites, saveToFavorites, removeFavorite, clearFavorites, isCurrentStopFavorited };
+  return { favorites, saveToFavorites, removeFavorite, clearFavorites, isCurrentStopFavorited};
 }
 
 

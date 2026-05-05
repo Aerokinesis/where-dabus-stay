@@ -8,6 +8,8 @@ function formatStopName(raw, stopId) {
     : `Stop #${stopId}`;
 }
 
+
+
 export function useArrivals() {
   const [arrivals, setArrivals] = useState(null);
   const [currentStop, setCurrentStop] = useState(null);
@@ -51,6 +53,11 @@ export function useArrivals() {
     return () => clearInterval(interval);
   }, [currentStop, fetchArrivals]);
 
+  const clearArrivals = () => {
+    setArrivals(null);
+    setCurrentStop(null);
+  };
+
   return {
     arrivals,
     currentStop,
@@ -59,5 +66,6 @@ export function useArrivals() {
     setError,
     fetchArrivals,
     lastUpdated,
+    clearArrivals,
   };
 }

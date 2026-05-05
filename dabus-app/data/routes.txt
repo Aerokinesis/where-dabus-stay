@@ -112,10 +112,10 @@ route_id,route_short_name,route_long_name,route_desc,route_type,agency_id,route_
 186,47,Keoneae UH West Oahu-Ewa Beach,,3,TheBus,,
 187,421,Kapilina,,3,TheBus,,
 188,331,Makalapa-Hickam,,3,TheBus,,
-22,A,Ahua-UH Manoa,,3,TheBus,00FF00,000000
 189,A LINE,Ahua-UH Manoa,,3,TheBus,00FF00,000000
 190,U LINE,Ahua-UH Manoa via Freeway,,3,TheBus,328F16,FFFFFF
 191,W LINE,Airport-Waikiki,,3,TheBus,00FFFF,000000
-192,U,Ahua-UH Manoa via Freeway,,3,TheBus,328F16,FFFFFF
-193,W,Airport-Waikiki,,3,TheBus,00FFFF,000000
+22_merge,A,Ahua-UH Manoa,,3,TheBus,00FF00,000000
+192_merge,U,Ahua-UH Manoa via Freeway,,3,TheBus,328F16,FFFFFF
+193_merge,W,Airport-Waikiki,,3,TheBus,00FFFF,000000
 181,,SKYLINE,,1,Skyline,142e57,FFFFFF

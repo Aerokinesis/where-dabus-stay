@@ -10,6 +10,8 @@ export function useBusTracking(setError) {
   const [trackingLoading, setTrackingLoading] = useState(false);
 
   const fetchBusLocation = async (bus) => {
+    console.log("bus object:", JSON.stringify(bus, null, 2));
+    
     if (bus.estimated !== "1") return;
 
     if (selectedBus?.id === bus.id) {
@@ -44,7 +46,7 @@ export function useBusTracking(setError) {
 
     const [shapeRes, tripRes] = await Promise.allSettled([
       fetch(`${API_BASE}/api/shape/${bus.shape}`),
-      fetch(`${API_BASE}/api/trip/${bus.trip}/stops`),
+      fetch(`${API_BASE}/api/trip/${bus.trip}/stops?shape=${bus.shape}`),
     ]);
 
     if (shapeRes.status === "fulfilled") {

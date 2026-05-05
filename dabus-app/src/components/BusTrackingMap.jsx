@@ -1,52 +1,29 @@
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Polyline,
+} from "react-leaflet";
 import { useState } from "react";
 import L from "leaflet";
 
-function BusTrackingMap({ busLocation, selectedBus, busShape, tripStops, onBack }) {
+function BusTrackingMap({ busLocation, selectedBus, busShape, tripStops, onGetArrivals }) {
   const [satelliteView, setSatelliteView] = useState(false);
 
   return (
-    <div style={{
-      position: "fixed",
-      inset: 0,
-      zIndex: 1100,        // well above nav (200) and everything else
-      display: "flex",
-      flexDirection: "column",
-      background: "var(--bg)",
-    }}>
-      {/* Header — rendered first in DOM, always on top within this stacking context */}
-      <div style={{
-        flexShrink: 0,
-        padding: "12px 16px",
-        background: "var(--surface)",
-        borderBottom: "1px solid var(--border)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "4px",
-        zIndex: 501,
-        position: "relative",
-      }}>
-        <button
-          onClick={onBack}
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--primary)",
-            fontSize: "14px",
-            cursor: "pointer",
-            padding: 0,
-            textAlign: "left",
-          }}
-        >
-          ← Back to arrivals
-        </button>
-        <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-          Route {busLocation.route_short_name} — {busLocation.headsign}
-        </p>
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div
+        style={{
+          flexShrink: 0,
+          padding: "8px 16px",
+          background: "var(--surface)",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
         <button
           onClick={() => setSatelliteView(!satelliteView)}
           style={{
-            alignSelf: "flex-start",
             background: "none",
             border: "1px solid var(--border)",
             borderRadius: "6px",
@@ -54,17 +31,17 @@ function BusTrackingMap({ busLocation, selectedBus, busShape, tripStops, onBack 
             fontSize: "13px",
             padding: "4px 10px",
             cursor: "pointer",
-            marginTop: "4px",
           }}
         >
           {satelliteView ? "Map view" : "Satellite view"}
         </button>
       </div>
-
-      {/* Map fills remaining space */}
-      <div style={{ flex: 1, height: 0, position: "relative", zIndex: 500 }}>
+      <div style={{ flex: 1, height: 0 }}>
         <MapContainer
-          center={[parseFloat(busLocation.latitude), parseFloat(busLocation.longitude)]}
+          center={[
+            parseFloat(busLocation.latitude),
+            parseFloat(busLocation.longitude),
+          ]}
           zoom={15}
           style={{ height: "100%", width: "100%" }}
         >
@@ -79,40 +56,74 @@ function BusTrackingMap({ busLocation, selectedBus, busShape, tripStops, onBack 
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             />
           )}
-          <Marker position={[parseFloat(busLocation.latitude), parseFloat(busLocation.longitude)]}>
+          <Marker
+            position={[
+              parseFloat(busLocation.latitude),
+              parseFloat(busLocation.longitude),
+            ]}
+          >
             <Popup>
-              Route {selectedBus.route} — {selectedBus.headsign}<br />
-              Bus #{busLocation.number}<br />
+              Route {selectedBus.route} — {selectedBus.headsign}
+              <br />
+              Bus #{busLocation.number}
+              <br />
               {busLocation.adherence > 0
                 ? `${busLocation.adherence} min early`
                 : busLocation.adherence < 0
-                ? `${Math.abs(busLocation.adherence)} min late`
-                : "On time"}
+                  ? `${Math.abs(busLocation.adherence)} min late`
+                  : "On time"}
             </Popup>
           </Marker>
           {busShape && (
-            <Polyline positions={busShape} color="#1a6faf" weight={3} opacity={0.7} />
+            <Polyline
+              positions={busShape}
+              color="#1a6faf"
+              weight={3}
+              opacity={0.7}
+            />
           )}
-          {tripStops && tripStops.map((stop) => (
-            <Marker
-              key={stop.stop_id}
-              position={[stop.stop_lat, stop.stop_lon]}
-              icon={L.divIcon({
-                className: "",
-                html: `<div style="width:10px;height:10px;background:#e8b84b;border:2px solid #0a0a0a;border-radius:50%;"></div>`,
-                iconSize: [10, 10],
-                iconAnchor: [5, 5],
-              })}
-            >
-              <Popup>
-                <strong>
-                  {stop.stop_name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
-                </strong><br />
-                Stop #{stop.stop_id}<br />
-                {stop.arrival_time}
-              </Popup>
-            </Marker>
-          ))}
+          {tripStops &&
+            tripStops.map((stop) => (
+              <Marker
+                key={stop.stop_id}
+                position={[stop.stop_lat, stop.stop_lon]}
+                icon={L.divIcon({
+                  className: "",
+                  html: `<div style="width:16px;height:16px;background:#e8b84b;border:2px solid #0a0a0a;border-radius:50%;"></div>`,
+                  iconSize: [16, 16],
+                  iconAnchor: [5, 5],
+                })}
+              >
+                <Popup>
+                  <strong>
+                    {stop.stop_name
+                      .toLowerCase()
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </strong>
+                  <br />
+                  Stop #{stop.stop_id}
+                  <br />
+                  {stop.arrival_time}
+                  <br />
+                  <button
+                    onClick={() => onGetArrivals(stop.stop_id)}
+                    style={{
+                      marginTop: "6px",
+                      background: "#1a6faf",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "6px",
+                      padding: "5px 10px",
+                      fontSize: "12px",
+                      cursor: "pointer",
+                      width: "100%",
+                    }}
+                  >
+                    Get Arrivals
+                  </button>
+                </Popup>
+              </Marker>
+            ))}
         </MapContainer>
       </div>
     </div>

@@ -47,6 +47,10 @@ function SaveStopModal({ stop, onSave, onCancel }) {
             type="text"
             value={customName}
             onChange={(e) => setCustomName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onSave(customName);
+              if (e.key === "Escape") onCancel();
+            }}
             style={{
               width: "100%",
               padding: "10px 12px",

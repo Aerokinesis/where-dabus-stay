@@ -6,7 +6,7 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
   const [nearbyStopsMap, setNearbyStopsMap] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [searchingAddress, setSearchingAddress] = useState(false);
-  const [locating, setLocating] = useState(false);        // add this
+  const [locating, setLocating] = useState(false);
 
   const searchByAddress = async (query) => {
     setSearchingAddress(true);
@@ -17,71 +17,54 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
       const data = await res.json();
       if (data.error) setError(data.error);
       else setNearbyStops(data.stops);
-    } catch (_err) {
+    } catch {
       setError("Could not search for stops. Try again.");
     } finally {
       setSearchingAddress(false);
     }
   };
 
+  const refindNearbyStops = async (lat, lon, radius) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}&radius=${radius}`);
+      const data = await res.json();
+      if (data.stops) setNearbyStopsMap(data.stops);
+    } catch {
+      setError("Could not find nearby stops.");
+    }
+  };
+
   const findNearbyStops = () => {
-    if (locating || userLocation) return;
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
       return;
     }
-
     setLocating(true);
-
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
         setUserLocation({ lat, lon });
-
-        try {
-          const res = await fetch(`${API_BASE}/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}&radius=${searchRadius}`);
-          const data = await res.json();
-          if (data.stops) {
-            setNearbyStopsMap(data.stops);
-            setError(null);       // clear any stale error on success
-          }
-        } catch (_err) {
-          setError("Could not find nearby stops.");
-        } finally {
-          setLocating(false);
-        }
+        await refindNearbyStops(lat, lon, searchRadius);
+        setLocating(false);
       },
       () => {
-        setLocating(false);
         setError("Could not get your location. Please allow location access.");
-      }
+        setLocating(false);
+      },
+      { maximumAge: 60000, timeout: 10000 }
     );
   };
 
-  const refindNearbyStops = async (lat, lon, radius) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}&radius=${radius}`);
-      console.log("refindNearbyStops called", lat, lon, radius);
-      const data = await res.json();
-      if (data.stops) {
-        setNearbyStopsMap(data.stops);
-        setError(null);
-      }
-    } catch (_err) {
-      setError("Could not find nearby stops.");
-    }
-  };
-
   return {
-  nearbyStops,
-  nearbyStopsMap,
-  userLocation,
-  searchingAddress,
-  locating,
-  searchByAddress,
-  findNearbyStops,
-  refindNearbyStops,
-  clearNearbyStops: () => setNearbyStops(null),
-};
+    nearbyStops,
+    nearbyStopsMap,
+    userLocation,
+    searchingAddress,
+    locating,
+    searchByAddress,
+    findNearbyStops,
+    refindNearbyStops,
+    clearNearbyStops: () => setNearbyStops(null),
+  };
 }

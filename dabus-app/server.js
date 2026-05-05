@@ -168,7 +168,21 @@ app.get("/api/shape/:shapeId", (req, res) => {
 // Trip stops endpoint
 app.get("/api/trip/:tripId/stops", (req, res) => {
     const tripId = req.params.tripId
-    const stopTimes = stopTimesByTrip[tripId]
+
+    // Try direct lookup first (static GTFS trip ID)
+    let stopTimes = stopTimesByTrip[tripId]
+
+    // If not found, try matching by shape_id (realtime trip IDs won't be in GTFS)
+    if (!stopTimes) {
+        const shapeId = req.query.shape
+        if (shapeId) {
+            const matchingTrip = tripsRaw.find(t => t.shape_id === shapeId)
+            if (matchingTrip) {
+                stopTimes = stopTimesByTrip[matchingTrip.trip_id]
+            }
+        }
+    }
+
     if (!stopTimes) return res.status(404).json({ error: "Trip not found" })
 
     const tripStops = stopTimes
@@ -249,7 +263,7 @@ app.get("/api/nearby-stops-by-coords", (req, res) => {
             stop_lon: stop.stop_lon,
             distance: getDistance(lat, lon, parseFloat(stop.stop_lat), parseFloat(stop.stop_lon))
         }))
-        .filter(stop => stop.distance <= radius)           // was: <= 0.25
+        .filter(stop => stop.distance <= radius)
         .sort((a, b) => a.distance - b.distance)
         .slice(0, 20)
 
@@ -270,6 +284,11 @@ const httpsOptions = {
     cert: fs.readFileSync("./192.168.4.27+2.pem"),
 }
 
+app.get("/api/debug/shapes", (req, res) => {
+    res.json({ sample: Object.keys(shapes).slice(0, 20) })
+})
+
 https.createServer(httpsOptions, app).listen(3001, () => {
     console.log("Server running on https://localhost:3001")
 })
+

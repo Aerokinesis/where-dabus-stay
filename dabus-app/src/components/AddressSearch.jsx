@@ -98,7 +98,7 @@ function AddressSearch({
               <div
                 key={stop.stop_id}
                 className="dabus-result-item"
-                onClick={() => onSelectStop(stop.stop_id)}
+                onMouseDown={() => onSelectStop(stop.stop_id)}
               >
                 <div className="dabus-stop-name">
                   {stop.stop_name

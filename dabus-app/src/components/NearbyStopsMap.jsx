@@ -1,4 +1,6 @@
-import { useEffect } from "react";
+import L from "leaflet";
+import styles from "./NearbyStopsMap.module.css";
+import { useEffect, useRef } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -6,49 +8,72 @@ import {
   Popup,
   Circle,
   useMap,
+  useMapEvents,
 } from "react-leaflet";
-import L from "leaflet";
-import styles from "./NearbyStopsMap.module.css";
+
+function MapMoveTracker({ onMapMove }) {
+  useMapEvents({
+    moveend: (e) => onMapMove(e.target.getCenter()),
+  });
+  return null;
+}
 
 function MapRecenter({ center }) {
   const map = useMap();
+  const hasSet = useRef(false);
+
   useEffect(() => {
-    map.setView(center);
+    if (center && !hasSet.current) {
+      map.setView(center);
+      hasSet.current = true;
+    }
   }, [center]);
+
   return null;
 }
 
 function NearbyStopsMap({
   userLocation,
   nearbyStopsMap,
-  locating,
-  searchRadius,
   onSelectStop,
   onMount,
+  mapCenter,
+  onMapMove,
+  fullHeight,
+  searchRadius = 0.25,
 }) {
+  useEffect(() => {
+    if (onMount) onMount();
+  }, []);
+
+  const defaultCenter = [21.3069, -157.8583];
+  const initialCenter = mapCenter
+    ? [mapCenter.lat, mapCenter.lng]
+    : userLocation
+      ? [userLocation.lat, userLocation.lon]
+      : defaultCenter;
   useEffect(() => {
     onMount();
   }, []);
 
-  const defaultCenter = [21.3069, -157.8583];
-  const center = userLocation
-    ? [userLocation.lat, userLocation.lon]
-    : defaultCenter;
+function MapMoveTracker({ onMapMove }) {
+  useMapEvents({
+    moveend: (e) => onMapMove && onMapMove(e.target.getCenter()),
+  });
+  return null;
+}
 
   return (
-    <div className={styles.mapWrapper}>
-      {locating && (
-        <div className={styles.locatingOverlay}>
-          <span className={styles.locatingDot} />
-          Finding your location…
-        </div>
-      )}
+    <div className={fullHeight ? styles.mapWrapperFull : styles.mapWrapper}>
       <MapContainer
-        center={center}
+        center={initialCenter}
         zoom={15}
         style={{ height: "100%", width: "100%" }}
       >
-        <MapRecenter center={center} />
+        <MapMoveTracker onMapMove={onMapMove} />
+        {!mapCenter && userLocation && (
+          <MapRecenter center={[userLocation.lat, userLocation.lon]} />
+        )}
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -58,6 +83,7 @@ function NearbyStopsMap({
             <Marker position={[userLocation.lat, userLocation.lon]}>
               <Popup>You are here</Popup>
             </Marker>
+
             <Circle
               center={[userLocation.lat, userLocation.lon]}
               radius={searchRadius * 1609.34}
@@ -76,9 +102,9 @@ function NearbyStopsMap({
               position={[parseFloat(stop.stop_lat), parseFloat(stop.stop_lon)]}
               icon={L.divIcon({
                 className: "",
-                html: `<div style="width:12px;height:12px;background:#e8b84b;border:2px solid #0a0a0a;border-radius:50%;cursor:pointer;"></div>`,
-                iconSize: [12, 12],
-                iconAnchor: [6, 6],
+                html: `<div style="width:16px;height:16px;background:#e8b84b;border:2px solid #0a0a0a;border-radius:50%;cursor:pointer;"></div>`,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8],
               })}
             >
               <Popup>

@@ -11,6 +11,7 @@ function ArrivalsList({
   lastUpdated,
   onBack,
   arrivalsTab,
+  onBackToTracking,
 }) {
   const getMinutesUntil = (stopTime, date) => {
     const now = new Date();
@@ -32,7 +33,10 @@ function ArrivalsList({
     return acc;
   }, {});
 
+  {console.log("onBackToTracking:", onBackToTracking)}
+
   return (
+    
     <div className={styles.container}>
       {onBack && (
         <button className={styles.backBtn} onClick={onBack}>
@@ -41,10 +45,16 @@ function ArrivalsList({
             ? "Recent"
             : arrivalsTab === "routes"
               ? "Routes"
-              : "Favorites"}
+              : arrivalsTab === "nearby"
+                ? "Nearby"
+                : "Favorites"}
         </button>
       )}
-
+      {onBackToTracking && (
+        <button className={styles.backBtn} onClick={onBackToTracking}>
+          ← Back to tracking
+        </button>
+      )}
       {currentStop && (
         <div className={styles.stopHeader}>
           <div className={styles.stopInfo}>
