@@ -507,6 +507,8 @@ function App() {
                   busShape={busShape}
                   tripStops={tripStops}
                   onGetArrivals={(stopId) => {
+                    setArrivalsTab(null);
+                    setTrackingView(false);
                     fetchArrivals(stopId).then((stopName) => {
                       addToHistory(stopId, stopName);
                       setArrivalsTab(activeTab);
@@ -554,6 +556,10 @@ function App() {
               }}
             >
               <button
+                onClick={() => {
+                  setTrackingView(false);
+                  clearBusTracking();
+                }}
                 style={{
                   background: "none",
                   border: "none",
