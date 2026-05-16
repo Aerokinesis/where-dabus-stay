@@ -52,16 +52,7 @@ function NearbyStopsMap({
     : userLocation
       ? [userLocation.lat, userLocation.lon]
       : defaultCenter;
-  useEffect(() => {
-    onMount();
-  }, []);
 
-function MapMoveTracker({ onMapMove }) {
-  useMapEvents({
-    moveend: (e) => onMapMove && onMapMove(e.target.getCenter()),
-  });
-  return null;
-}
 
   return (
     <div className={fullHeight ? styles.mapWrapperFull : styles.mapWrapper}>

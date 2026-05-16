@@ -13,6 +13,7 @@ import StopHistory from "./components/StopHistory";
 import RoutesTab from "./components/RoutesTab";
 import SettingsTab from "./components/SettingsTab";
 import Toast from "./components/Toast";
+import SearchInput from "./components/SearchInput";
 import { useArrivals } from "./hooks/useArrivals";
 import { useFavorites } from "./hooks/useFavorites";
 import { useNearbyStops } from "./hooks/useNearbyStops";
@@ -314,63 +315,12 @@ function App() {
         <div className={styles.topBar}>
           {activeTab === "nearby" && <AddressSearch {...searchProps} />}
           {activeTab === "routes" && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                background: "var(--bg)",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius)",
-                padding: "0 12px",
-              }}
-            >
-              <svg
-                style={{
-                  width: 18,
-                  height: 18,
-                  color: "var(--text-muted)",
-                  flexShrink: 0,
-                }}
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                style={{
-                  flex: 1,
-                  background: "none",
-                  border: "none",
-                  outline: "none",
-                  color: "var(--text)",
-                  fontSize: "15px",
-                  padding: "12px 0",
-                }}
-                placeholder="Search routes"
-                value={routeQuery}
-                onChange={(e) => setRouteQuery(e.target.value)}
-              />
-              {routeQuery && (
-                <button
-                  onClick={() => setRouteQuery("")}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "var(--text-muted)",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                    padding: "4px",
-                  }}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+            <SearchInput
+              value={routeQuery}
+              onChange={setRouteQuery}
+              placeholder="Search routes"
+              onClear={() => setRouteQuery("")}
+            />
           )}
         </div>
       )}
@@ -380,63 +330,12 @@ function App() {
         {/* Desktop search bar */}
         <div className={styles.desktopSearch}>
           {activeTab === "routes" ? (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                background: "var(--bg)",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius)",
-                padding: "0 12px",
-              }}
-            >
-              <svg
-                style={{
-                  width: 18,
-                  height: 18,
-                  color: "var(--text-muted)",
-                  flexShrink: 0,
-                }}
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                style={{
-                  flex: 1,
-                  background: "none",
-                  border: "none",
-                  outline: "none",
-                  color: "var(--text)",
-                  fontSize: "15px",
-                  padding: "12px 0",
-                }}
-                placeholder="Search routes"
-                value={routeQuery}
-                onChange={(e) => setRouteQuery(e.target.value)}
-              />
-              {routeQuery && (
-                <button
-                  onClick={() => setRouteQuery("")}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "var(--text-muted)",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                    padding: "4px",
-                  }}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+            <SearchInput
+              value={routeQuery}
+              onChange={setRouteQuery}
+              placeholder="Search routes"
+              onClear={() => setRouteQuery("")}
+            />
           ) : (
             <AddressSearch {...searchProps} />
           )}
@@ -444,7 +343,7 @@ function App() {
 
         <div className={styles.desktopContent}>
           {/* Nearby map — mobile only (desktop uses mapPanel) */}
-          {activeTab === "nearby" && !arrivals && (
+          {activeTab === "nearby" && (!arrivals || arrivalsTab !== "nearby") && (
             <div className={styles.mobileMapOnly}>
               <NearbyStopsMap
                 userLocation={userLocation}
@@ -453,6 +352,7 @@ function App() {
                 onMount={findNearbyStops}
                 mapCenter={mapCenter}
                 onMapMove={setMapCenter}
+                searchRadius={settings.searchRadius}
               />
             </div>
           )}
@@ -618,7 +518,7 @@ function App() {
             <circle cx="12" cy="12" r="3" />
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
           </svg>
-          <span>Nearby</span>
+          <span>Home</span>
         </button>
 
         <button
