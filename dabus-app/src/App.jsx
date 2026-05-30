@@ -21,6 +21,7 @@ import { useBusTracking } from "./hooks/useBusTracking";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import { useStopHistory } from "./hooks/useStopHistory";
 import { useSettings } from "./hooks/useSettings";
+import { useMediaQuery } from "./hooks/useMediaQuery";
 import { API_BASE } from "./constants";
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -34,6 +35,7 @@ L.Icon.Default.mergeOptions({
 function App() {
   // Settings must be first — other hooks depend on settings.searchRadius
   const { settings, updateSetting } = useSettings();
+  const isMobile = useMediaQuery("(max-width: 767px)");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [routeQuery, setRouteQuery] = useState("");
@@ -294,14 +296,14 @@ function App() {
               arrivalsTab === "favorites" ||
               arrivalsTab === "history" ||
               arrivalsTab === "routes" ||
-              (arrivalsTab === "nearby" && window.innerWidth < 768)
+              (arrivalsTab === "nearby" && isMobile)
                 ? () => {
                     if (arrivalsTab === "nearby") clearArrivals();
                     setArrivalsTab(null);
                   }
                 : null
             }
-            onBackToTracking={busLocation ? () => setTrackingView(true) : null}
+            onBackToTracking={busLocation && isMobile ? () => setTrackingView(true) : null}
           />
         )}
       </ErrorBoundary>
