@@ -1,5 +1,7 @@
 import express from "express"
 import cors from "cors"
+import helmet from "helmet"
+import rateLimit from "express-rate-limit"
 import fetch from "node-fetch"
 import dotenv from "dotenv"
 import fs from "fs"
@@ -9,7 +11,33 @@ import https from "https"
 dotenv.config()
 
 const app = express()
-app.use(cors())
+
+// Security headers
+app.use(helmet())
+
+// Rate limit: 60 requests per minute per IP across all /api routes
+app.use("/api", rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests, slow down." },
+}))
+
+// CORS: allow only origins listed in ALLOWED_ORIGINS (comma-separated).
+// Defaults to common local dev origins if the env var is unset.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "https://localhost:5173,https://192.168.4.27:5173")
+    .split(",")
+    .map(o => o.trim())
+    .filter(Boolean)
+
+app.use(cors({
+    origin: (origin, cb) => {
+        // Allow non-browser tools (curl, server-to-server) and explicitly listed origins
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
+        return cb(new Error("Not allowed by CORS"))
+    },
+}))
 
 // Load stops from GTFS stops.txt
 const stopsData = fs.readFileSync("./data/stops.txt", "utf8")
@@ -135,6 +163,12 @@ const abbreviations = {
     "loop": "lp", "lane": "ln",
 }
 
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+// Allow only safe id chars (digits, letters, underscore, hyphen, dot).
+// Rejects URL escapes, special regex chars, and __proto__/constructor lookups.
+const isSafeId = (s) => typeof s === "string" && /^[\w.-]+$/.test(s) && s !== "__proto__" && s !== "constructor" && s !== "prototype"
+
 const normalizeQuery = (query) => {
     let q = query.toLowerCase()
     Object.entries(abbreviations).forEach(([full, abbr]) => {
@@ -146,10 +180,15 @@ const normalizeQuery = (query) => {
 // Arrivals endpoint
 app.get("/api/arrivals", async (req, res) => {
     const stop = req.query.stop
-    const apiKey = process.env.VITE_THEBUS_API_KEY
-    const url = `http://api.thebus.org/arrivalsJSON/?key=${apiKey}&stop=${stop}`
+    if (!/^\d+$/.test(stop || "")) {
+        return res.status(400).json({ error: "Invalid stop number" })
+    }
+    const apiKey = process.env.THEBUS_API_KEY
+    const url = new URL("http://api.thebus.org/arrivalsJSON/")
+    url.searchParams.set("key", apiKey)
+    url.searchParams.set("stop", stop)
     try {
-        const response = await fetch(url)
+        const response = await fetch(url.toString(), { signal: AbortSignal.timeout(5000) })
         const data = await response.json()
         res.json(data)
     } catch (_err) {
@@ -160,7 +199,8 @@ app.get("/api/arrivals", async (req, res) => {
 // Shape endpoint
 app.get("/api/shape/:shapeId", (req, res) => {
     const shapeId = req.params.shapeId
-    const shape = shapes[shapeId]
+    if (!isSafeId(shapeId)) return res.status(400).json({ error: "Invalid shape id" })
+    const shape = Object.prototype.hasOwnProperty.call(shapes, shapeId) ? shapes[shapeId] : null
     if (!shape) return res.status(404).json({ error: "Shape not found" })
     res.json({ shape })
 })
@@ -168,14 +208,17 @@ app.get("/api/shape/:shapeId", (req, res) => {
 // Trip stops endpoint
 app.get("/api/trip/:tripId/stops", (req, res) => {
     const tripId = req.params.tripId
+    if (!isSafeId(tripId)) return res.status(400).json({ error: "Invalid trip id" })
 
     // Try direct lookup first (static GTFS trip ID)
-    let stopTimes = stopTimesByTrip[tripId]
+    let stopTimes = Object.prototype.hasOwnProperty.call(stopTimesByTrip, tripId)
+        ? stopTimesByTrip[tripId]
+        : null
 
     // If not found, try matching by shape_id (realtime trip IDs won't be in GTFS)
     if (!stopTimes) {
         const shapeId = req.query.shape
-        if (shapeId) {
+        if (shapeId && isSafeId(shapeId)) {
             const matchingTrip = tripsRaw.find(t => t.shape_id === shapeId)
             if (matchingTrip) {
                 stopTimes = stopTimesByTrip[matchingTrip.trip_id]
@@ -219,7 +262,9 @@ app.get("/api/routes", (req, res) => {
 
 // Stops for a specific route direction
 app.get("/api/route/:routeId/stops", (req, res) => {
-    const entry = routeDirections.find(r => r.id === req.params.routeId)
+    const routeId = req.params.routeId
+    if (!isSafeId(routeId)) return res.status(400).json({ error: "Invalid route id" })
+    const entry = routeDirections.find(r => r.id === routeId)
     if (!entry) return res.status(404).json({ error: "Route not found" })
     res.json({ stops: entry.stops })
 })
@@ -233,7 +278,7 @@ app.get("/api/search-stops", (req, res) => {
     const results = stops
         .filter(stop =>
             terms.every(term =>
-                new RegExp(`\\b${term}(\\s|$)`, "i").test(stop.stop_name)
+                new RegExp(`\\b${escapeRegex(term)}(\\s|$)`, "i").test(stop.stop_name)
             )
         )
         .map(stop => ({
@@ -251,8 +296,7 @@ app.get("/api/search-stops", (req, res) => {
 app.get("/api/nearby-stops-by-coords", (req, res) => {
     const lat = parseFloat(req.query.lat)
     const lon = parseFloat(req.query.lon)
-    const radius = parseFloat(req.query.radius) || 0.25   // add this
-    console.log("nearby stops request — radius:", radius, "raw:", req.query.radius)
+    const radius = parseFloat(req.query.radius) || 0.25
     if (isNaN(lat) || isNaN(lon)) return res.status(400).json({ error: "Invalid coordinates" })
 
     const nearbyStops = stops
@@ -273,20 +317,19 @@ app.get("/api/nearby-stops-by-coords", (req, res) => {
 // Stop info endpoint
 app.get("/api/stop/:stopId", (req, res) => {
     const stopId = req.params.stopId
-    const stop = stopsById[stopId]
+    if (!isSafeId(stopId)) return res.status(400).json({ error: "Invalid stop id" })
+    const stop = Object.prototype.hasOwnProperty.call(stopsById, stopId) ? stopsById[stopId] : null
     if (!stop) return res.status(404).json({ error: "Stop not found" })
     res.json({ stop_id: stop.stop_id, stop_name: stop.stop_name })
 })
 
-// Start HTTPS server with mkcert certificates
+// Start HTTPS server with mkcert certificates.
+// In production, TLS is usually terminated upstream — set USE_HTTPS=false to skip.
 const httpsOptions = {
-    key: fs.readFileSync("./192.168.4.27+2-key.pem"),
-    cert: fs.readFileSync("./192.168.4.27+2.pem"),
+    key: fs.readFileSync(process.env.SSL_KEY_PATH || "./192.168.4.27+2-key.pem"),
+    cert: fs.readFileSync(process.env.SSL_CERT_PATH || "./192.168.4.27+2.pem"),
 }
 
-app.get("/api/debug/shapes", (req, res) => {
-    res.json({ sample: Object.keys(shapes).slice(0, 20) })
-})
 
 https.createServer(httpsOptions, app).listen(3001, () => {
     console.log("Server running on https://localhost:3001")
