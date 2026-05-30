@@ -12,6 +12,7 @@ function ArrivalsList({
   onBack,
   arrivalsTab,
   onBackToTracking,
+  routeShortName,
 }) {
   const getMinutesUntil = (stopTime, date) => {
     const now = new Date();
@@ -44,7 +45,9 @@ function ArrivalsList({
           {arrivalsTab === "history"
             ? "Recent"
             : arrivalsTab === "routes"
-              ? "Routes"
+              ? routeShortName
+                ? `Route ${routeShortName}`
+                : "Stops"
               : arrivalsTab === "nearby"
                 ? "Home"
                 : "Favorites"}
@@ -149,17 +152,19 @@ function ArrivalsList({
                 <span className={styles.vehicle}>Bus #{bus.vehicle}</span>
               )}
               {bus.estimated === "1" && (
-                <button
-                  className={styles.mapBtn}
-                  onClick={() => onShowMap(bus)}
-                  disabled={trackingLoading && selectedBus?.id === bus.id}
-                >
-                  {trackingLoading && selectedBus?.id === bus.id
-                    ? "Loading..."
-                    : selectedBus?.id === bus.id
-                      ? "Hide map"
-                      : "Track"}
-                </button>
+                selectedBus?.id === bus.id ? (
+                  <span className={styles.trackingPill}>
+                    {trackingLoading ? "Loading..." : "● Tracking"}
+                  </span>
+                ) : (
+                  <button
+                    className={styles.mapBtn}
+                    onClick={() => onShowMap(bus)}
+                    disabled={trackingLoading}
+                  >
+                    Track
+                  </button>
+                )
               )}
             </div>
           </div>

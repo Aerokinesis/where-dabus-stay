@@ -10,18 +10,12 @@ export function useBusTracking(setError) {
   const [trackingLoading, setTrackingLoading] = useState(false);
 
   const fetchBusLocation = async (bus) => {
-    console.log("bus object:", JSON.stringify(bus, null, 2));
-    
     if (bus.estimated !== "1") return;
 
-    if (selectedBus?.id === bus.id) {
-      setSelectedBus(null);
-      setBusLocation(null);
-      setBusShape(null);
-      setTripStops(null);
-      return;
-    }
-
+    // If the same bus is re-tracked (or a different one), clear any prior shape/stops
+    // so we don't briefly render stale overlays while the new fetch is in flight.
+    setBusShape(null);
+    setTripStops(null);
     setSelectedBus(bus);
     setTrackingLoading(true);
 

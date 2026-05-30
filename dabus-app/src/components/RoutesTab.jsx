@@ -19,7 +19,7 @@ function RoutesTab({
       {selectedRoute ? (
         <>
           <button className={styles.backBtn} onClick={onClearRoute}>
-            ← Routes
+            ← All routes
           </button>
           <div className={styles.routeHeader}>
             <div className={styles.routeBadge}>

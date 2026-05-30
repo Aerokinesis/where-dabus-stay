@@ -143,6 +143,13 @@ function App() {
     setArrivalsTab(tab);
   };
 
+  // Navigation always dismisses tracking so the right-hand map returns to nearby.
+  const switchTab = (tab) => {
+    clearBusTracking();
+    setTrackingView(false);
+    setActiveTab(tab);
+  };
+
   const showToast = (message, type = "add") => {
     setToast(message);
     setToastType(type);
@@ -292,6 +299,7 @@ function App() {
             }}
             lastUpdated={lastUpdated}
             arrivalsTab={arrivalsTab}
+            routeShortName={arrivalsTab === "routes" ? selectedRoute?.route_short_name : null}
             onBack={
               arrivalsTab === "favorites" ||
               arrivalsTab === "history" ||
@@ -299,6 +307,8 @@ function App() {
               (arrivalsTab === "nearby" && isMobile)
                 ? () => {
                     if (arrivalsTab === "nearby") clearArrivals();
+                    clearBusTracking();
+                    setTrackingView(false);
                     setArrivalsTab(null);
                   }
                 : null
@@ -508,7 +518,7 @@ function App() {
         </div>
         <button
           className={`${styles.navBtn} ${activeTab === "nearby" ? styles.active : ""}`}
-          onClick={() => setActiveTab("nearby")}
+          onClick={() => switchTab("nearby")}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -525,7 +535,7 @@ function App() {
 
         <button
           className={`${styles.navBtn} ${activeTab === "routes" ? styles.active : ""}`}
-          onClick={() => setActiveTab("routes")}
+          onClick={() => switchTab("routes")}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -546,7 +556,7 @@ function App() {
 
         <button
           className={`${styles.navBtn} ${activeTab === "history" ? styles.active : ""}`}
-          onClick={() => setActiveTab("history")}
+          onClick={() => switchTab("history")}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -563,7 +573,7 @@ function App() {
 
         <button
           className={`${styles.navBtn} ${activeTab === "favorites" ? styles.active : ""}`}
-          onClick={() => setActiveTab("favorites")}
+          onClick={() => switchTab("favorites")}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -579,7 +589,7 @@ function App() {
 
         <button
           className={`${styles.navBtn} ${activeTab === "settings" ? styles.active : ""}`}
-          onClick={() => setActiveTab("settings")}
+          onClick={() => switchTab("settings")}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
