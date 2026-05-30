@@ -26,14 +26,14 @@ function ArrivalsList({
     return `${hours} hr ${mins} min`;
   };
 
-  const routesByDirection = arrivals.reduce((acc, bus) => {
+  const safeArrivals = arrivals || [];
+
+  const routesByDirection = safeArrivals.reduce((acc, bus) => {
     if (!bus.direction) return acc;
     if (!acc[bus.direction]) acc[bus.direction] = new Set();
     acc[bus.direction].add(bus.route);
     return acc;
   }, {});
-
-  {console.log("onBackToTracking:", onBackToTracking)}
 
   return (
     
@@ -46,7 +46,7 @@ function ArrivalsList({
             : arrivalsTab === "routes"
               ? "Routes"
               : arrivalsTab === "nearby"
-                ? "Nearby"
+                ? "Home"
                 : "Favorites"}
         </button>
       )}
@@ -92,23 +92,35 @@ function ArrivalsList({
         </p>
       )}
 
-      <div className={styles.summary}>
-        {Object.entries(routesByDirection).map(([direction, routes]) => (
-          <div key={direction} className={styles.summaryRow}>
-            <span className={styles.summaryDirection}>{direction}</span>
-            <span className={styles.summaryRoutes}>
-              {[...routes]
-                .sort((a, b) =>
-                  a.localeCompare(b, undefined, { numeric: true }),
-                )
-                .join(" · ")}
-            </span>
-          </div>
-        ))}
-      </div>
+      {safeArrivals.length > 0 && (
+        <div className={styles.summary}>
+          {Object.entries(routesByDirection).map(([direction, routes]) => (
+            <div key={direction} className={styles.summaryRow}>
+              <span className={styles.summaryDirection}>{direction}</span>
+              <span className={styles.summaryRoutes}>
+                {[...routes]
+                  .sort((a, b) =>
+                    a.localeCompare(b, undefined, { numeric: true }),
+                  )
+                  .join(" · ")}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {safeArrivals.length === 0 && (
+        <div className={styles.empty}>
+          <p className={styles.emptyTitle}>No upcoming buses</p>
+          <p className={styles.emptyHint}>
+            There are no scheduled arrivals at this stop right now. Service may
+            be on a break or finished for the day.
+          </p>
+        </div>
+      )}
 
       <div className={styles.list}>
-        {arrivals.map((bus) => (
+        {safeArrivals.map((bus) => (
           <div
             key={bus.id}
             className={`${styles.card} ${bus.canceled === "1" ? styles.canceled : ""}`}

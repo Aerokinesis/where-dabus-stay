@@ -28,11 +28,19 @@ export function useArrivals() {
         fetch(`${API_BASE}/api/stop/${stopId}`),
       ]);
 
+      // 404 (or any non-OK) from /api/stop/:stopId means the stop number isn't real
+      if (!stopRes.ok) {
+        setError(`Stop #${stopId} doesn't exist. Check the number and try again.`);
+        setArrivals(null);
+        setCurrentStop(null);
+        return null;
+      }
+
       const arrivalsData = await arrivalsRes.json();
       const stopData = await stopRes.json();
       const stopName = formatStopName(stopData.stop_name, stopId);
 
-      setArrivals(arrivalsData.arrivals);
+      setArrivals(arrivalsData.arrivals || []);
       setCurrentStop({ id: stopId, name: stopName });
       setLastUpdated(new Date());
 
