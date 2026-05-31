@@ -514,7 +514,7 @@ function App() {
       {/* Nav */}
       <nav className={styles.bottomNav}>
         <div className={styles.brandMark}>
-          <img src="/dabus-icon.png" alt="DaBus" />
+          <img src="/dabus-icon.png" alt="WhereDaBusStay?" />
         </div>
         <button
           className={`${styles.navBtn} ${activeTab === "nearby" ? styles.active : ""}`}
