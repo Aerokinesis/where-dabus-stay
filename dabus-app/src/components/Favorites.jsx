@@ -20,8 +20,9 @@ function Favorites({ favorites, onSelectStop, onRemoveFavorite }) {
           <button
             className={styles.removeBtn}
             onClick={() => onRemoveFavorite(fav.stop_id)}
+            aria-label={`Remove ${fav.custom_name} from favorites`}
           >
-            🗑
+            <span aria-hidden="true">🗑</span>
           </button>
         </div>
       ))}

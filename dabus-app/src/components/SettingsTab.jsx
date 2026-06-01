@@ -39,10 +39,10 @@ function SettingsTab({ settings, onUpdateSetting, onClearHistory, onClearFavorit
           <div className={`${styles.row} ${styles.sliderRow}`}>
             <div className={styles.sliderHeader}>
               <div>
-                <p className={styles.rowLabel}>Search radius</p>
-                <p className={styles.rowSub}>How far to look for stops</p>
+                <p id="radius-label" className={styles.rowLabel}>Search radius</p>
+                <p id="radius-desc" className={styles.rowSub}>How far to look for stops</p>
               </div>
-              <span className={styles.sliderVal}>
+              <span id="radius-value" className={styles.sliderVal}>
                 {settings.searchRadius.toFixed(2)} mi
               </span>
             </div>
@@ -55,6 +55,8 @@ function SettingsTab({ settings, onUpdateSetting, onClearHistory, onClearFavorit
                 max={RADIUS_OPTIONS.length - 1}
                 step="1"
                 value={sliderValue}
+                aria-labelledby="radius-label"
+                aria-describedby="radius-desc radius-value"
                 onChange={(e) =>
                   onUpdateSetting("searchRadius", RADIUS_OPTIONS[parseInt(e.target.value)])
                 }
