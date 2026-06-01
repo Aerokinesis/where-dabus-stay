@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { API_BASE } from "../constants";
 
 export function useNearbyStops(setError, searchRadius = 0.25) {
@@ -24,7 +24,7 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
     }
   };
 
-  const refindNearbyStops = async (lat, lon, radius) => {
+  const refindNearbyStops = useCallback(async (lat, lon, radius) => {
     try {
       const res = await fetch(`${API_BASE}/api/nearby-stops-by-coords?lat=${lat}&lon=${lon}&radius=${radius}`);
       const data = await res.json();
@@ -32,7 +32,7 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
     } catch {
       setError("Could not find nearby stops.");
     }
-  };
+  }, [setError]);
 
   const findNearbyStops = () => {
     if (!navigator.geolocation) {

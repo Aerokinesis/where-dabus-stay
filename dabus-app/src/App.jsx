@@ -107,24 +107,9 @@ function App() {
 
   const [mapCenter, setMapCenter] = useState(null);
 
-  // Re-run nearby stops when search radius changes
-  useEffect(() => {
-    if (activeTab === "nearby" && userLocation) {
-      refindNearbyStops(
-        userLocation.lat,
-        userLocation.lon,
-        settings.searchRadius,
-      );
-    }
-  }, [settings.searchRadius]);
-
-  // Fetch routes list when routes tab is opened
-  useEffect(() => {
-    if (activeTab === "routes" && !routes && !routesLoading) {
-      fetchRoutes();
-    }
-  }, [activeTab]);
-
+  // Refetch nearby stops whenever the radius or user's location changes.
+  // Runs regardless of active tab so changes from Settings take effect before
+  // the user navigates back to Home.
   useEffect(() => {
     if (userLocation) {
       refindNearbyStops(
@@ -133,7 +118,18 @@ function App() {
         settings.searchRadius,
       );
     }
-  }, [settings.searchRadius]);
+  }, [settings.searchRadius, userLocation, refindNearbyStops]);
+
+  // Fetch routes list when routes tab is first opened. The guard inside the
+  // effect prevents duplicate fetches; depending on routes/routesLoading here
+  // would risk a refetch loop on persistent failure, so they're intentionally
+  // omitted from the dep array.
+  useEffect(() => {
+    if (activeTab === "routes" && !routes && !routesLoading) {
+      fetchRoutes();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const handleFetchArrivals = async (stopId, tab) => {
     clearBusTracking();
@@ -292,6 +288,7 @@ function App() {
           <ArrivalsList
             arrivals={arrivals}
             selectedBus={selectedBus}
+            trackingLoading={trackingLoading}
             onShowMap={(bus) => {
               fetchBusLocation(bus);
               setTrackingView(true);
