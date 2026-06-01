@@ -278,7 +278,7 @@ function App() {
       )}
 
       {loading && <p>Loading arrivals...</p>}
-      {error && <p>{error}</p>}
+      {error && <p role="alert">{error}</p>}
       {isPulling && (
         <p>Refreshing... ({Math.round((pullDistance / 80) * 100)}%)</p>
       )}

@@ -9,9 +9,27 @@
 }
 
 .dabus-result-item {
-  padding: 12px 16px;
+  display: block;
+  width: 100%;
+  background: none;
+  color: var(--text);
+  border: none;
   border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  text-align: left;
+  font: inherit;
   cursor: pointer;
+}
+
+.dabus-result-item:hover,
+.dabus-result-item:focus {
+  background: rgba(255, 255, 255, 0.04);
+  outline: none;
+}
+
+.dabus-result-item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
 }
 
 .dabus-result-item:last-child {

@@ -73,12 +73,17 @@ function AddressSearch({
             className="dabus-results"
             ref={resultsRef}
             style={portalStyle}
+            role="listbox"
+            aria-label="Stop search results"
           >
             {nearbyStops.map((stop) => (
-              <div
+              <button
                 key={stop.stop_id}
+                type="button"
                 className="dabus-result-item"
-                onMouseDown={() => onSelectStop(stop.stop_id)}
+                onClick={() => onSelectStop(stop.stop_id)}
+                role="option"
+                aria-selected="false"
               >
                 <div className="dabus-stop-name">
                   {stop.stop_name
@@ -86,7 +91,7 @@ function AddressSearch({
                     .replace(/\b\w/g, (c) => c.toUpperCase())}
                 </div>
                 <div className="dabus-stop-id">Stop #{stop.stop_id}</div>
-              </div>
+              </button>
             ))}
           </div>,
           document.body,

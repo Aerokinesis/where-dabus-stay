@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const MAX_NAME_LENGTH = 60;
 
@@ -7,8 +7,50 @@ function SaveStopModal({ stop, onSave, onCancel }) {
   const remaining = MAX_NAME_LENGTH - customName.length;
   const isOverLimit = customName.length > MAX_NAME_LENGTH;
 
+  const modalRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // Save the focus from before the modal opened, move focus to the input,
+  // trap Tab inside the modal, and restore focus when the modal unmounts.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement;
+    inputRef.current?.focus();
+    inputRef.current?.select();
+
+    const handleTab = (e) => {
+      if (e.key !== "Tab") return;
+      const focusables = modalRef.current?.querySelectorAll(
+        'input, button, [href], [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusables || focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleTab);
+    return () => {
+      document.removeEventListener("keydown", handleTab);
+      if (previouslyFocused && typeof previouslyFocused.focus === "function") {
+        previouslyFocused.focus();
+      }
+    };
+  }, []);
+
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="save-stop-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
       style={{
         position: "fixed",
         top: 0,
@@ -23,6 +65,7 @@ function SaveStopModal({ stop, onSave, onCancel }) {
       }}
     >
       <div
+        ref={modalRef}
         style={{
           background: "var(--surface)",
           color: "var(--text)",
@@ -36,7 +79,7 @@ function SaveStopModal({ stop, onSave, onCancel }) {
         }}
       >
         <div>
-          <p style={{ fontSize: "16px", fontWeight: 500, marginBottom: "4px" }}>
+          <p id="save-stop-title" style={{ fontSize: "16px", fontWeight: 500, marginBottom: "4px" }}>
             Add to favorites
           </p>
           <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
@@ -44,10 +87,12 @@ function SaveStopModal({ stop, onSave, onCancel }) {
           </p>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <label style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+          <label htmlFor="save-stop-name" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
             Custom name
           </label>
           <input
+            id="save-stop-name"
+            ref={inputRef}
             type="text"
             value={customName}
             maxLength={MAX_NAME_LENGTH}
