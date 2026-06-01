@@ -1,7 +1,11 @@
 import { useState } from "react";
 
+const MAX_NAME_LENGTH = 60;
+
 function SaveStopModal({ stop, onSave, onCancel }) {
   const [customName, setCustomName] = useState(stop.name);
+  const remaining = MAX_NAME_LENGTH - customName.length;
+  const isOverLimit = customName.length > MAX_NAME_LENGTH;
 
   return (
     <div
@@ -46,9 +50,10 @@ function SaveStopModal({ stop, onSave, onCancel }) {
           <input
             type="text"
             value={customName}
+            maxLength={MAX_NAME_LENGTH}
             onChange={(e) => setCustomName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") onSave(customName);
+              if (e.key === "Enter" && !isOverLimit) onSave(customName);
               if (e.key === "Escape") onCancel();
             }}
             style={{
@@ -62,10 +67,29 @@ function SaveStopModal({ stop, onSave, onCancel }) {
               outline: "none",
             }}
           />
-          <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-            Defaults to the stop name — change it to something memorable like
-            "Home stop".
-          </p>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: 0 }}>
+              Defaults to the stop name — change it to something memorable like
+              "Home stop".
+            </p>
+            <p
+              style={{
+                fontSize: "11px",
+                color: isOverLimit || remaining <= 5 ? "#f87171" : "var(--text-muted)",
+                margin: 0,
+                flexShrink: 0,
+              }}
+            >
+              {customName.length}/{MAX_NAME_LENGTH}
+            </p>
+          </div>
         </div>
         <div
           style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}
@@ -86,6 +110,7 @@ function SaveStopModal({ stop, onSave, onCancel }) {
           </button>
           <button
             onClick={() => onSave(customName)}
+            disabled={isOverLimit}
             style={{
               background: "var(--primary)",
               border: "none",
@@ -93,7 +118,8 @@ function SaveStopModal({ stop, onSave, onCancel }) {
               color: "#fff",
               fontSize: "14px",
               padding: "8px 16px",
-              cursor: "pointer",
+              cursor: isOverLimit ? "not-allowed" : "pointer",
+              opacity: isOverLimit ? 0.5 : 1,
             }}
           >
             Save
