@@ -130,4 +130,4 @@ Personal project, not affiliated with OTS or TheBus. GTFS data and API access us
 
 ## Mahalo
 
-This app exists because Oahu riders deserve a way to check when da bus stay coming. If you ride TheBus and this helps you out — that's the whole point.
+This app exists because Oahu riders deserve a way to check when da bus stay coming.
