@@ -1,6 +1,6 @@
 import styles from "./SearchInput.module.css";
 
-function SearchInput({ value, onChange, placeholder, onClear, onSubmit }) {
+function SearchInput({ value, onChange, placeholder, onClear, onSubmit, ariaLabel }) {
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && onSubmit) onSubmit();
   };
@@ -22,12 +22,17 @@ function SearchInput({ value, onChange, placeholder, onClear, onSubmit }) {
         className={styles.input}
         type="text"
         placeholder={placeholder}
+        aria-label={ariaLabel || placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
       />
       {value && (
-        <button className={styles.clearBtn} onClick={onClear}>
+        <button
+          className={styles.clearBtn}
+          onClick={onClear}
+          aria-label="Clear search"
+        >
           ✕
         </button>
       )}

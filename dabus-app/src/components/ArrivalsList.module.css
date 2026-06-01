@@ -153,8 +153,10 @@
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--primary);
-  font-size: 12px;
-  padding: 4px 10px;
+  font-size: 13px;
+  padding: 10px 16px;
+  min-height: 44px;
+  min-width: 44px;
   cursor: pointer;
 }
 
@@ -231,4 +233,19 @@
   font-size: 13px;
   color: var(--text-muted);
   line-height: 1.4;
+}
+
+.trackingPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 16px;
+  min-height: 44px;
+  border-radius: 6px;
+  background: var(--live-bg);
+  color: var(--live-text);
+  white-space: nowrap;
 }

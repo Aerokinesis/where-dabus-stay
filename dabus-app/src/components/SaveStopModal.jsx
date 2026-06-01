@@ -109,7 +109,6 @@ function SaveStopModal({ stop, onSave, onCancel }) {
               borderRadius: "8px",
               color: "var(--text)",
               fontSize: "15px",
-              outline: "none",
             }}
           />
           <div

@@ -13,7 +13,7 @@
   --accent: #e8b84b;
   --text: #f0f0f0;
   --text-muted: #888;
-  --border: #2a2a2a;
+  --border: #5e5e5e;   /* WCAG 1.4.11: 3:1+ against --bg #0a0a0a */
   --radius: 12px;
 
   font-synthesis: none;
@@ -92,7 +92,7 @@ p {
   --accent: #e8b84b;
   --text: #111111;
   --text-muted: #666666;
-  --border: #e0e0e0;
+  --border: #919191;   /* WCAG 1.4.11: 3:1+ against --bg #ffffff */
 
   --live-bg: #dcfce7;
   --live-text: #166534;
@@ -107,5 +107,20 @@ p {
   --accent: #e8b84b;
   --text: #f0f0f0;
   --text-muted: #888;
-  --border: #2a2a2a;
+  --border: #5e5e5e;   /* WCAG 1.4.11: 3:1+ against --bg #0a0a0a */
+}
+
+/* Accessibility: visible focus indicator for keyboard navigation.
+   :focus-visible only applies when the browser detects keyboard-style
+   focus, so mouse clicks don't get an outline. */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Inputs use a slightly different offset so the outline sits cleanly
+   against the rounded pill border. */
+input:focus-visible,
+button:focus-visible {
+  outline-offset: 2px;
 }
