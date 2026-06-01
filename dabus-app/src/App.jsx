@@ -195,9 +195,16 @@ function App() {
       })
     : [];
 
+  // Tabs where arrivals don't belong inline — search results go to Home instead.
+  const tabForSearchResults = () =>
+    activeTab === "settings" ? "nearby" : activeTab;
+
   const handleSearch = () => {
+    const target = tabForSearchResults();
+    if (target !== activeTab) setActiveTab(target);
+
     if (/^\d+$/.test(searchQuery.trim())) {
-      handleFetchArrivals(searchQuery.trim(), activeTab);
+      handleFetchArrivals(searchQuery.trim(), target);
     } else {
       searchByAddress(searchQuery);
     }
@@ -210,7 +217,9 @@ function App() {
     searching: searchingAddress,
     nearbyStops,
     onSelectStop: (stopId) => {
-      handleFetchArrivals(stopId, activeTab);
+      const target = tabForSearchResults();
+      if (target !== activeTab) setActiveTab(target);
+      handleFetchArrivals(stopId, target);
       clearNearbyStops();
       setSearchQuery("");
     },
