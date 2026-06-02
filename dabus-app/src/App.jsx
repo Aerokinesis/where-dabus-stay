@@ -421,6 +421,7 @@ function App() {
               <div style={{ flex: 1, minHeight: 0 }}>
                 <BusTrackingMap
                   busLocation={busLocation}
+                  userLocation={userLocation}
                   selectedBus={selectedBus}
                   busShape={busShape}
                   tripStops={tripStops}
@@ -451,9 +452,10 @@ function App() {
         </ErrorBoundary>
       </div>
 
-      {/* Mobile bus tracking overlay */}
+      {/* Mobile bus tracking overlay — only mount on mobile so the hidden
+          Leaflet container on desktop doesn't error on init */}
       <ErrorBoundary>
-        {trackingView && busLocation && (
+        {isMobile && trackingView && busLocation && (
           <div
             className={styles.mobileTrackingOverlay}
             style={{
@@ -502,6 +504,7 @@ function App() {
             <div style={{ flex: 1, height: 0 }}>
               <BusTrackingMap
                 busLocation={busLocation}
+                userLocation={userLocation}
                 selectedBus={selectedBus}
                 busShape={busShape}
                 tripStops={tripStops}
