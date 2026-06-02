@@ -124,6 +124,7 @@ function SaveStopModal({ stop, onSave, onCancel }) {
               "Home stop".
             </p>
             <p
+              id="save-stop-counter"
               style={{
                 fontSize: "11px",
                 color: isOverLimit || remaining <= 5 ? "#f87171" : "var(--text-muted)",
@@ -131,7 +132,7 @@ function SaveStopModal({ stop, onSave, onCancel }) {
                 flexShrink: 0,
               }}
             >
-              {customName.length}/{MAX_NAME_LENGTH}
+              {isOverLimit ? `Too long — ${customName.length}/${MAX_NAME_LENGTH}` : `${customName.length}/${MAX_NAME_LENGTH}`}
             </p>
           </div>
         </div>
@@ -155,6 +156,7 @@ function SaveStopModal({ stop, onSave, onCancel }) {
           <button
             onClick={() => onSave(customName)}
             disabled={isOverLimit}
+            aria-describedby="save-stop-counter"
             style={{
               background: "var(--primary)",
               border: "none",

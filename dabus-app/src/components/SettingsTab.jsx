@@ -18,12 +18,13 @@ function SettingsTab({ settings, onUpdateSetting, onClearHistory, onClearFavorit
               <p className={styles.rowLabel}>Appearance</p>
               <p className={styles.rowSub}>Choose your preferred theme</p>
             </div>
-            <div className={styles.seg}>
+            <div className={styles.seg} role="group" aria-label="Theme">
               {["light", "system", "dark"].map((t) => (
                 <button
                   key={t}
                   className={`${styles.segBtn} ${settings.theme === t ? styles.segActive : ""}`}
                   onClick={() => onUpdateSetting("theme", t)}
+                  aria-pressed={settings.theme === t}
                 >
                   {t.charAt(0).toUpperCase() + t.slice(1)}
                 </button>

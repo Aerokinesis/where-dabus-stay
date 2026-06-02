@@ -154,7 +154,13 @@ function ArrivalsList({
               {bus.estimated === "1" && (
                 selectedBus?.id === bus.id ? (
                   <span className={styles.trackingPill}>
-                    {trackingLoading ? "Loading..." : "● Tracking"}
+                    {trackingLoading ? (
+                      "Loading..."
+                    ) : (
+                      <>
+                        <span aria-hidden="true">●</span> Tracking
+                      </>
+                    )}
                   </span>
                 ) : (
                   <button
