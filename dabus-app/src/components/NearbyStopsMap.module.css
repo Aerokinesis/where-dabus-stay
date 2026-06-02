@@ -48,3 +48,34 @@
     display: none;
   }
 }
+
+.mapWrapper, .mapWrapperFull {
+  position: relative;
+}
+
+.recenterFab {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: background 0.15s, transform 0.1s;
+}
+
+.recenterFab:hover {
+  background: var(--bg);
+}
+
+.recenterFab:active {
+  transform: scale(0.95);
+}

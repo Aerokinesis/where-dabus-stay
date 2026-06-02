@@ -1,6 +1,6 @@
 import L from "leaflet";
 import styles from "./NearbyStopsMap.module.css";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -32,6 +32,24 @@ function MapRecenter({ center }) {
   return null;
 }
 
+// Listens for the FAB's trigger counter and flies the map to the user.
+function RecenterControl({ trigger, center }) {
+  const map = useMap();
+  const firstRender = useRef(true);
+
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    if (center) {
+      map.flyTo(center, Math.max(map.getZoom(), 15), { duration: 0.6 });
+    }
+  }, [trigger]);
+
+  return null;
+}
+
 function NearbyStopsMap({
   userLocation,
   nearbyStopsMap,
@@ -42,6 +60,8 @@ function NearbyStopsMap({
   fullHeight,
   searchRadius = 0.25,
 }) {
+  const [recenterTrigger, setRecenterTrigger] = useState(0);
+
   useEffect(() => {
     if (onMount) onMount();
   }, []);
@@ -116,7 +136,38 @@ function NearbyStopsMap({
               </Popup>
             </Marker>
           ))}
+        <RecenterControl
+          trigger={recenterTrigger}
+          center={userLocation ? [userLocation.lat, userLocation.lon] : null}
+        />
       </MapContainer>
+
+      {userLocation && (
+        <button
+          type="button"
+          className={styles.recenterFab}
+          onClick={() => setRecenterTrigger((t) => t + 1)}
+          aria-label="Recenter map on your location"
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <line x1="12" y1="2" x2="12" y2="5" />
+            <line x1="12" y1="19" x2="12" y2="22" />
+            <line x1="2" y1="12" x2="5" y2="12" />
+            <line x1="19" y1="12" x2="22" y2="12" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
