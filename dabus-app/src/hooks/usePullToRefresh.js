@@ -14,6 +14,9 @@ export function usePullToRefresh(onRefresh, enabled) {
     const handleTouchStart = (e) => {
       if (e.touches.length > 1) return;
       if (window.scrollY !== 0) return;
+      // Don't capture touches that started inside a Leaflet map — they're map
+      // drags (or pinch-zooms), not pull-to-refresh gestures.
+      if (e.target.closest?.(".leaflet-container")) return;
       startY.current = e.touches[0].clientY;
     };
 
