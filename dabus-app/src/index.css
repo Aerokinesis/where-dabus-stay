@@ -7,13 +7,13 @@
 }
 
 :root {
-  --bg: #0a0a0a;
-  --surface: #141414;
+  --bg: #18181B;
+  --surface: #1F1F23;
   --primary: #1a6faf;
   --accent: #e8b84b;
   --text: #f0f0f0;
   --text-muted: #888;
-  --border: #5e5e5e;   /* WCAG 1.4.11: 3:1+ against --bg #0a0a0a */
+  --border: #6e6e73;   /* WCAG 1.4.11: 3:1+ against --bg #18181B */
   --radius: 12px;
 
   font-synthesis: none;
@@ -101,13 +101,13 @@ p {
 }
 
 [data-theme="dark"] {
-  --bg: #0a0a0a;
-  --surface: #141414;
+  --bg: #18181B;
+  --surface: #1F1F23;
   --primary: #1a6faf;
   --accent: #e8b84b;
   --text: #f0f0f0;
   --text-muted: #888;
-  --border: #5e5e5e;   /* WCAG 1.4.11: 3:1+ against --bg #0a0a0a */
+  --border: #6e6e73;   /* WCAG 1.4.11: 3:1+ against --bg #18181B */
 }
 
 /* Accessibility: visible focus indicator for keyboard navigation.
