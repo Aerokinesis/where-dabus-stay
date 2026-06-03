@@ -90,6 +90,25 @@ function BusTrackingMap({ busLocation, userLocation, selectedBus, busShape, trip
               parseFloat(busLocation.latitude),
               parseFloat(busLocation.longitude),
             ]}
+            icon={L.divIcon({
+              className: "",
+              html: `<div style="
+                background:#0a0a0a;
+                color:#fff;
+                padding:6px 12px;
+                border-radius:10px;
+                border:2px solid #e8b84b;
+                font-weight:700;
+                font-size:13px;
+                white-space:nowrap;
+                box-shadow:0 2px 8px rgba(0,0,0,0.6);
+                text-align:center;
+                font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                line-height:1;
+              ">🚌 ${selectedBus.route}</div>`,
+              iconSize: [60, 30],
+              iconAnchor: [30, 15],
+            })}
           >
             <Popup>
               Route {selectedBus.route} — {selectedBus.headsign}
