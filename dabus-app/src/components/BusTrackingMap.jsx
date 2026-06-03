@@ -93,7 +93,7 @@ function BusTrackingMap({ busLocation, userLocation, selectedBus, busShape, trip
             icon={L.divIcon({
               className: "",
               html: `<div style="
-                background:#0a0a0a;
+                background:#18181B;
                 color:#fff;
                 padding:6px 12px;
                 border-radius:10px;
