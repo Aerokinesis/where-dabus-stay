@@ -111,6 +111,19 @@ function BusTrackingMap({ busLocation, userLocation, selectedBus, busShape, trip
               opacity={0.7}
             />
           )}
+          {userCenter && (
+            <Marker
+              position={userCenter}
+              icon={L.divIcon({
+                className: "",
+                html: '<div style="width:14px;height:14px;background:#1a6faf;border:2px solid #ffffff;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,0.5);"></div>',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7],
+              })}
+            >
+              <Popup>You are here</Popup>
+            </Marker>
+          )}
           {tripStops &&
             tripStops.map((stop) => (
               <Marker
