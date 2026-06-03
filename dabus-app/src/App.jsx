@@ -426,11 +426,12 @@ function App() {
                   busShape={busShape}
                   tripStops={tripStops}
                   onGetArrivals={(stopId) => {
+                    if (activeTab !== "nearby") setActiveTab("nearby");
                     setArrivalsTab(null);
                     setTrackingView(false);
                     fetchArrivals(stopId).then((stopName) => {
                       addToHistory(stopId, stopName);
-                      setArrivalsTab(activeTab);
+                      setArrivalsTab("nearby");
                     });
                   }}
                 />
@@ -441,7 +442,10 @@ function App() {
               userLocation={userLocation}
               nearbyStopsMap={nearbyStopsMap}
               locating={locating}
-              onSelectStop={(stopId) => handleFetchArrivals(stopId, "nearby")}
+              onSelectStop={(stopId) => {
+                if (activeTab !== "nearby") setActiveTab("nearby");
+                handleFetchArrivals(stopId, "nearby");
+              }}
               onMount={() => {}}
               mapCenter={mapCenter}
               onMapMove={setMapCenter}

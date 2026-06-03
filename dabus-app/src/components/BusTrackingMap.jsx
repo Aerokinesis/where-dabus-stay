@@ -4,12 +4,41 @@ import {
   Marker,
   Popup,
   Polyline,
+  useMap,
 } from "react-leaflet";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import L from "leaflet";
+import styles from "./BusTrackingMap.module.css";
 
-function BusTrackingMap({ busLocation, selectedBus, busShape, tripStops, onGetArrivals }) {
+// Listens for a trigger counter and flies the map to the given center.
+function RecenterControl({ trigger, center }) {
+  const map = useMap();
+
+  useEffect(() => {
+    // trigger starts at 0 and only increments on FAB click, so this naturally
+    // skips both the initial mount and StrictMode's simulated remount in dev.
+    if (trigger === 0) return;
+    if (!Array.isArray(center)) return;
+    const [lat, lng] = center;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    map.flyTo([lat, lng], Math.max(map.getZoom(), 15), { duration: 0.6 });
+  }, [trigger]);
+
+  return null;
+}
+
+function BusTrackingMap({ busLocation, userLocation, selectedBus, busShape, tripStops, onGetArrivals }) {
   const [satelliteView, setSatelliteView] = useState(false);
+  const [busTrigger, setBusTrigger] = useState(0);
+  const [userTrigger, setUserTrigger] = useState(0);
+
+  const busCenter = [
+    parseFloat(busLocation.latitude),
+    parseFloat(busLocation.longitude),
+  ];
+  const userCenter = userLocation
+    ? [userLocation.lat, userLocation.lon]
+    : null;
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -36,7 +65,7 @@ function BusTrackingMap({ busLocation, selectedBus, busShape, tripStops, onGetAr
           {satelliteView ? "Map view" : "Satellite view"}
         </button>
       </div>
-      <div style={{ flex: 1, height: 0 }}>
+      <div className={styles.mapWrapper}>
         <MapContainer
           center={[
             parseFloat(busLocation.latitude),
@@ -124,7 +153,62 @@ function BusTrackingMap({ busLocation, selectedBus, busShape, tripStops, onGetAr
                 </Popup>
               </Marker>
             ))}
+          <RecenterControl trigger={busTrigger} center={busCenter} />
+          <RecenterControl trigger={userTrigger} center={userCenter} />
         </MapContainer>
+
+        <div className={styles.fabStack}>
+          {userCenter && (
+            <button
+              type="button"
+              className={styles.fab}
+              onClick={() => setUserTrigger((t) => t + 1)}
+              aria-label="Recenter map on your location"
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <line x1="12" y1="2" x2="12" y2="5" />
+                <line x1="12" y1="19" x2="12" y2="22" />
+                <line x1="2" y1="12" x2="5" y2="12" />
+                <line x1="19" y1="12" x2="22" y2="12" />
+              </svg>
+            </button>
+          )}
+          <button
+            type="button"
+            className={styles.fab}
+            onClick={() => setBusTrigger((t) => t + 1)}
+            aria-label="Recenter map on the bus"
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 18V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10" />
+              <path d="M4 12h16" />
+              <circle cx="8" cy="18" r="1.5" />
+              <circle cx="16" cy="18" r="1.5" />
+              <path d="M6 6V4h12v2" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );
