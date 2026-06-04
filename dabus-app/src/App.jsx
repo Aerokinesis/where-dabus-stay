@@ -11,6 +11,7 @@ import Favorites from "./components/Favorites";
 import SaveStopModal from "./components/SaveStopModal";
 import StopHistory from "./components/StopHistory";
 import RoutesTab from "./components/RoutesTab";
+import RouteMap from "./components/RouteMap";
 import SettingsTab from "./components/SettingsTab";
 import Toast from "./components/Toast";
 import SearchInput from "./components/SearchInput";
@@ -42,6 +43,7 @@ function App() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [activeTab, setActiveTab] = useState("nearby");
   const [trackingView, setTrackingView] = useState(false);
+  const [routeMapView, setRouteMapView] = useState(false);
   const [arrivalsTab, setArrivalsTab] = useState(null);
 
   // Toast state
@@ -54,6 +56,7 @@ function App() {
   const [routesLoading, setRoutesLoading] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [routeStops, setRouteStops] = useState(null);
+  const [routeShape, setRouteShape] = useState(null);
   const [routeStopsLoading, setRouteStopsLoading] = useState(false);
 
   const {
@@ -174,6 +177,7 @@ function App() {
       const res = await fetch(`${API_BASE}/api/route/${route.route_id}/stops`);
       const data = await res.json();
       setRouteStops(data.stops);
+      setRouteShape(data.shape || null);
     } catch {
       setError("Could not load stops for this route.");
     } finally {
@@ -260,8 +264,11 @@ function App() {
           onClearRoute={() => {
             setSelectedRoute(null);
             setRouteStops(null);
+            setRouteShape(null);
+            setRouteMapView(false);
           }}
           onSelectStop={(stopId) => handleFetchArrivals(stopId, "routes")}
+          onViewOnMap={isMobile ? () => setRouteMapView(true) : null}
         />
       )}
 
@@ -437,6 +444,17 @@ function App() {
                 />
               </div>
             </>
+          ) : activeTab === "routes" && selectedRoute ? (
+            <RouteMap
+              shape={routeShape}
+              stops={routeStops}
+              selectedStopId={
+                arrivals && arrivalsTab === "routes" ? currentStop?.id : null
+              }
+              userLocation={userLocation}
+              onSelectStop={(stopId) => handleFetchArrivals(stopId, "routes")}
+              fullHeight
+            />
           ) : (
             <NearbyStopsMap
               userLocation={userLocation}
@@ -518,6 +536,69 @@ function App() {
                     setArrivalsTab(activeTab);
                   });
                 }}
+              />
+            </div>
+          </div>
+        )}
+      </ErrorBoundary>
+
+      {/* Mobile route-map overlay */}
+      <ErrorBoundary>
+        {isMobile && routeMapView && selectedRoute && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "var(--bg)",
+              zIndex: 1100,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div
+              style={{
+                padding: "12px 16px",
+                background: "var(--surface)",
+                borderBottom: "1px solid var(--border)",
+                flexShrink: 0,
+              }}
+            >
+              <button
+                onClick={() => setRouteMapView(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--primary)",
+                  fontSize: "14px",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                ← Back to stops
+              </button>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "var(--text-muted)",
+                  marginTop: "4px",
+                }}
+              >
+                Route {selectedRoute.route_short_name} — {selectedRoute.route_long_name}
+              </p>
+            </div>
+            <div style={{ flex: 1, height: 0 }}>
+              <RouteMap
+                shape={routeShape}
+                stops={routeStops}
+                selectedStopId={
+                  arrivals && arrivalsTab === "routes" ? currentStop?.id : null
+                }
+                userLocation={userLocation}
+                onSelectStop={(stopId) => {
+                  setRouteMapView(false);
+                  handleFetchArrivals(stopId, "routes");
+                }}
+                fullHeight
               />
             </div>
           </div>
