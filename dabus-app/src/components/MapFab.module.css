@@ -1,0 +1,28 @@
+.fab {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: background 0.15s, transform 0.1s;
+  padding: 0;
+}
+
+.fab:hover:not(:disabled) {
+  background: var(--bg);
+}
+
+.fab:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.fab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

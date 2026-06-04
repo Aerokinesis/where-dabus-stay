@@ -9,6 +9,8 @@ import {
   Polyline,
   useMap,
 } from "react-leaflet";
+import MapRecenterControl from "./MapRecenterControl";
+import MapFab from "./MapFab";
 
 // Fit the map to the route's bounding box on mount or when the shape changes.
 function FitToRoute({ shape }) {
@@ -26,23 +28,6 @@ function FitToRoute({ shape }) {
 
 const isFiniteLatLng = (lat, lng) =>
   Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
-
-// Listens for a trigger counter and flies to the given center.
-// trigger===0 is the initial state, so this naturally skips both
-// the first mount and StrictMode's simulated remount in dev.
-function RecenterControl({ trigger, center }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (trigger === 0) return;
-    if (!Array.isArray(center)) return;
-    const [lat, lng] = center;
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-    map.flyTo([lat, lng], Math.max(map.getZoom(), 15), { duration: 0.6 });
-  }, [trigger]);
-
-  return null;
-}
 
 function RouteMap({
   shape,
@@ -65,6 +50,7 @@ function RouteMap({
     userLocation && isFiniteLatLng(userLocation.lat, userLocation.lon);
 
   const [recenterTrigger, setRecenterTrigger] = useState(0);
+  const [fitRouteTrigger, setFitRouteTrigger] = useState(0);
 
   return (
     <div className={fullHeight ? styles.mapWrapperFull : styles.mapWrapper}>
@@ -145,38 +131,65 @@ function RouteMap({
               </Marker>
             );
           })}
-        <RecenterControl
+        <MapRecenterControl
           trigger={recenterTrigger}
           center={userValid ? [Number(userLocation.lat), Number(userLocation.lon)] : null}
         />
+        <MapRecenterControl
+          trigger={fitRouteTrigger}
+          bounds={shape}
+        />
       </MapContainer>
 
-      {userValid && (
-        <button
-          type="button"
-          className={styles.recenterFab}
-          onClick={() => setRecenterTrigger((t) => t + 1)}
-          aria-label="Recenter map on your location"
-        >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+      <div className={styles.fabStack}>
+        {userValid && (
+          <MapFab
+            onClick={() => setRecenterTrigger((t) => t + 1)}
+            ariaLabel="Recenter map on your location"
           >
-            <circle cx="12" cy="12" r="3" />
-            <line x1="12" y1="2" x2="12" y2="5" />
-            <line x1="12" y1="19" x2="12" y2="22" />
-            <line x1="2" y1="12" x2="5" y2="12" />
-            <line x1="19" y1="12" x2="22" y2="12" />
-          </svg>
-        </button>
-      )}
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <line x1="12" y1="2" x2="12" y2="5" />
+              <line x1="12" y1="19" x2="12" y2="22" />
+              <line x1="2" y1="12" x2="5" y2="12" />
+              <line x1="19" y1="12" x2="22" y2="12" />
+            </svg>
+          </MapFab>
+        )}
+        {shape && shape.length > 0 && (
+          <MapFab
+            onClick={() => setFitRouteTrigger((t) => t + 1)}
+            ariaLabel="Fit map to the whole route"
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="4 8 4 4 8 4" />
+              <polyline points="16 4 20 4 20 8" />
+              <polyline points="4 16 4 20 8 20" />
+              <polyline points="16 20 20 20 20 16" />
+            </svg>
+          </MapFab>
+        )}
+      </div>
     </div>
   );
 }
