@@ -124,8 +124,11 @@ Object.entries(tripsByRoute).forEach(([routeId, trips]) => {
                 return {
                     stop_id: st.stop_id,
                     stop_name: stop?.stop_name || "Unknown",
+                    stop_lat: parseFloat(stop?.stop_lat),
+                    stop_lon: parseFloat(stop?.stop_lon),
                 }
             })
+            .filter(s => !isNaN(s.stop_lat) && !isNaN(s.stop_lon))
 
         routeDirections.push({
             id: `${routeId}-${directionId}`,
@@ -134,6 +137,7 @@ Object.entries(tripsByRoute).forEach(([routeId, trips]) => {
             route_short_name: route.route_short_name,
             route_long_name: route.route_long_name,
             headsign: trip.trip_headsign,
+            shape_id: trip.shape_id,
             stops: dirStops,
         })
     })
@@ -266,7 +270,10 @@ app.get("/api/route/:routeId/stops", (req, res) => {
     if (!isSafeId(routeId)) return res.status(400).json({ error: "Invalid route id" })
     const entry = routeDirections.find(r => r.id === routeId)
     if (!entry) return res.status(404).json({ error: "Route not found" })
-    res.json({ stops: entry.stops })
+    const shape = entry.shape_id && Object.prototype.hasOwnProperty.call(shapes, entry.shape_id)
+        ? shapes[entry.shape_id]
+        : []
+    res.json({ stops: entry.stops, shape })
 })
 
 // Stop name search endpoint
