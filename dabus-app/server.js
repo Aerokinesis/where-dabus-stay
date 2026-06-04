@@ -89,6 +89,20 @@ const stopsById = stops.reduce((acc, stop) => {
     return acc
 }, {})
 
+// Strip GTFS internal "_merge" suffix so the frontend always sees the user-visible
+// stop code (e.g. "4511_merge" -> "4511"). The bus signage and OTS API use the bare
+// code; only GTFS internals carry the suffix.
+const displayStopId = (id) => (typeof id === "string" ? id.replace(/_merge$/, "") : id)
+
+// Look up a stop by either its displayed ID or its raw GTFS stop_id, so frontend
+// callers can use the user-visible code without knowing about the "_merge" quirk.
+const getStopByDisplayId = (id) => {
+    if (Object.prototype.hasOwnProperty.call(stopsById, id)) return stopsById[id]
+    const mergeKey = `${id}_merge`
+    if (Object.prototype.hasOwnProperty.call(stopsById, mergeKey)) return stopsById[mergeKey]
+    return null
+}
+
 // Index trips by route_id
 const tripsByRoute = tripsRaw.reduce((acc, trip) => {
     if (!acc[trip.route_id]) acc[trip.route_id] = []
@@ -122,7 +136,7 @@ Object.entries(tripsByRoute).forEach(([routeId, trips]) => {
             .map(st => {
                 const stop = stopsById[st.stop_id]
                 return {
-                    stop_id: st.stop_id,
+                    stop_id: displayStopId(st.stop_id),
                     stop_name: stop?.stop_name || "Unknown",
                     stop_lat: parseFloat(stop?.stop_lat),
                     stop_lon: parseFloat(stop?.stop_lon),
@@ -237,7 +251,7 @@ app.get("/api/trip/:tripId/stops", (req, res) => {
         .map(st => {
             const stop = stopsById[st.stop_id]
             return {
-                stop_id: st.stop_id,
+                stop_id: displayStopId(st.stop_id),
                 stop_name: stop?.stop_name || "Unknown",
                 stop_lat: parseFloat(stop?.stop_lat),
                 stop_lon: parseFloat(stop?.stop_lon),
@@ -289,7 +303,7 @@ app.get("/api/search-stops", (req, res) => {
             )
         )
         .map(stop => ({
-            stop_id: stop.stop_id,
+            stop_id: displayStopId(stop.stop_id),
             stop_name: stop.stop_name,
             stop_lat: stop.stop_lat,
             stop_lon: stop.stop_lon,
@@ -308,7 +322,7 @@ app.get("/api/nearby-stops-by-coords", (req, res) => {
 
     const nearbyStops = stops
         .map(stop => ({
-            stop_id: stop.stop_id,
+            stop_id: displayStopId(stop.stop_id),
             stop_name: stop.stop_name,
             stop_lat: stop.stop_lat,
             stop_lon: stop.stop_lon,
@@ -325,9 +339,9 @@ app.get("/api/nearby-stops-by-coords", (req, res) => {
 app.get("/api/stop/:stopId", (req, res) => {
     const stopId = req.params.stopId
     if (!isSafeId(stopId)) return res.status(400).json({ error: "Invalid stop id" })
-    const stop = Object.prototype.hasOwnProperty.call(stopsById, stopId) ? stopsById[stopId] : null
+    const stop = getStopByDisplayId(stopId)
     if (!stop) return res.status(404).json({ error: "Stop not found" })
-    res.json({ stop_id: stop.stop_id, stop_name: stop.stop_name })
+    res.json({ stop_id: displayStopId(stop.stop_id), stop_name: stop.stop_name })
 })
 
 // Start HTTPS server with mkcert certificates.

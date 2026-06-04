@@ -10,6 +10,8 @@ import {
   useMap,
   useMapEvents,
 } from "react-leaflet";
+import MapRecenterControl from "./MapRecenterControl";
+import MapFab from "./MapFab";
 
 function MapMoveTracker({ onMapMove }) {
   useMapEvents({
@@ -28,23 +30,6 @@ function MapRecenter({ center }) {
       hasSet.current = true;
     }
   }, [center]);
-
-  return null;
-}
-
-// Listens for the FAB's trigger counter and flies the map to the user.
-function RecenterControl({ trigger, center }) {
-  const map = useMap();
-
-  useEffect(() => {
-    // trigger starts at 0 and only increments on FAB click, so this naturally
-    // skips both the initial mount and StrictMode's simulated remount in dev.
-    if (trigger === 0) return;
-    if (!Array.isArray(center)) return;
-    const [lat, lng] = center;
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-    map.flyTo([lat, lng], Math.max(map.getZoom(), 15), { duration: 0.6 });
-  }, [trigger]);
 
   return null;
 }
@@ -135,37 +120,37 @@ function NearbyStopsMap({
               </Popup>
             </Marker>
           ))}
-        <RecenterControl
+        <MapRecenterControl
           trigger={recenterTrigger}
           center={userLocation ? [userLocation.lat, userLocation.lon] : null}
         />
       </MapContainer>
 
       {userLocation && (
-        <button
-          type="button"
-          className={styles.recenterFab}
-          onClick={() => setRecenterTrigger((t) => t + 1)}
-          aria-label="Recenter map on your location"
-        >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+        <div className={styles.fabStack}>
+          <MapFab
+            onClick={() => setRecenterTrigger((t) => t + 1)}
+            ariaLabel="Recenter map on your location"
           >
-            <circle cx="12" cy="12" r="3" />
-            <line x1="12" y1="2" x2="12" y2="5" />
-            <line x1="12" y1="19" x2="12" y2="22" />
-            <line x1="2" y1="12" x2="5" y2="12" />
-            <line x1="19" y1="12" x2="22" y2="12" />
-          </svg>
-        </button>
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <line x1="12" y1="2" x2="12" y2="5" />
+              <line x1="12" y1="19" x2="12" y2="22" />
+              <line x1="2" y1="12" x2="5" y2="12" />
+              <line x1="19" y1="12" x2="22" y2="12" />
+            </svg>
+          </MapFab>
+        </div>
       )}
     </div>
   );
