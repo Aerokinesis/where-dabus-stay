@@ -35,16 +35,15 @@ function MapRecenter({ center }) {
 // Listens for the FAB's trigger counter and flies the map to the user.
 function RecenterControl({ trigger, center }) {
   const map = useMap();
-  const firstRender = useRef(true);
 
   useEffect(() => {
-    if (firstRender.current) {
-      firstRender.current = false;
-      return;
-    }
-    if (center) {
-      map.flyTo(center, Math.max(map.getZoom(), 15), { duration: 0.6 });
-    }
+    // trigger starts at 0 and only increments on FAB click, so this naturally
+    // skips both the initial mount and StrictMode's simulated remount in dev.
+    if (trigger === 0) return;
+    if (!Array.isArray(center)) return;
+    const [lat, lng] = center;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    map.flyTo([lat, lng], Math.max(map.getZoom(), 15), { duration: 0.6 });
   }, [trigger]);
 
   return null;
