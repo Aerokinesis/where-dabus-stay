@@ -1,0 +1,20 @@
+# Normalize all text files to LF in the repository.
+# Working tree gets the platform's native line endings on checkout.
+* text=auto eol=lf
+
+# Explicit overrides for files that must keep their own conventions.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# Binary files — never touch these.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.svg   text
+*.pdf   binary
+*.zip   binary
+*.woff  binary
+*.woff2 binary
