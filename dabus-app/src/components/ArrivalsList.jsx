@@ -1,4 +1,5 @@
 import styles from "./ArrivalsList.module.css";
+import RouteAlerts from "./RouteAlerts";
 
 function ArrivalsList({
   arrivals,
@@ -13,6 +14,8 @@ function ArrivalsList({
   arrivalsTab,
   onBackToTracking,
   routeShortName,
+  alerts,
+  onDismissAlert,
 }) {
   const getMinutesUntil = (stopTime, date) => {
     const now = new Date();
@@ -94,6 +97,8 @@ function ArrivalsList({
           Updated {lastUpdated.toLocaleTimeString()}
         </p>
       )}
+
+      <RouteAlerts alerts={alerts} onDismiss={onDismissAlert} />
 
       {safeArrivals.length > 0 && (
         <div className={styles.summary}>

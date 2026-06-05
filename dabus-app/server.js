@@ -7,6 +7,7 @@ import dotenv from "dotenv"
 import fs from "fs"
 import { parse } from "csv-parse/sync"
 import https from "https"
+import { parseAlerts } from "./alerts.js"
 
 dotenv.config()
 
@@ -160,6 +161,12 @@ Object.entries(tripsByRoute).forEach(([routeId, trips]) => {
 // Sort by route number then direction
 routeDirections.sort((a, b) =>
     a.route_short_name.localeCompare(b.route_short_name, undefined, { numeric: true })
+)
+
+// Set of route_short_name values present in our GTFS bundle. Used by the alerts
+// parser to decide which mentioned routes the frontend can deep-link to.
+const knownRouteShortNames = new Set(
+    routesRaw.map(r => r.route_short_name).filter(Boolean)
 )
 
 // Calculate distance between two lat/lon points in miles
@@ -342,6 +349,44 @@ app.get("/api/stop/:stopId", (req, res) => {
     const stop = getStopByDisplayId(stopId)
     if (!stop) return res.status(404).json({ error: "Stop not found" })
     res.json({ stop_id: displayStopId(stop.stop_id), stop_name: stop.stop_name })
+})
+
+// Service alerts endpoint — scrapes the public OTS rider alerts page since OTS
+// doesn't publish the GTFS-Realtime feed URL. 5-minute in-memory cache; on
+// upstream failure we serve stale cache rather than erroring out.
+const ALERTS_URL = "https://www.thebus.org/RiderAlerts.asp"
+const ALERTS_CACHE_MS = 5 * 60 * 1000
+let alertsCache = { alerts: null, fetchedAt: 0 }
+
+app.get("/api/alerts", async (req, res) => {
+    const now = Date.now()
+    if (alertsCache.alerts && now - alertsCache.fetchedAt < ALERTS_CACHE_MS) {
+        return res.json({
+            alerts: alertsCache.alerts,
+            cached: true,
+            stale: false,
+            fetched_at: alertsCache.fetchedAt,
+        })
+    }
+    try {
+        const r = await fetch(ALERTS_URL, { signal: AbortSignal.timeout(10000) })
+        if (!r.ok) throw new Error(`Upstream ${r.status}`)
+        const html = await r.text()
+        const parsed = parseAlerts(html, knownRouteShortNames)
+        alertsCache = { alerts: parsed, fetchedAt: now }
+        res.json({ alerts: parsed, cached: false, stale: false, fetched_at: now })
+    } catch (_err) {
+        // Better to serve a stale list than a hard error — alerts are advisory.
+        if (alertsCache.alerts) {
+            return res.json({
+                alerts: alertsCache.alerts,
+                cached: true,
+                stale: true,
+                fetched_at: alertsCache.fetchedAt,
+            })
+        }
+        res.status(502).json({ error: "Could not fetch alerts" })
+    }
 })
 
 // Start HTTPS server with mkcert certificates.

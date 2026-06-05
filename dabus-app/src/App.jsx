@@ -23,6 +23,7 @@ import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import { useStopHistory } from "./hooks/useStopHistory";
 import { useSettings } from "./hooks/useSettings";
 import { useMediaQuery } from "./hooks/useMediaQuery";
+import { useAlerts } from "./hooks/useAlerts";
 import { API_BASE } from "./constants";
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -102,6 +103,8 @@ function App() {
 
   const { stopHistory, addToHistory, removeFromHistory, clearHistory } =
     useStopHistory();
+
+  const { alertsForRoute, dismiss: dismissAlert } = useAlerts();
 
   const { isPulling, pullDistance } = usePullToRefresh(
     () => fetchArrivals(currentStop.id),
@@ -269,6 +272,8 @@ function App() {
           }}
           onSelectStop={(stopId) => handleFetchArrivals(stopId, "routes")}
           onViewOnMap={isMobile ? () => setRouteMapView(true) : null}
+          alertsForRoute={alertsForRoute}
+          onDismissAlert={dismissAlert}
         />
       )}
 
@@ -313,6 +318,17 @@ function App() {
             lastUpdated={lastUpdated}
             arrivalsTab={arrivalsTab}
             routeShortName={arrivalsTab === "routes" ? selectedRoute?.route_short_name : null}
+            alerts={(() => {
+              // Union of alerts across every route arriving at this stop, deduped by id.
+              const seen = new Map();
+              for (const bus of arrivals || []) {
+                for (const a of alertsForRoute(bus.route)) {
+                  if (!seen.has(a.id)) seen.set(a.id, a);
+                }
+              }
+              return [...seen.values()];
+            })()}
+            onDismissAlert={dismissAlert}
             onBack={
               arrivalsTab === "favorites" ||
               arrivalsTab === "history" ||

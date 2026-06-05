@@ -1,4 +1,17 @@
 import styles from "./RoutesTab.module.css";
+import RouteAlerts from "./RouteAlerts";
+
+// Pick the most informative single label across a route's alerts: detour beats
+// service-change beats stop-mod beats generic alert.
+const PRIORITY = ["Detour", "Alert", "Service change", "Stop change", "Holiday", "Notice"];
+const summarizeBadge = (alerts) => {
+  if (!alerts || alerts.length === 0) return null;
+  const labels = new Set(alerts.map((a) => a.category_label));
+  for (const label of PRIORITY) {
+    if (labels.has(label)) return label;
+  }
+  return [...labels][0];
+};
 
 function RoutesTab({
   routes,
@@ -11,6 +24,8 @@ function RoutesTab({
   onClearRoute,
   onSelectStop,
   onViewOnMap,
+  alertsForRoute,
+  onDismissAlert,
 }) {
   const titleCase = (str) =>
     str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
@@ -30,6 +45,12 @@ function RoutesTab({
               {selectedRoute.route_long_name}
             </div>
           </div>
+          {alertsForRoute && (
+            <RouteAlerts
+              alerts={alertsForRoute(selectedRoute.route_short_name)}
+              onDismiss={onDismissAlert}
+            />
+          )}
           {onViewOnMap && (
             <button
               type="button"
@@ -88,28 +109,42 @@ function RoutesTab({
             <p className={styles.status}>No routes found.</p>
           )}
           <div className={styles.routeList}>
-            {filteredRoutes.map((route) => (
-              <div
-                key={route.route_id}
-                className={styles.routeRow}
-                onClick={() => onSelectRoute(route)}
-              >
-                <div className={styles.routeBadge}>
-                  {route.route_short_name}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div className={styles.routeRowName}>
-                    {route.route_long_name}
+            {filteredRoutes.map((route) => {
+              const routeAlerts = alertsForRoute
+                ? alertsForRoute(route.route_short_name)
+                : [];
+              const badgeLabel = summarizeBadge(routeAlerts);
+              return (
+                <div
+                  key={route.route_id}
+                  className={styles.routeRow}
+                  onClick={() => onSelectRoute(route)}
+                >
+                  <div className={styles.routeBadge}>
+                    {route.route_short_name}
                   </div>
-                  {route.route_description && (
-                    <div className={styles.routeRowDesc}>
-                      {route.route_description}
+                  <div style={{ flex: 1 }}>
+                    <div className={styles.routeRowName}>
+                      {route.route_long_name}
+                      {badgeLabel && (
+                        <span
+                          className={styles.alertBadge}
+                          aria-label={`${routeAlerts.length} active ${badgeLabel.toLowerCase()} notice${routeAlerts.length === 1 ? "" : "s"}`}
+                        >
+                          {badgeLabel}
+                        </span>
+                      )}
                     </div>
-                  )}
+                    {route.route_description && (
+                      <div className={styles.routeRowDesc}>
+                        {route.route_description}
+                      </div>
+                    )}
+                  </div>
+                  <span className={styles.arrow} aria-hidden="true">›</span>
                 </div>
-                <span className={styles.arrow}>›</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
