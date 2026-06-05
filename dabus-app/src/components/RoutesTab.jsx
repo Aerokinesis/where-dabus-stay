@@ -25,7 +25,9 @@ function RoutesTab({
   onSelectStop,
   onViewOnMap,
   alertsForRoute,
+  dismissedAlertsForRoute,
   onDismissAlert,
+  onRestoreAlerts,
 }) {
   const titleCase = (str) =>
     str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
@@ -48,7 +50,13 @@ function RoutesTab({
           {alertsForRoute && (
             <RouteAlerts
               alerts={alertsForRoute(selectedRoute.route_short_name)}
+              hiddenAlerts={
+                dismissedAlertsForRoute
+                  ? dismissedAlertsForRoute(selectedRoute.route_short_name)
+                  : []
+              }
               onDismiss={onDismissAlert}
+              onRestore={onRestoreAlerts}
             />
           )}
           {onViewOnMap && (

@@ -15,7 +15,9 @@ function ArrivalsList({
   onBackToTracking,
   routeShortName,
   alerts,
+  hiddenAlerts,
   onDismissAlert,
+  onRestoreAlerts,
 }) {
   const getMinutesUntil = (stopTime, date) => {
     const now = new Date();
@@ -98,7 +100,12 @@ function ArrivalsList({
         </p>
       )}
 
-      <RouteAlerts alerts={alerts} onDismiss={onDismissAlert} />
+      <RouteAlerts
+        alerts={alerts}
+        hiddenAlerts={hiddenAlerts}
+        onDismiss={onDismissAlert}
+        onRestore={onRestoreAlerts}
+      />
 
       {safeArrivals.length > 0 && (
         <div className={styles.summary}>

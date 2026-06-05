@@ -104,7 +104,12 @@ function App() {
   const { stopHistory, addToHistory, removeFromHistory, clearHistory } =
     useStopHistory();
 
-  const { alertsForRoute, dismiss: dismissAlert } = useAlerts();
+  const {
+    alertsForRoute,
+    dismissedAlertsForRoute,
+    dismiss: dismissAlert,
+    restore: restoreAlerts,
+  } = useAlerts();
 
   const { isPulling, pullDistance } = usePullToRefresh(
     () => fetchArrivals(currentStop.id),
@@ -273,7 +278,9 @@ function App() {
           onSelectStop={(stopId) => handleFetchArrivals(stopId, "routes")}
           onViewOnMap={isMobile ? () => setRouteMapView(true) : null}
           alertsForRoute={alertsForRoute}
+          dismissedAlertsForRoute={dismissedAlertsForRoute}
           onDismissAlert={dismissAlert}
+          onRestoreAlerts={restoreAlerts}
         />
       )}
 
@@ -328,7 +335,19 @@ function App() {
               }
               return [...seen.values()];
             })()}
+            hiddenAlerts={(() => {
+              // Same union, but for previously dismissed alerts. Drives the
+              // "Show N hidden alerts" link.
+              const seen = new Map();
+              for (const bus of arrivals || []) {
+                for (const a of dismissedAlertsForRoute(bus.route)) {
+                  if (!seen.has(a.id)) seen.set(a.id, a);
+                }
+              }
+              return [...seen.values()];
+            })()}
             onDismissAlert={dismissAlert}
+            onRestoreAlerts={restoreAlerts}
             onBack={
               arrivalsTab === "favorites" ||
               arrivalsTab === "history" ||

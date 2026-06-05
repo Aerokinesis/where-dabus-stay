@@ -27,6 +27,18 @@ const writeDismissed = (set) => {
   }
 };
 
+// Two parallel indexes are built off this: route_short_name -> alerts.
+const indexByRoute = (list) => {
+  const map = new Map();
+  for (const alert of list) {
+    for (const route of alert.affected_routes || []) {
+      if (!map.has(route)) map.set(route, []);
+      map.get(route).push(alert);
+    }
+  }
+  return map;
+};
+
 // Fetches and exposes service alerts. Dismissed IDs persist in localStorage so a
 // user who dismisses an alert won't see it again until OTS rotates to a new ID.
 export function useAlerts() {
@@ -72,38 +84,56 @@ export function useAlerts() {
     writeDismissed(new Set());
   }, []);
 
-  // Visible = not dismissed. Consumers can filter further by route.
+  // Un-dismiss a specific list of alert IDs (or undefined to restore everything).
+  // Used by the "Show N hidden alerts" link so consumers can restore only the
+  // alerts that affect the current view, not every dismissed alert globally.
+  const restore = useCallback((alertIds) => {
+    setDismissed((prev) => {
+      if (!alertIds) {
+        writeDismissed(new Set());
+        return new Set();
+      }
+      const next = new Set(prev);
+      for (const id of alertIds) next.delete(id);
+      writeDismissed(next);
+      return next;
+    });
+  }, []);
+
   const visibleAlerts = useMemo(
     () => alerts.filter((a) => !dismissed.has(a.id)),
     [alerts, dismissed],
   );
 
-  // Index: route_short_name -> array of alerts that mention it. Built once per
-  // alerts/dismissed change so per-route lookups stay O(1).
-  const alertsByRoute = useMemo(() => {
-    const map = new Map();
-    for (const alert of visibleAlerts) {
-      for (const route of alert.affected_routes || []) {
-        if (!map.has(route)) map.set(route, []);
-        map.get(route).push(alert);
-      }
-    }
-    return map;
-  }, [visibleAlerts]);
+  const dismissedAlerts = useMemo(
+    () => alerts.filter((a) => dismissed.has(a.id)),
+    [alerts, dismissed],
+  );
+
+  const alertsByRoute = useMemo(() => indexByRoute(visibleAlerts), [visibleAlerts]);
+  const dismissedByRoute = useMemo(() => indexByRoute(dismissedAlerts), [dismissedAlerts]);
 
   const alertsForRoute = useCallback(
     (routeShortName) => alertsByRoute.get(routeShortName) || [],
     [alertsByRoute],
   );
 
+  const dismissedAlertsForRoute = useCallback(
+    (routeShortName) => dismissedByRoute.get(routeShortName) || [],
+    [dismissedByRoute],
+  );
+
   return {
     alerts,
     visibleAlerts,
+    dismissedAlerts,
     alertsForRoute,
+    dismissedAlertsForRoute,
     loading,
     error,
     stale,
     dismiss,
+    restore,
     clearDismissed,
     refresh: fetchAlerts,
   };
