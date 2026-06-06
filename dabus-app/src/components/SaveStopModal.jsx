@@ -98,7 +98,7 @@ function SaveStopModal({ stop, onSave, onCancel }) {
             maxLength={MAX_NAME_LENGTH}
             onChange={(e) => setCustomName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !isOverLimit) onSave(customName);
+              if (e.key === "Enter" && !isOverLimit) { e.preventDefault(); onSave(customName); }
               if (e.key === "Escape") onCancel();
             }}
             style={{
@@ -140,6 +140,7 @@ function SaveStopModal({ stop, onSave, onCancel }) {
           style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}
         >
           <button
+            type="button"
             onClick={onCancel}
             style={{
               background: "none",
@@ -154,6 +155,7 @@ function SaveStopModal({ stop, onSave, onCancel }) {
             Cancel
           </button>
           <button
+            type="button"
             onClick={() => onSave(customName)}
             disabled={isOverLimit}
             aria-describedby="save-stop-counter"
