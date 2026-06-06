@@ -6,6 +6,7 @@ import fetch from "node-fetch"
 import dotenv from "dotenv"
 import fs from "fs"
 import { parse } from "csv-parse/sync"
+import http from "http"
 import https from "https"
 import { parseAlerts } from "./alerts.js"
 
@@ -40,49 +41,16 @@ app.use(cors({
     },
 }))
 
-// Load stops from GTFS stops.txt
+// Load stops from GTFS stops.txt (small — needed for search/nearby/stop-info endpoints)
 const stopsData = fs.readFileSync("./data/stops.txt", "utf8")
 const stops = parse(stopsData, { columns: true, skip_empty_lines: true })
 
-// Load shapes from GTFS shapes.txt
-const shapesData = fs.readFileSync("./data/shapes.txt", "utf8")
-const shapesRaw = parse(shapesData, { columns: true, skip_empty_lines: true })
-
-// Group shapes by shape_id sorted by sequence
-const shapes = shapesRaw.reduce((acc, row) => {
-    if (!acc[row.shape_id]) acc[row.shape_id] = []
-    acc[row.shape_id].push({
-        seq: parseInt(row.shape_pt_sequence),
-        coords: [parseFloat(row.shape_pt_lat), parseFloat(row.shape_pt_lon)]
-    })
-    return acc
-}, {})
-
-// Sort each shape by sequence and extract just the coordinates
-Object.keys(shapes).forEach(id => {
-    shapes[id] = shapes[id]
-        .sort((a, b) => a.seq - b.seq)
-        .map(p => p.coords)
-})
-
-// Load trips from GTFS trips.txt
-const tripsData = fs.readFileSync("./data/trips.txt", "utf8")
-const tripsRaw = parse(tripsData, { columns: true, skip_empty_lines: true })
-
-// Load stop_times from GTFS stop_times.txt
-const stopTimesData = fs.readFileSync("./data/stop_times.txt", "utf8")
-const stopTimesRaw = parse(stopTimesData, { columns: true, skip_empty_lines: true })
-
-// Load routes from GTFS routes.txt
-const routesData = fs.readFileSync("./data/routes.txt", "utf8")
-const routesRaw = parse(routesData, { columns: true, skip_empty_lines: true })
-
-// Index stop times by trip_id
-const stopTimesByTrip = stopTimesRaw.reduce((acc, row) => {
-    if (!acc[row.trip_id]) acc[row.trip_id] = []
-    acc[row.trip_id].push(row)
-    return acc
-}, {})
+// Load pre-processed route/shape data (replaces the heavy shapes.txt, trips.txt,
+// stop_times.txt, and routes.txt that would blow the 512MB Railway memory limit).
+// Re-generate with: node preprocess.js
+const { routeDirections, shapes, shapeStops } = JSON.parse(
+    fs.readFileSync("./data/processed.json", "utf8")
+)
 
 // Index stops by stop_id
 const stopsById = stops.reduce((acc, stop) => {
@@ -104,69 +72,10 @@ const getStopByDisplayId = (id) => {
     return null
 }
 
-// Index trips by route_id
-const tripsByRoute = tripsRaw.reduce((acc, trip) => {
-    if (!acc[trip.route_id]) acc[trip.route_id] = []
-    acc[trip.route_id].push(trip)
-    return acc
-}, {})
-
-// Build one entry per direction per route
-const routeDirections = []
-
-Object.entries(tripsByRoute).forEach(([routeId, trips]) => {
-    const route = routesRaw.find(r => r.route_id === routeId)
-    if (!route) return
-
-    const directions = {}
-    trips.forEach(trip => {
-        const dir = trip.direction_id ?? "0"
-        if (!directions[dir]) directions[dir] = trip
-    })
-
-    Object.entries(directions).forEach(([directionId, trip]) => {
-        const stopTimes = stopTimesByTrip[trip.trip_id] || []
-        const seen = new Set()
-        const dirStops = stopTimes
-            .sort((a, b) => parseInt(a.stop_sequence) - parseInt(b.stop_sequence))
-            .filter(st => {
-                if (seen.has(st.stop_id)) return false
-                seen.add(st.stop_id)
-                return true
-            })
-            .map(st => {
-                const stop = stopsById[st.stop_id]
-                return {
-                    stop_id: displayStopId(st.stop_id),
-                    stop_name: stop?.stop_name || "Unknown",
-                    stop_lat: parseFloat(stop?.stop_lat),
-                    stop_lon: parseFloat(stop?.stop_lon),
-                }
-            })
-            .filter(s => !isNaN(s.stop_lat) && !isNaN(s.stop_lon))
-
-        routeDirections.push({
-            id: `${routeId}-${directionId}`,
-            route_id: routeId,
-            direction_id: directionId,
-            route_short_name: route.route_short_name,
-            route_long_name: route.route_long_name,
-            headsign: trip.trip_headsign,
-            shape_id: trip.shape_id,
-            stops: dirStops,
-        })
-    })
-})
-
-// Sort by route number then direction
-routeDirections.sort((a, b) =>
-    a.route_short_name.localeCompare(b.route_short_name, undefined, { numeric: true })
-)
-
 // Set of route_short_name values present in our GTFS bundle. Used by the alerts
 // parser to decide which mentioned routes the frontend can deep-link to.
 const knownRouteShortNames = new Set(
-    routesRaw.map(r => r.route_short_name).filter(Boolean)
+    routeDirections.map(r => r.route_short_name).filter(Boolean)
 )
 
 // Calculate distance between two lat/lon points in miles
@@ -230,45 +139,19 @@ app.get("/api/shape/:shapeId", (req, res) => {
     res.json({ shape })
 })
 
-// Trip stops endpoint
+// Trip stops endpoint — used for bus tracking route display.
+// Live trip IDs from the OTS API won't be in GTFS, so we always fall back
+// to the pre-processed shapeStops index keyed by shape_id.
 app.get("/api/trip/:tripId/stops", (req, res) => {
     const tripId = req.params.tripId
     if (!isSafeId(tripId)) return res.status(400).json({ error: "Invalid trip id" })
 
-    // Try direct lookup first (static GTFS trip ID)
-    let stopTimes = Object.prototype.hasOwnProperty.call(stopTimesByTrip, tripId)
-        ? stopTimesByTrip[tripId]
-        : null
-
-    // If not found, try matching by shape_id (realtime trip IDs won't be in GTFS)
-    if (!stopTimes) {
-        const shapeId = req.query.shape
-        if (shapeId && isSafeId(shapeId)) {
-            const matchingTrip = tripsRaw.find(t => t.shape_id === shapeId)
-            if (matchingTrip) {
-                stopTimes = stopTimesByTrip[matchingTrip.trip_id]
-            }
-        }
+    const shapeId = req.query.shape
+    if (shapeId && isSafeId(shapeId) && Object.prototype.hasOwnProperty.call(shapeStops, shapeId)) {
+        return res.json({ stops: shapeStops[shapeId] })
     }
 
-    if (!stopTimes) return res.status(404).json({ error: "Trip not found" })
-
-    const tripStops = stopTimes
-        .sort((a, b) => parseInt(a.stop_sequence) - parseInt(b.stop_sequence))
-        .map(st => {
-            const stop = stopsById[st.stop_id]
-            return {
-                stop_id: displayStopId(st.stop_id),
-                stop_name: stop?.stop_name || "Unknown",
-                stop_lat: parseFloat(stop?.stop_lat),
-                stop_lon: parseFloat(stop?.stop_lon),
-                arrival_time: st.arrival_time,
-                sequence: parseInt(st.stop_sequence)
-            }
-        })
-        .filter(s => !isNaN(s.stop_lat) && !isNaN(s.stop_lon))
-
-    res.json({ stops: tripStops })
+    res.status(404).json({ error: "Trip not found" })
 })
 
 // All routes endpoint — one entry per direction
@@ -389,15 +272,22 @@ app.get("/api/alerts", async (req, res) => {
     }
 })
 
-// Start HTTPS server with mkcert certificates.
-// In production, TLS is usually terminated upstream — set USE_HTTPS=false to skip.
-const httpsOptions = {
-    key: fs.readFileSync(process.env.SSL_KEY_PATH || "./192.168.4.27+2-key.pem"),
-    cert: fs.readFileSync(process.env.SSL_CERT_PATH || "./192.168.4.27+2.pem"),
+const PORT = process.env.PORT || 3001
+const USE_HTTPS = process.env.USE_HTTPS !== "false"
+
+if (USE_HTTPS) {
+    // Local dev: TLS via mkcert certs. Set USE_HTTPS=false in production
+    // where TLS is terminated upstream (Railway, Render, etc.).
+    const httpsOptions = {
+        key: fs.readFileSync(process.env.SSL_KEY_PATH || "./192.168.4.27+2-key.pem"),
+        cert: fs.readFileSync(process.env.SSL_CERT_PATH || "./192.168.4.27+2.pem"),
+    }
+    https.createServer(httpsOptions, app).listen(PORT, () => {
+        console.log(`Server running on https://localhost:${PORT}`)
+    })
+} else {
+    http.createServer(app).listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`)
+    })
 }
-
-
-https.createServer(httpsOptions, app).listen(3001, () => {
-    console.log("Server running on https://localhost:3001")
-})
 
