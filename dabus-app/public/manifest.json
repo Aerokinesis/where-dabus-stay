@@ -1,6 +1,6 @@
 {
-  "name": "DaBus — Oahu Bus Tracker",
-  "short_name": "DaBus",
+  "name": "WhereDaBusStay",
+  "short_name": "WhereDaBusStay",
   "description": "Real-time TheBus arrivals and stop info for Oahu",
   "theme_color": "#1a6faf",
   "background_color": "#18181B",
