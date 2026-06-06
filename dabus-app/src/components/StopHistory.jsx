@@ -9,7 +9,7 @@ function StopHistory({ stopHistory, onSelectStop, onRemoveStop, onClearHistory }
       <div className={styles.header}>
         <span className={styles.title}>Recent</span>
         <button className={styles.clearBtn} onClick={onClearHistory}>
-          Clear
+          Clear all
         </button>
       </div>
       {stopHistory.map((entry) => (

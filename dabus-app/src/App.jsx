@@ -323,6 +323,7 @@ function App() {
               }
             }}
             lastUpdated={lastUpdated}
+            onRefresh={() => fetchArrivals(currentStop.id)}
             arrivalsTab={arrivalsTab}
             routeShortName={arrivalsTab === "routes" ? selectedRoute?.route_short_name : null}
             alerts={(() => {

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import styles from "./ArrivalsList.module.css";
 import RouteAlerts from "./RouteAlerts";
 
@@ -10,6 +11,7 @@ function ArrivalsList({
   isFavorited,
   onSaveStop,
   lastUpdated,
+  onRefresh,
   onBack,
   arrivalsTab,
   onBackToTracking,
@@ -19,6 +21,7 @@ function ArrivalsList({
   onDismissAlert,
   onRestoreAlerts,
 }) {
+  const [refreshing, setRefreshing] = useState(false);
   const getMinutesUntil = (stopTime, date) => {
     const now = new Date();
     const arrival = new Date(`${date} ${stopTime}`);
@@ -95,9 +98,40 @@ function ArrivalsList({
       )}
 
       {lastUpdated && (
-        <p className={styles.lastUpdated}>
-          Updated {lastUpdated.toLocaleTimeString()}
-        </p>
+        <div className={styles.lastUpdatedRow}>
+          <span className={styles.lastUpdated}>
+            Updated {lastUpdated.toLocaleTimeString()}
+          </span>
+          {onRefresh && (
+            <button
+              className={styles.refreshBtn}
+              aria-label="Refresh arrivals"
+              disabled={refreshing}
+              onClick={async () => {
+                setRefreshing(true);
+                await onRefresh();
+                setRefreshing(false);
+              }}
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={refreshing ? styles.spinning : ""}
+                aria-hidden="true"
+              >
+                <polyline points="23 4 23 10 17 10" />
+                <polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+              </svg>
+            </button>
+          )}
+        </div>
       )}
 
       <RouteAlerts

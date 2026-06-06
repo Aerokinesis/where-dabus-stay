@@ -101,6 +101,32 @@ function SettingsTab({ settings, onUpdateSetting, onClearHistory, onClearFavorit
         </div>
       </div>
 
+      <div className={styles.section}>
+        <p className={styles.sectionLabel}>Legal</p>
+        <div className={styles.group}>
+          <div className={styles.legalBlock}>
+            <p className={styles.legalAttribution}>
+              Route and arrival data provided by permission of Oahu Transit Services, Inc.*
+            </p>
+            <p className={styles.legalNote}>
+              * OTS and HEA are registered trademarks of Oahu Transit Services, Inc. All rights reserved.
+            </p>
+            <p className={styles.legalNote}>
+              Real-time data is provided "as is" without warranty of any kind. OTS is not liable for inaccuracies or service interruptions. Use of this data is subject to the{" "}
+              <a
+                href="https://api.thebus.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.legalLink}
+              >
+                OTS Web Services Terms of Use
+              </a>
+              .
+            </p>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }
