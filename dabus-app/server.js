@@ -41,16 +41,16 @@ app.use(cors({
     },
 }))
 
-console.log("[startup] loading stops.txt...")
+// Load stops from GTFS stops.txt (small — needed for search/nearby/stop-info endpoints)
 const stopsData = fs.readFileSync("./data/stops.txt", "utf8")
 const stops = parse(stopsData, { columns: true, skip_empty_lines: true })
-console.log(`[startup] stops loaded: ${stops.length}`)
 
-console.log("[startup] loading processed.json...")
+// Load pre-processed route/shape data (replaces the heavy shapes.txt, trips.txt,
+// stop_times.txt, and routes.txt that would blow the 512MB Railway memory limit).
+// Re-generate with: node preprocess.js
 const { routeDirections, shapes, shapeStops } = JSON.parse(
     fs.readFileSync("./data/processed.json", "utf8")
 )
-console.log(`[startup] processed.json loaded: ${routeDirections.length} routes, ${Object.keys(shapes).length} shapes`)
 
 // Index stops by stop_id
 const stopsById = stops.reduce((acc, stop) => {
