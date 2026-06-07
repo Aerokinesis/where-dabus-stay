@@ -6,120 +6,308 @@
   padding: 0;
 }
 
+/* ─── MD3 Color tokens — dark theme (default) ─────────────────────────────── */
 :root {
-  --bg: #18181B;
-  --surface: #1F1F23;
-  --primary: #1a6faf;
-  --accent: #e8b84b;
-  --text: #f0f0f0;
-  --text-muted: #888;
-  --border: #6e6e73;   /* WCAG 1.4.11: 3:1+ against --bg #18181B */
-  --radius: 12px;
+  /* Primary — TheBus blue */
+  --md-sys-color-primary:                  #90caf9;
+  --md-sys-color-on-primary:               #003258;
+  --md-sys-color-primary-container:        #004881;
+  --md-sys-color-on-primary-container:     #cce5ff;
+
+  /* Secondary — golden accent */
+  --md-sys-color-secondary:                #f0b429;
+  --md-sys-color-on-secondary:             #3d2800;
+  --md-sys-color-secondary-container:      #573b00;
+  --md-sys-color-on-secondary-container:   #ffdea2;
+
+  /* Tertiary — live/green */
+  --md-sys-color-tertiary:                 #a8d4af;
+  --md-sys-color-on-tertiary:              #0d3b1a;
+  --md-sys-color-tertiary-container:       #245230;
+  --md-sys-color-on-tertiary-container:    #c4f0cb;
+
+  /* Error */
+  --md-sys-color-error:                    #ffb4ab;
+  --md-sys-color-on-error:                 #690005;
+  --md-sys-color-error-container:          #93000a;
+  --md-sys-color-on-error-container:       #ffdad6;
+
+  /* Background & Surface */
+  --md-sys-color-background:               #1a1c1e;
+  --md-sys-color-on-background:            #e3e2e6;
+  --md-sys-color-surface:                  #1a1c1e;
+  --md-sys-color-on-surface:               #e3e2e6;
+  --md-sys-color-surface-variant:          #43474e;
+  --md-sys-color-on-surface-variant:       #c3c7cf;
+  --md-sys-color-surface-container-lowest: #0f1113;
+  --md-sys-color-surface-container-low:    #1a1c1e;
+  --md-sys-color-surface-container:        #1e2022;
+  --md-sys-color-surface-container-high:   #282a2d;
+  --md-sys-color-surface-container-highest:#333538;
+
+  /* Outline */
+  --md-sys-color-outline:                  #8d9199;
+  --md-sys-color-outline-variant:          #43474e;
+
+  /* Inverse */
+  --md-sys-color-inverse-surface:          #e3e2e6;
+  --md-sys-color-inverse-on-surface:       #2f3033;
+  --md-sys-color-inverse-primary:          #1a6faf;
+
+  /* Misc */
+  --md-sys-color-shadow:                   #000000;
+  --md-sys-color-surface-tint:             #90caf9;
+  --md-sys-color-scrim:                    #000000;
+
+  /* ─── MD3 Shape tokens ──────────────────────────────────────────────────── */
+  --md-sys-shape-corner-none:              0px;
+  --md-sys-shape-corner-extra-small:       4px;
+  --md-sys-shape-corner-small:             8px;
+  --md-sys-shape-corner-medium:            12px;
+  --md-sys-shape-corner-large:             16px;
+  --md-sys-shape-corner-extra-large:       28px;
+  --md-sys-shape-corner-full:              9999px;
+
+  /* ─── MD3 Typescale ─────────────────────────────────────────────────────── */
+  --md-sys-typescale-body-medium-font:     'Roboto', sans-serif;
+  --md-sys-typescale-body-medium-size:     14px;
+  --md-sys-typescale-body-large-size:      16px;
+  --md-sys-typescale-label-large-size:     14px;
+  --md-sys-typescale-title-medium-size:    16px;
+  --md-sys-typescale-title-large-size:     22px;
+  --md-sys-typescale-headline-small-size:  24px;
+
+  /* ─── App-level aliases (used in non-MWC components) ───────────────────── */
+  --bg:         var(--md-sys-color-background);
+  --surface:    var(--md-sys-color-surface-container);
+  --primary:    var(--md-sys-color-primary);
+  --accent:     var(--md-sys-color-secondary);
+  --text:       var(--md-sys-color-on-surface);
+  --text-muted: var(--md-sys-color-on-surface-variant);
+  --border:     var(--md-sys-color-outline-variant);
+  --radius:     var(--md-sys-shape-corner-medium);
+
+  --live-bg:    var(--md-sys-color-tertiary-container);
+  --live-text:  var(--md-sys-color-on-tertiary-container);
+  --sched-bg:   var(--md-sys-color-surface-container-high);
+  --sched-text: var(--md-sys-color-on-surface-variant);
+
+  --control-h: 44px;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  --live-bg: #1A2E22;
-  --live-text: #4ade80;
-  --sched-bg: #1F1F2E;
-  --sched-text: #888;
-
-  --control-h: 44px;
 }
 
-html,
-body {
+/* ─── MD3 Color tokens — light theme ───────────────────────────────────────── */
+[data-theme="light"] {
+  --md-sys-color-primary:                  #1a6faf;
+  --md-sys-color-on-primary:               #ffffff;
+  --md-sys-color-primary-container:        #cce5ff;
+  --md-sys-color-on-primary-container:     #001d35;
+
+  --md-sys-color-secondary:                #7b5800;
+  --md-sys-color-on-secondary:             #ffffff;
+  --md-sys-color-secondary-container:      #ffdea2;
+  --md-sys-color-on-secondary-container:   #271900;
+
+  --md-sys-color-tertiary:                 #376942;
+  --md-sys-color-on-tertiary:              #ffffff;
+  --md-sys-color-tertiary-container:       #b8f0be;
+  --md-sys-color-on-tertiary-container:    #002109;
+
+  --md-sys-color-error:                    #ba1a1a;
+  --md-sys-color-on-error:                 #ffffff;
+  --md-sys-color-error-container:          #ffdad6;
+  --md-sys-color-on-error-container:       #410002;
+
+  --md-sys-color-background:               #fafcff;
+  --md-sys-color-on-background:            #1a1c1e;
+  --md-sys-color-surface:                  #fafcff;
+  --md-sys-color-on-surface:               #1a1c1e;
+  --md-sys-color-surface-variant:          #dfe2ea;
+  --md-sys-color-on-surface-variant:       #43474e;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low:    #f4f6fa;
+  --md-sys-color-surface-container:        #eef0f4;
+  --md-sys-color-surface-container-high:   #e8eaee;
+  --md-sys-color-surface-container-highest:#e3e5e9;
+
+  --md-sys-color-outline:                  #73777f;
+  --md-sys-color-outline-variant:          #c3c7cf;
+
+  --md-sys-color-inverse-surface:          #2f3033;
+  --md-sys-color-inverse-on-surface:       #f1f0f4;
+  --md-sys-color-inverse-primary:          #90caf9;
+
+  --md-sys-color-shadow:                   #000000;
+  --md-sys-color-surface-tint:             #1a6faf;
+  --md-sys-color-scrim:                    #000000;
+}
+
+[data-theme="dark"] {
+  /* same as :root defaults above — explicit for clarity */
+  --md-sys-color-primary:                  #90caf9;
+  --md-sys-color-on-primary:               #003258;
+  --md-sys-color-primary-container:        #004881;
+  --md-sys-color-on-primary-container:     #cce5ff;
+  --md-sys-color-background:               #1a1c1e;
+  --md-sys-color-on-background:            #e3e2e6;
+  --md-sys-color-surface:                  #1a1c1e;
+  --md-sys-color-on-surface:               #e3e2e6;
+  --md-sys-color-surface-variant:          #43474e;
+  --md-sys-color-on-surface-variant:       #c3c7cf;
+  --md-sys-color-outline:                  #8d9199;
+  --md-sys-color-outline-variant:          #43474e;
+}
+
+/* ─── Accessibility utilities ───────────────────────────────────────────────── */
+
+/* Visually hidden but available to screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip link — hidden until focused */
+.skip-link {
+  position: absolute;
+  top: -48px;
+  left: 8px;
+  z-index: 9999;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  padding: 8px 16px;
+  border-radius: var(--md-sys-shape-corner-small);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: top 0.15s;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
+/* Global focus indicator — applied via :focus-visible so mouse users are unaffected */
+:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── OS light-mode preference (honors prefers-color-scheme even without the attribute) ─ */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --md-sys-color-primary:                  #1a6faf;
+    --md-sys-color-on-primary:               #ffffff;
+    --md-sys-color-primary-container:        #cce5ff;
+    --md-sys-color-on-primary-container:     #001d35;
+    --md-sys-color-secondary:                #7b5800;
+    --md-sys-color-on-secondary:             #ffffff;
+    --md-sys-color-secondary-container:      #ffdea2;
+    --md-sys-color-on-secondary-container:   #271900;
+    --md-sys-color-tertiary:                 #376942;
+    --md-sys-color-on-tertiary:              #ffffff;
+    --md-sys-color-tertiary-container:       #b8f0be;
+    --md-sys-color-on-tertiary-container:    #002109;
+    --md-sys-color-error:                    #ba1a1a;
+    --md-sys-color-on-error:                 #ffffff;
+    --md-sys-color-error-container:          #ffdad6;
+    --md-sys-color-on-error-container:       #410002;
+    --md-sys-color-background:               #fafcff;
+    --md-sys-color-on-background:            #1a1c1e;
+    --md-sys-color-surface:                  #fafcff;
+    --md-sys-color-on-surface:               #1a1c1e;
+    --md-sys-color-surface-variant:          #dfe2ea;
+    --md-sys-color-on-surface-variant:       #43474e;
+    --md-sys-color-surface-container-lowest: #ffffff;
+    --md-sys-color-surface-container-low:    #f4f6fa;
+    --md-sys-color-surface-container:        #eef0f4;
+    --md-sys-color-surface-container-high:   #e8eaee;
+    --md-sys-color-surface-container-highest:#e3e5e9;
+    --md-sys-color-outline:                  #73777f;
+    --md-sys-color-outline-variant:          #c3c7cf;
+    --md-sys-color-inverse-surface:          #2f3033;
+    --md-sys-color-inverse-on-surface:       #f1f0f4;
+    --md-sys-color-inverse-primary:          #90caf9;
+    --md-sys-color-shadow:                   #000000;
+    --md-sys-color-surface-tint:             #1a6faf;
+    --md-sys-color-scrim:                    #000000;
+  }
+}
+
+/* ─── Base styles ───────────────────────────────────────────────────────────── */
+html, body {
   height: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 16px;
 }
 
 #root {
   height: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 16px;
   display: flex;
   flex-direction: column;
-
-  /* Mobile: centered narrow shell */
   max-width: 480px;
   margin: 0 auto;
-  border-inline: 1px solid var(--border);
+  border-inline: 1px solid var(--md-sys-color-outline-variant);
 }
 
-/* Desktop: fill the full viewport */
 @media (min-width: 768px) {
   #root {
     max-width: 100%;
     margin: 0;
     border-inline: none;
   }
+}
+
+/* Material Symbols font class */
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
 .leaflet-container {
   z-index: 0 !important;
 }
 
-h1,
-h2,
-h3 {
-  color: var(--text);
+h1, h2, h3 {
+  color: var(--md-sys-color-on-surface);
   font-weight: 500;
 }
 
-p {
-  margin: 0;
-}
+p { margin: 0; }
 
-@media (min-width: 768px) {
-  #root {
-    max-width: 100%;
-    margin: 0;
-    border-inline: none;
-  }
-}
-
-[data-theme="light"] {
-  --bg: #ffffff;
-  --surface: #f5f5f5;
-  --primary: #1a6faf;
-  --accent: #e8b84b;
-  --text: #111111;
-  --text-muted: #666666;
-  --border: #919191;   /* WCAG 1.4.11: 3:1+ against --bg #ffffff */
-
-  --live-bg: #dcfce7;
-  --live-text: #166534;
-  --sched-bg: #e0e7ff;
-  --sched-text: #3730a3;
-}
-
-[data-theme="dark"] {
-  --bg: #18181B;
-  --surface: #1F1F23;
-  --primary: #1a6faf;
-  --accent: #e8b84b;
-  --text: #f0f0f0;
-  --text-muted: #888;
-  --border: #6e6e73;   /* WCAG 1.4.11: 3:1+ against --bg #18181B */
-}
-
-/* Accessibility: visible focus indicator for keyboard navigation.
-   :focus-visible only applies when the browser detects keyboard-style
-   focus, so mouse clicks don't get an outline. */
 *:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--md-sys-color-primary);
   outline-offset: 2px;
 }
 
-/* Inputs use a slightly different offset so the outline sits cleanly
-   against the rounded pill border. */
 input:focus-visible,
 button:focus-visible {
   outline-offset: 2px;

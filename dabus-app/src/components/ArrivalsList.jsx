@@ -22,6 +22,7 @@ function ArrivalsList({
   onRestoreAlerts,
 }) {
   const [refreshing, setRefreshing] = useState(false);
+
   const getMinutesUntil = (stopTime, date) => {
     const now = new Date();
     const arrival = new Date(`${date} ${stopTime}`);
@@ -35,6 +36,12 @@ function ArrivalsList({
     return `${hours} hr ${mins} min`;
   };
 
+  const backLabel =
+    arrivalsTab === "history" ? "Recent"
+    : arrivalsTab === "routes" ? (routeShortName ? `Route ${routeShortName}` : "Stops")
+    : arrivalsTab === "nearby" ? "Home"
+    : "Favorites";
+
   const safeArrivals = arrivals || [];
 
   const routesByDirection = safeArrivals.reduce((acc, bus) => {
@@ -45,27 +52,29 @@ function ArrivalsList({
   }, {});
 
   return (
-    
     <div className={styles.container}>
+      {/* Loading announcer — screen readers are notified when arrivals load */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {safeArrivals.length > 0
+          ? `${safeArrivals.length} arrival${safeArrivals.length === 1 ? "" : "s"} loaded`
+          : ""}
+      </div>
+
+      {/* Back button */}
       {onBack && (
         <button className={styles.backBtn} onClick={onBack}>
-          ←{" "}
-          {arrivalsTab === "history"
-            ? "Recent"
-            : arrivalsTab === "routes"
-              ? routeShortName
-                ? `Route ${routeShortName}`
-                : "Stops"
-              : arrivalsTab === "nearby"
-                ? "Home"
-                : "Favorites"}
+          <span className="material-symbols-rounded" aria-hidden="true">arrow_back</span>
+          {backLabel}
         </button>
       )}
       {onBackToTracking && (
         <button className={styles.backBtn} onClick={onBackToTracking}>
-          ← Back to tracking
+          <span className="material-symbols-rounded" aria-hidden="true">arrow_back</span>
+          Back to tracking
         </button>
       )}
+
+      {/* Stop header */}
       {currentStop && (
         <div className={styles.stopHeader}>
           <div className={styles.stopInfo}>
@@ -73,30 +82,18 @@ function ArrivalsList({
             <span className={styles.stopId}>Stop #{currentStop.id}</span>
           </div>
           <button
-            className={`${styles.saveBtn} ${isFavorited ? styles.saved : ""}`}
+            className={`${styles.favoriteChip} ${isFavorited ? styles.favoriteChipActive : ""}`}
             onClick={() => onSaveStop(isFavorited)}
+            aria-pressed={isFavorited}
+            aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill={isFavorited ? "currentColor" : "none"}
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{
-                color: isFavorited ? "#f87171" : "currentColor",
-                flexShrink: 0,
-              }}
-            >
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-            {isFavorited ? "Added to Favorites" : "Favorite"}
+            <span className="material-symbols-rounded" aria-hidden="true">favorite</span>
+            {isFavorited ? "Favorited" : "Favorite"}
           </button>
         </div>
       )}
 
+      {/* Last updated row */}
       {lastUpdated && (
         <div className={styles.lastUpdatedRow}>
           <span className={styles.lastUpdated}>
@@ -113,22 +110,11 @@ function ArrivalsList({
                 setRefreshing(false);
               }}
             >
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={refreshing ? styles.spinning : ""}
-                aria-hidden="true"
+              <span
+                className={`material-symbols-rounded ${refreshing ? styles.spinning : ""}`}
               >
-                <polyline points="23 4 23 10 17 10" />
-                <polyline points="1 20 1 14 7 14" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-              </svg>
+                refresh
+              </span>
             </button>
           )}
         </div>
@@ -141,6 +127,7 @@ function ArrivalsList({
         onRestore={onRestoreAlerts}
       />
 
+      {/* Direction summary */}
       {safeArrivals.length > 0 && (
         <div className={styles.summary}>
           {Object.entries(routesByDirection).map(([direction, routes]) => (
@@ -148,9 +135,7 @@ function ArrivalsList({
               <span className={styles.summaryDirection}>{direction}</span>
               <span className={styles.summaryRoutes}>
                 {[...routes]
-                  .sort((a, b) =>
-                    a.localeCompare(b, undefined, { numeric: true }),
-                  )
+                  .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
                   .join(" · ")}
               </span>
             </div>
@@ -158,8 +143,12 @@ function ArrivalsList({
         </div>
       )}
 
+      {/* Empty state */}
       {safeArrivals.length === 0 && (
-        <div className={styles.empty}>
+        <div className={styles.emptyCard}>
+          <span className={`material-symbols-rounded ${styles.emptyIcon}`}>
+            directions_bus
+          </span>
           <p className={styles.emptyTitle}>No upcoming buses</p>
           <p className={styles.emptyHint}>
             There are no scheduled arrivals at this stop right now. Service may
@@ -168,25 +157,30 @@ function ArrivalsList({
         </div>
       )}
 
+      {/* Arrival cards */}
       <div className={styles.list}>
         {safeArrivals.map((bus) => (
           <div
             key={bus.id}
             className={`${styles.card} ${bus.canceled === "1" ? styles.canceled : ""}`}
           >
+            {/* Top row: route badge · headsign · countdown */}
             <div className={styles.cardTop}>
-              <div className={styles.routeBadge}>{bus.route}</div>
-              <div className={styles.headsign}>
+              <span className={styles.routeBadge}>{bus.route}</span>
+              <span className={styles.headsign}>
                 {bus.canceled === "1" && (
                   <span className={styles.canceledTag}>Canceled</span>
                 )}
                 {bus.headsign}
-              </div>
-              <div className={styles.time}>
+              </span>
+              <span className={styles.time}>
                 {getMinutesUntil(bus.stopTime, bus.date)}
-              </div>
+              </span>
             </div>
 
+            <hr className={styles.divider} />
+
+            {/* Bottom row: live/scheduled · time · vehicle · track */}
             <div className={styles.cardBottom}>
               <span
                 className={`${styles.liveTag} ${bus.estimated === "1" ? styles.live : styles.scheduled}`}
@@ -200,19 +194,17 @@ function ArrivalsList({
               {bus.estimated === "1" && (
                 selectedBus?.id === bus.id ? (
                   <span className={styles.trackingPill}>
-                    {trackingLoading ? (
-                      "Loading..."
-                    ) : (
-                      <>
-                        <span aria-hidden="true">●</span> Tracking
-                      </>
-                    )}
+                    {trackingLoading
+                      ? <span className={`material-symbols-rounded ${styles.spinning}`} style={{ fontSize: "16px" }}>refresh</span>
+                      : <><span aria-hidden="true">●</span> Tracking</>
+                    }
                   </span>
                 ) : (
                   <button
-                    className={styles.mapBtn}
+                    className={styles.trackBtn}
                     onClick={() => onShowMap(bus)}
                     disabled={trackingLoading}
+                    aria-label={`Track route ${bus.route} to ${bus.headsign}`}
                   >
                     Track
                   </button>

@@ -86,6 +86,7 @@ function App() {
     userLocation,
     searchingAddress,
     locating,
+    offIsland,
     searchByAddress,
     findNearbyStops,
     refindNearbyStops,
@@ -157,6 +158,8 @@ function App() {
     setTrackingView(false);
     setActiveTab(tab);
   };
+
+  const TAB_NAMES = ["nearby", "routes", "history", "favorites", "settings"];
 
   const showToast = (message, type = "add") => {
     setToast(message);
@@ -372,7 +375,7 @@ function App() {
     <div className={styles.shell}>
       {/* Mobile-only top search bar */}
       {(activeTab === "nearby" || activeTab === "routes") && !trackingView && (
-        <div className={styles.topBar}>
+        <header className={styles.topBar} role="banner">
           {activeTab === "nearby" && <AddressSearch {...searchProps} />}
           {activeTab === "routes" && (
             <SearchInput
@@ -382,11 +385,11 @@ function App() {
               onClear={() => setRouteQuery("")}
             />
           )}
-        </div>
+        </header>
       )}
 
       {/* Center column */}
-      <main className={styles.main}>
+      <main className={styles.main} id="main-content">
         {/* Desktop search bar */}
         <div className={styles.desktopSearch}>
           {activeTab === "routes" ? (
@@ -402,8 +405,22 @@ function App() {
         </div>
 
         <div className={styles.desktopContent}>
+          {/* Off-island notice — shown instead of map when GPS is outside Oahu */}
+          {activeTab === "nearby" && offIsland && (!arrivals || arrivalsTab !== "nearby") && (
+            <div style={{ padding: "24px 16px", textAlign: "center", color: "var(--text-muted)" }}>
+              <p style={{ fontSize: "2rem", marginBottom: "8px" }}>🌺</p>
+              <p style={{ fontWeight: 600, color: "var(--text)", marginBottom: "6px" }}>
+                You're not on Oahu
+              </p>
+              <p style={{ fontSize: "14px", lineHeight: 1.5 }}>
+                Where Da Bus Stay only covers Oahu's TheBus. You can still search
+                by stop number or browse routes above.
+              </p>
+            </div>
+          )}
+
           {/* Nearby map — mobile only (desktop uses mapPanel) */}
-          {activeTab === "nearby" && (!arrivals || arrivalsTab !== "nearby") && (
+          {activeTab === "nearby" && !offIsland && (!arrivals || arrivalsTab !== "nearby") && (
             <div className={styles.mobileMapOnly}>
               <NearbyStopsMap
                 userLocation={userLocation}
@@ -490,6 +507,16 @@ function App() {
               onSelectStop={(stopId) => handleFetchArrivals(stopId, "routes")}
               fullHeight
             />
+          ) : offIsland ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-muted)", padding: "32px", textAlign: "center" }}>
+              <p style={{ fontSize: "2.5rem", marginBottom: "12px" }}>🌺</p>
+              <p style={{ fontWeight: 600, color: "var(--text)", marginBottom: "8px", fontSize: "16px" }}>
+                You're not on Oahu
+              </p>
+              <p style={{ fontSize: "14px", lineHeight: 1.5, maxWidth: "260px" }}>
+                Where Da Bus Stay covers Oahu's TheBus only. Search by stop number or browse routes to plan ahead.
+              </p>
+            </div>
           ) : (
             <NearbyStopsMap
               userLocation={userLocation}
@@ -640,100 +667,28 @@ function App() {
         )}
       </ErrorBoundary>
 
-      {/* Nav */}
+      {/* Nav — MD3 Navigation Bar (custom — labs web component is unreliable in React) */}
       <nav className={styles.bottomNav}>
-        <div className={styles.brandMark}>
-          <img src="/dabus-icon.png" alt="" role="presentation" />
-        </div>
-        <button
-          className={`${styles.navBtn} ${activeTab === "nearby" ? styles.active : ""}`}
-          onClick={() => switchTab("nearby")}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
+        {[
+          { id: "nearby",    icon: "location_on",  label: "Home"      },
+          { id: "routes",    icon: "directions_bus",label: "Routes"    },
+          { id: "history",   icon: "history",       label: "Recent"    },
+          { id: "favorites", icon: "favorite",      label: "Favorites" },
+          { id: "settings",  icon: "settings",      label: "Settings"  },
+        ].map(({ id, icon, label }) => (
+          <button
+            key={id}
+            className={`${styles.navTab} ${activeTab === id ? styles.navTabActive : ""}`}
+            onClick={() => switchTab(id)}
+            aria-label={label}
+            aria-current={activeTab === id ? "page" : undefined}
           >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
-          </svg>
-          <span>Home</span>
-        </button>
-
-        <button
-          className={`${styles.navBtn} ${activeTab === "routes" ? styles.active : ""}`}
-          onClick={() => switchTab("routes")}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="5" cy="6" r="2" fill="currentColor" />
-            <circle cx="19" cy="18" r="2" fill="currentColor" />
-            <path d="M7 6h4a4 4 0 0 1 4 4v4a4 4 0 0 0 4 4" />
-            <path d="M7 6h4" />
-          </svg>
-          <span>Routes</span>
-        </button>
-
-        <button
-          className={`${styles.navBtn} ${activeTab === "history" ? styles.active : ""}`}
-          onClick={() => switchTab("history")}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          <span>Recent</span>
-        </button>
-
-        <button
-          className={`${styles.navBtn} ${activeTab === "favorites" ? styles.active : ""}`}
-          onClick={() => switchTab("favorites")}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-          </svg>
-          <span>Favorites</span>
-        </button>
-
-        <button
-          className={`${styles.navBtn} ${activeTab === "settings" ? styles.active : ""}`}
-          onClick={() => switchTab("settings")}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-          <span>Settings</span>
-        </button>
+            <span className={styles.navTabIndicator}>
+              <span className="material-symbols-rounded">{icon}</span>
+            </span>
+            <span className={styles.navTabLabel}>{label}</span>
+          </button>
+        ))}
       </nav>
 
       {showSaveModal && currentStop && (

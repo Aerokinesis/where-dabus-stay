@@ -6,9 +6,9 @@
 
 .topBar {
   flex-shrink: 0;
-  padding: 12px 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  background: var(--md-sys-color-surface);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
   position: relative;
   z-index: 1000;
   overflow: visible;
@@ -21,40 +21,77 @@
   padding: 16px;
 }
 
+/* ─── MD3 Navigation Bar ────────────────────────────────────────── */
 .bottomNav {
   flex-shrink: 0;
   display: flex;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
+  flex-direction: row;
+  background: var(--md-sys-color-surface-container);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  height: 80px;
+  width: 100%;
 }
 
-.navBtn {
+.navTab {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 10px 0 14px;
   background: none;
   border: none;
-  color: var(--text-muted);
-  font-size: 11px;
   cursor: pointer;
-  transition: color 0.15s;
+  padding: 12px 0 16px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.navBtn.active {
-  color: var(--primary);
+/* Active indicator pill behind the icon */
+.navTabIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 32px;
+  border-radius: var(--md-sys-shape-corner-full);
+  transition: background 0.2s;
 }
 
-.navBtn svg {
-  width: 22px;
-  height: 22px;
+.navTabIndicator .material-symbols-rounded {
+  font-size: 24px;
+  transition: font-variation-settings 0.2s;
+  font-variation-settings: 'FILL' 0, 'wght' 400;
 }
 
-.brandMark {
-  display: none;
+.navTabLabel {
+  font-size: 0.75rem;
+  line-height: 1;
 }
+
+/* Active state */
+.navTabActive {
+  color: var(--md-sys-color-on-surface);
+}
+
+.navTabActive .navTabIndicator {
+  background: var(--md-sys-color-secondary-container);
+}
+
+.navTabActive .navTabIndicator .material-symbols-rounded {
+  color: var(--md-sys-color-on-secondary-container);
+  font-variation-settings: 'FILL' 1, 'wght' 400;
+}
+
+/* Legacy — no longer used */
+.navBtn { display: none; }
+.navBtn.active { display: none; }
+.brandMark { display: none; }
 
 /* Mobile: hide desktop-only elements */
 .desktopSearch {
@@ -83,13 +120,30 @@
     order: -1;
     flex-direction: column;
     flex-shrink: 0;
-    width: 72px;
+    width: 80px;
     height: 100%;
     border-top: none;
-    border-right: 1px solid var(--border);
-    padding: 0 0 16px;
+    border-right: 1px solid var(--md-sys-color-outline-variant);
+    padding: 8px 0;
     justify-content: flex-start;
-    gap: 2px;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .navTab {
+    flex: 0 0 auto;
+    height: 56px;
+    padding: 0;
+    width: 100%;
+  }
+
+  .navTabIndicator {
+    width: 56px;
+    height: 32px;
+  }
+
+  .navTabLabel {
+    font-size: 0.65rem;
   }
 
   .brandMark {
@@ -133,9 +187,9 @@
   .desktopSearch {
     display: block;
     flex-shrink: 0;
-    padding: 12px 14px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
+    background: var(--md-sys-color-surface);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
     position: relative;
     z-index: 100;
     overflow: visible;

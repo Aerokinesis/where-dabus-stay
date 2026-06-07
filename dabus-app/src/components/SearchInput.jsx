@@ -7,17 +7,13 @@ function SearchInput({ value, onChange, placeholder, onClear, onSubmit, ariaLabe
 
   return (
     <div className={styles.inputRow}>
-      <svg
-        className={styles.icon}
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
+      <span
+        className="material-symbols-rounded"
+        aria-hidden="true"
+        style={{ fontSize: "24px", color: "var(--md-sys-color-on-surface-variant)", flexShrink: 0 }}
       >
-        <circle cx="11" cy="11" r="8" />
-        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-      </svg>
+        search
+      </span>
       <input
         className={styles.input}
         type="text"
@@ -28,13 +24,9 @@ function SearchInput({ value, onChange, placeholder, onClear, onSubmit, ariaLabe
         onKeyDown={handleKeyDown}
       />
       {value && (
-        <button
-          className={styles.clearBtn}
-          onClick={onClear}
-          aria-label="Clear search"
-        >
-          ✕
-        </button>
+        <md-icon-button onClick={onClear} aria-label="Clear search">
+          <span className="material-symbols-rounded" style={{ fontSize: "20px" }}>close</span>
+        </md-icon-button>
       )}
     </div>
   );

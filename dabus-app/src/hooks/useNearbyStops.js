@@ -1,12 +1,19 @@
 import { useState, useCallback } from "react";
 import { API_BASE } from "../constants";
 
+// Oahu bounding box — any GPS fix outside this is not on the island
+const OAHU_BOUNDS = { minLat: 21.2, maxLat: 21.75, minLon: -158.35, maxLon: -157.6 }
+const isOnOahu = (lat, lon) =>
+  lat >= OAHU_BOUNDS.minLat && lat <= OAHU_BOUNDS.maxLat &&
+  lon >= OAHU_BOUNDS.minLon && lon <= OAHU_BOUNDS.maxLon
+
 export function useNearbyStops(setError, searchRadius = 0.25) {
   const [nearbyStops, setNearbyStops] = useState(null);
   const [nearbyStopsMap, setNearbyStopsMap] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [searchingAddress, setSearchingAddress] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [offIsland, setOffIsland] = useState(false);
 
   const searchByAddress = async (query) => {
     setSearchingAddress(true);
@@ -45,6 +52,12 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
         setUserLocation({ lat, lon });
+        if (!isOnOahu(lat, lon)) {
+          setOffIsland(true);
+          setLocating(false);
+          return;
+        }
+        setOffIsland(false);
         await refindNearbyStops(lat, lon, searchRadius);
         setLocating(false);
       },
@@ -62,6 +75,7 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
     userLocation,
     searchingAddress,
     locating,
+    offIsland,
     searchByAddress,
     findNearbyStops,
     refindNearbyStops,
