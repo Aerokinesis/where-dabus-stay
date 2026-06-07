@@ -17,6 +17,7 @@ function RoutesTab({
   routes,
   routesLoading,
   filteredRoutes,
+  routeQuery,
   selectedRoute,
   routeStops,
   routeStopsLoading,
@@ -34,7 +35,7 @@ function RoutesTab({
 
   return (
     <div>
-      {selectedRoute ? (
+      {selectedRoute && !routeQuery ? (
         <>
           {onClearRoute && (
             <button className={styles.backBtn} onClick={onClearRoute}>

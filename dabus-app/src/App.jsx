@@ -208,6 +208,10 @@ function App() {
   const tabForSearchResults = () =>
     activeTab === "settings" ? "nearby" : activeTab;
 
+  const handleRouteQueryChange = (val) => {
+    setRouteQuery(val);
+  };
+
   const handleSearch = () => {
     const target = tabForSearchResults();
     if (target !== activeTab) setActiveTab(target);
@@ -266,6 +270,7 @@ function App() {
           routes={routes}
           routesLoading={routesLoading}
           filteredRoutes={filteredRoutes}
+          routeQuery={routeQuery}
           selectedRoute={selectedRoute}
           routeStops={routeStops}
           routeStopsLoading={routeStopsLoading}
@@ -383,6 +388,9 @@ function App() {
                     clearBusTracking();
                     setTrackingView(false);
                     setArrivalsTab(null);
+                  } else if (activeTab === "routes" && routeQuery) {
+                    // Searching while in a route — clear query to restore route stops
+                    setRouteQuery("");
                   } else if (activeTab === "routes") {
                     setSelectedRoute(null);
                     setRouteStops(null);
@@ -404,7 +412,7 @@ function App() {
                 {activeTab === "routes" && (
                   <SearchInput
                     value={routeQuery}
-                    onChange={setRouteQuery}
+                    onChange={handleRouteQueryChange}
                     placeholder="Search routes"
                     onClear={() => setRouteQuery("")}
                   />
@@ -417,7 +425,7 @@ function App() {
               {activeTab === "routes" && (
                 <SearchInput
                   value={routeQuery}
-                  onChange={setRouteQuery}
+                  onChange={handleRouteQueryChange}
                   placeholder="Search routes"
                   onClear={() => setRouteQuery("")}
                 />
@@ -434,7 +442,7 @@ function App() {
           {activeTab === "routes" ? (
             <SearchInput
               value={routeQuery}
-              onChange={setRouteQuery}
+              onChange={handleRouteQueryChange}
               placeholder="Search routes"
               onClear={() => setRouteQuery("")}
             />
