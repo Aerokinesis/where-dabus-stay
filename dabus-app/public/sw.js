@@ -1,7 +1,7 @@
 const SHELL_CACHE = 'dabus-shell-v1'
 const STOPS_CACHE = 'dabus-stops-v1'
 
-const SHELL_ASSETS = ['/', '/index.html']
+const SHELL_ASSETS = ['/dabus-icon.png']
 
 const STOPS_PATTERNS = [
   '/api/nearby-stops-by-coords',
@@ -61,7 +61,18 @@ self.addEventListener('fetch', (e) => {
     return
   }
 
-  // App shell — cache first, fall back to network
+  // HTML navigation (loading the page) — network first so a new deployment's
+  // index.html (with updated JS bundle hashes) is always fetched fresh.
+  // Falls back to cache only when offline.
+  if (request.mode === 'navigate') {
+    e.respondWith(
+      fetch(request).catch(() => caches.match('/index.html'))
+    )
+    return
+  }
+
+  // Static assets (JS, CSS, images) — cache first. Vite gives every build a
+  // new hashed filename, so stale cache entries are never requested anyway.
   e.respondWith(
     caches.match(request).then((cached) => cached || fetch(request))
   )
