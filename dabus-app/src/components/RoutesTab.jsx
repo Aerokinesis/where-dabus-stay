@@ -36,9 +36,11 @@ function RoutesTab({
     <div>
       {selectedRoute ? (
         <>
-          <button className={styles.backBtn} onClick={onClearRoute}>
-            ← All routes
-          </button>
+          {onClearRoute && (
+            <button className={styles.backBtn} onClick={onClearRoute}>
+              ← All routes
+            </button>
+          )}
           <div className={styles.routeHeader}>
             <div className={styles.routeBadge}>
               {selectedRoute.route_short_name}

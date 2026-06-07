@@ -270,12 +270,12 @@ function App() {
           routeStops={routeStops}
           routeStopsLoading={routeStopsLoading}
           onSelectRoute={fetchRouteStops}
-          onClearRoute={() => {
+          onClearRoute={!isMobile ? () => {
             setSelectedRoute(null);
             setRouteStops(null);
             setRouteShape(null);
             setRouteMapView(false);
-          }}
+          } : null}
           onSelectStop={(stopId) => handleFetchArrivals(stopId, "routes")}
           onViewOnMap={isMobile ? () => setRouteMapView(true) : null}
           alertsForRoute={alertsForRoute}
@@ -351,7 +351,7 @@ function App() {
             onBack={
               arrivalsTab === "favorites" ||
               arrivalsTab === "history" ||
-              arrivalsTab === "routes"
+              (arrivalsTab === "routes" && !isMobile)
                 ? () => {
                     clearBusTracking();
                     setTrackingView(false);
@@ -371,16 +371,28 @@ function App() {
       {/* Mobile-only top search bar */}
       {(activeTab === "nearby" || activeTab === "routes") && !trackingView && (
         <div className={styles.topBar}>
-          {activeTab === "nearby" && arrivals && arrivalsTab === "nearby" ? (
+          {(activeTab === "nearby" && arrivals && arrivalsTab === "nearby") ||
+          (activeTab === "routes" && (selectedRoute || (arrivals && arrivalsTab === "routes"))) ? (
             <div className={styles.topBarSearch}>
               <button
                 className={styles.topBarBack}
                 aria-label="Back"
                 onClick={() => {
-                  clearArrivals();
-                  clearBusTracking();
-                  setTrackingView(false);
-                  setArrivalsTab(null);
+                  if (activeTab === "nearby") clearArrivals();
+                  if (activeTab === "routes" && arrivals && arrivalsTab === "routes") {
+                    clearBusTracking();
+                    setTrackingView(false);
+                    setArrivalsTab(null);
+                  } else if (activeTab === "routes") {
+                    setSelectedRoute(null);
+                    setRouteStops(null);
+                    setRouteShape(null);
+                    setRouteMapView(false);
+                  } else {
+                    clearBusTracking();
+                    setTrackingView(false);
+                    setArrivalsTab(null);
+                  }
                 }}
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -388,7 +400,15 @@ function App() {
                 </svg>
               </button>
               <div className={styles.topBarSearchInput}>
-                <AddressSearch {...searchProps} />
+                {activeTab === "nearby" && <AddressSearch {...searchProps} />}
+                {activeTab === "routes" && (
+                  <SearchInput
+                    value={routeQuery}
+                    onChange={setRouteQuery}
+                    placeholder="Search routes"
+                    onClear={() => setRouteQuery("")}
+                  />
+                )}
               </div>
             </div>
           ) : (
