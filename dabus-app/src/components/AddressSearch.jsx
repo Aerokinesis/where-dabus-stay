@@ -81,7 +81,8 @@ function AddressSearch({
                 key={stop.stop_id}
                 type="button"
                 className="dabus-result-item"
-                onClick={() => onSelectStop(stop.stop_id)}
+                onMouseDown={(e) => { e.preventDefault(); onSelectStop(stop.stop_id); }}
+                onTouchEnd={(e) => { e.preventDefault(); onSelectStop(stop.stop_id); }}
                 role="option"
                 aria-selected="false"
               >
