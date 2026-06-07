@@ -20,6 +20,7 @@ import { useFavorites } from "./hooks/useFavorites";
 import { useNearbyStops } from "./hooks/useNearbyStops";
 import { useBusTracking } from "./hooks/useBusTracking";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
+import PullToRefreshIndicator from "./components/PullToRefreshIndicator";
 import { useStopHistory } from "./hooks/useStopHistory";
 import { useSettings } from "./hooks/useSettings";
 import { useMediaQuery } from "./hooks/useMediaQuery";
@@ -111,7 +112,7 @@ function App() {
     restore: restoreAlerts,
   } = useAlerts();
 
-  const { isPulling, pullDistance } = usePullToRefresh(
+  const { isPulling, pullDistance, triggered } = usePullToRefresh(
     () => fetchArrivals(currentStop.id),
     !!arrivals,
   );
@@ -298,9 +299,7 @@ function App() {
 
       {loading && <p>Loading arrivals...</p>}
       {error && <p role="alert">{error}</p>}
-      {isPulling && (
-        <p>Refreshing... ({Math.round((pullDistance / 80) * 100)}%)</p>
-      )}
+      <PullToRefreshIndicator isPulling={isPulling} pullDistance={pullDistance} triggered={triggered} />
 
       <ErrorBoundary>
         {arrivals && arrivalsTab === activeTab && (
