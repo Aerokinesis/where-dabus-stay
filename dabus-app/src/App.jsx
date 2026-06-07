@@ -212,6 +212,18 @@ function App() {
     setRouteQuery(val);
   };
 
+  const isRouteSearching = activeTab === "routes" && routeQuery.trim().length > 0;
+
+  const handleSelectRoute = (route) => {
+    fetchRouteStops(route);
+    setRouteQuery("");
+    if (arrivalsTab === "routes") {
+      setArrivalsTab(null);
+      clearBusTracking();
+      setTrackingView(false);
+    }
+  };
+
   const handleSearch = () => {
     const target = tabForSearchResults();
     if (target !== activeTab) setActiveTab(target);
@@ -265,7 +277,7 @@ function App() {
           />
         )}
 
-      {activeTab === "routes" && arrivalsTab !== "routes" && (
+      {activeTab === "routes" && (arrivalsTab !== "routes" || isRouteSearching) && (
         <RoutesTab
           routes={routes}
           routesLoading={routesLoading}
@@ -274,7 +286,7 @@ function App() {
           selectedRoute={selectedRoute}
           routeStops={routeStops}
           routeStopsLoading={routeStopsLoading}
-          onSelectRoute={fetchRouteStops}
+          onSelectRoute={handleSelectRoute}
           onClearRoute={!isMobile ? () => {
             setSelectedRoute(null);
             setRouteStops(null);
@@ -307,7 +319,7 @@ function App() {
       <PullToRefreshIndicator isPulling={isPulling} pullDistance={pullDistance} triggered={triggered} />
 
       <ErrorBoundary>
-        {arrivals && arrivalsTab === activeTab && (
+        {arrivals && arrivalsTab === activeTab && !isRouteSearching && (
           <ArrivalsList
             arrivals={arrivals}
             selectedBus={selectedBus}
@@ -384,13 +396,13 @@ function App() {
                 aria-label="Back"
                 onClick={() => {
                   if (activeTab === "nearby") clearArrivals();
-                  if (activeTab === "routes" && arrivals && arrivalsTab === "routes") {
+                  if (activeTab === "routes" && routeQuery) {
+                    // Searching — always clear query first (restores whatever was behind)
+                    setRouteQuery("");
+                  } else if (activeTab === "routes" && arrivals && arrivalsTab === "routes") {
                     clearBusTracking();
                     setTrackingView(false);
                     setArrivalsTab(null);
-                  } else if (activeTab === "routes" && routeQuery) {
-                    // Searching while in a route — clear query to restore route stops
-                    setRouteQuery("");
                   } else if (activeTab === "routes") {
                     setSelectedRoute(null);
                     setRouteStops(null);
