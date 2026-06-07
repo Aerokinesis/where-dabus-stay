@@ -117,7 +117,40 @@ routeDirections.sort((a, b) =>
     a.route_short_name.localeCompare(b.route_short_name, undefined, { numeric: true })
 )
 
-const out = { routeDirections, shapes, shapeStops }
+// Compute travel bearing per stop using circular averaging across all route directions.
+// Bearing 0° = North, 90° = East, etc.
+const toRad = (deg) => deg * Math.PI / 180
+const toDeg = (rad) => rad * 180 / Math.PI
+
+function computeBearing(lat1, lon1, lat2, lon2) {
+    const dLon = toRad(lon2 - lon1)
+    const φ1 = toRad(lat1), φ2 = toRad(lat2)
+    const y = Math.sin(dLon) * Math.cos(φ2)
+    const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(dLon)
+    return (toDeg(Math.atan2(y, x)) + 360) % 360
+}
+
+console.log("Computing stop bearings...")
+const bearingAccum = {} // stop_id -> { s: sinSum, c: cosSum }
+for (const rd of routeDirections) {
+    const s = rd.stops
+    if (s.length < 2) continue
+    for (let i = 0; i < s.length; i++) {
+        // Use forward direction for all stops except the last, which uses the prior segment
+        const b = i < s.length - 1
+            ? computeBearing(s[i].stop_lat, s[i].stop_lon, s[i + 1].stop_lat, s[i + 1].stop_lon)
+            : computeBearing(s[i - 1].stop_lat, s[i - 1].stop_lon, s[i].stop_lat, s[i].stop_lon)
+        if (!bearingAccum[s[i].stop_id]) bearingAccum[s[i].stop_id] = { s: 0, c: 0 }
+        bearingAccum[s[i].stop_id].s += Math.sin(toRad(b))
+        bearingAccum[s[i].stop_id].c += Math.cos(toRad(b))
+    }
+}
+const stopBearings = {}
+for (const [id, { s, c }] of Object.entries(bearingAccum)) {
+    stopBearings[id] = Math.round((toDeg(Math.atan2(s, c)) + 360) % 360)
+}
+
+const out = { routeDirections, shapes, shapeStops, stopBearings }
 fs.writeFileSync("./data/processed.json", JSON.stringify(out))
 console.log(`Done. Wrote data/processed.json (${(fs.statSync("./data/processed.json").size / 1024 / 1024).toFixed(1)} MB)`)
-console.log(`  routeDirections: ${routeDirections.length}, shapes: ${Object.keys(shapes).length}, shapeStops: ${Object.keys(shapeStops).length}`)
+console.log(`  routeDirections: ${routeDirections.length}, shapes: ${Object.keys(shapes).length}, shapeStops: ${Object.keys(shapeStops).length}, stopBearings: ${Object.keys(stopBearings).length}`)

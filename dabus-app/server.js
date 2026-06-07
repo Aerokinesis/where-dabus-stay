@@ -48,7 +48,7 @@ const stops = parse(stopsData, { columns: true, skip_empty_lines: true })
 // Load pre-processed route/shape data (replaces the heavy shapes.txt, trips.txt,
 // stop_times.txt, and routes.txt that would blow the 512MB Railway memory limit).
 // Re-generate with: node preprocess.js
-const { routeDirections, shapes, shapeStops } = JSON.parse(
+const { routeDirections, shapes, shapeStops, stopBearings } = JSON.parse(
     fs.readFileSync("./data/processed.json", "utf8")
 )
 
@@ -197,6 +197,7 @@ app.get("/api/search-stops", (req, res) => {
             stop_name: stop.stop_name,
             stop_lat: stop.stop_lat,
             stop_lon: stop.stop_lon,
+            bearing: stopBearings?.[displayStopId(stop.stop_id)] ?? null,
         }))
         .slice(0, 20)
 
@@ -216,6 +217,7 @@ app.get("/api/nearby-stops-by-coords", (req, res) => {
             stop_name: stop.stop_name,
             stop_lat: stop.stop_lat,
             stop_lon: stop.stop_lon,
+            bearing: stopBearings?.[displayStopId(stop.stop_id)] ?? null,
             distance: getDistance(lat, lon, parseFloat(stop.stop_lat), parseFloat(stop.stop_lon))
         }))
         .filter(stop => stop.distance <= radius)

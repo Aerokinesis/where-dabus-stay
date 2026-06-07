@@ -97,9 +97,16 @@ function NearbyStopsMap({
               position={[parseFloat(stop.stop_lat), parseFloat(stop.stop_lon)]}
               icon={L.divIcon({
                 className: "",
-                html: `<div style="width:16px;height:16px;background:#e8b84b;border:2px solid #0a0a0a;border-radius:50%;cursor:pointer;"></div>`,
-                iconSize: [16, 16],
-                iconAnchor: [8, 8],
+                html: stop.bearing != null
+                  ? `<div style="width:20px;height:28px;transform:rotate(${stop.bearing}deg);transform-origin:10px 21px;">
+                       <svg width="20" height="28" viewBox="0 0 20 28" xmlns="http://www.w3.org/2000/svg">
+                         <polygon points="10,2 15,11 5,11" fill="#e8b84b" stroke="#1a1a1a" stroke-width="1.5" stroke-linejoin="round"/>
+                         <circle cx="10" cy="21" r="7" fill="#e8b84b" stroke="#1a1a1a" stroke-width="2"/>
+                       </svg>
+                     </div>`
+                  : `<div style="width:16px;height:16px;background:#e8b84b;border:2px solid #1a1a1a;border-radius:50%;cursor:pointer;"></div>`,
+                iconSize: stop.bearing != null ? [20, 28] : [16, 16],
+                iconAnchor: stop.bearing != null ? [10, 21] : [8, 8],
               })}
             >
               <Popup>
