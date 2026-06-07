@@ -8,13 +8,15 @@ In April 2026, Oahu Transit Services sunset the original DaBus2 app and pushed e
 
 This app is the answer for those folks. Real-time arrivals, nearby stops, live bus tracking, favorites, recents — built the way the old app worked, on the web so anybody on Oahu can use it from any phone.
 
+**Live:** [where-dabus-stay.vercel.app](https://where-dabus-stay.vercel.app)
+
 ## Status
 
-Personal project, actively in development. Runs locally for now; not yet deployed publicly.
+Personal project, actively in development.
 
-**Working today:** real-time arrivals by stop number or street name, GPS-based nearby stops with adjustable radius, live bus tracking with route line and stop markers, favorites and recent stops (saved in your browser), full routes browser with stop lists, responsive layouts for both phone and desktop.
+**Working today:** real-time arrivals by stop number or street name, GPS-based nearby stops with directional arrows showing which way each bus travels, adjustable search radius, live bus tracking with route line and stop markers, favorites and recent stops (saved in your browser), full routes browser with stop lists, service alerts, PWA install ("add to home screen") with offline stop caching, responsive layouts for both phone and desktop.
 
-**Still ahead:** trip planner for routing between two places, PWA install for "add to home screen," public deployment, GTFS-Realtime service alerts so you know about detours and stop relocations as they happen.
+**Still ahead:** trip planner for routing between two places.
 
 ## Screenshot
 
@@ -35,8 +37,8 @@ You'll need Node.js 20 or newer, [mkcert](https://github.com/FiloSottile/mkcert)
 ### Clone and install
 
 ```bash
-git clone https://github.com/Aerokinesis/da_bus_oahu.git
-cd da_bus_oahu/dabus-app
+git clone https://github.com/Aerokinesis/where-dabus-stay.git
+cd where-dabus-stay/dabus-app
 npm install
 ```
 
@@ -55,9 +57,9 @@ THEBUS_API_KEY=your_ots_api_key_here
 # SSL_CERT_PATH=./certs/cert.pem
 ```
 
-### Download the GTFS feed
+### Download and preprocess the GTFS feed
 
-The GTFS data is not in the repo (too big — about 80 MB total). Grab it fresh from TheBus:
+The raw GTFS files are committed to the repo (needed for Railway deployment). If you need to refresh them:
 
 ```bash
 cd dabus-app/data
@@ -67,7 +69,14 @@ rm google_transit.zip
 cat feed_info.txt   # check the validity window
 ```
 
-TheBus publishes a new feed every 4-8 weeks. If `feed_end_date` is in the past, run the above again. See `dabus-app/data/REFRESH.md` for more.
+TheBus publishes a new feed every 4-8 weeks. After refreshing the raw files, regenerate `processed.json`:
+
+```bash
+cd dabus-app
+node --max-old-space-size=4096 preprocess.js
+```
+
+This pre-computes route directions, shape polylines, stop sequences, and directional bearings so the server doesn't have to load 80+ MB of GTFS files at startup (important for Railway's 512MB memory limit).
 
 ### Generate local SSL certs
 
@@ -100,20 +109,47 @@ Open the frontend URL. On the first load you might get a "not trusted" certifica
 ## Project layout
 
 ```
-da_bus_oahu/
+where-dabus-stay/
 ├── dabus-app/
 │   ├── server.js              Express backend (CORS proxy + GTFS query layer)
-│   ├── data/                  GTFS static feed (gitignored; see REFRESH.md)
+│   ├── preprocess.js          One-time GTFS preprocessing script
+│   ├── data/
+│   │   ├── processed.json     Pre-computed route/shape/stop/bearing data
+│   │   └── *.txt              Raw GTFS files (stops, trips, shapes, etc.)
+│   ├── public/
+│   │   ├── manifest.json      PWA manifest
+│   │   ├── sw.js              Service worker (offline caching)
+│   │   └── icon-*.png         PWA icons
 │   ├── src/
 │   │   ├── App.jsx            Top-level layout
 │   │   ├── components/        UI components (map, arrivals, search, etc.)
 │   │   ├── hooks/             Custom React hooks for state + data fetching
 │   │   ├── index.css          Global tokens and resets
 │   │   └── main.jsx           Vite entry point
+│   ├── vercel.json            SPA routing config for Vercel
+│   ├── railpack.json          Start command config for Railway
 │   ├── package.json
 │   └── .env                   (gitignored — your API key and config)
 └── README.md
 ```
+
+## Deployment
+
+Frontend is hosted on **Vercel** (auto-deploys from `main`). Backend is hosted on **Railway** (set root directory to `dabus-app`).
+
+**Railway environment variables:**
+
+| Variable | Description |
+|---|---|
+| `THEBUS_API_KEY` | OTS API key |
+| `USE_HTTPS` | Set to `false` — Railway handles TLS |
+| `ALLOWED_ORIGINS` | Comma-separated frontend URLs (e.g. `https://where-dabus-stay.vercel.app`) |
+
+**Vercel environment variables:**
+
+| Variable | Description |
+|---|---|
+| `VITE_API_BASE` | Full Railway backend URL (e.g. `https://your-app.up.railway.app`) |
 
 ## Security
 
