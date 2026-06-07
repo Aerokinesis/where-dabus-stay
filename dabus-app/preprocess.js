@@ -117,26 +117,52 @@ routeDirections.sort((a, b) =>
     a.route_short_name.localeCompare(b.route_short_name, undefined, { numeric: true })
 )
 
+// Fill in shapeStops for ALL shape_ids in the GTFS dataset.
+// The loop above only captures one representative trip per route direction (236 entries).
+// Live OTS buses can report any shape_id, so we index every unique shape_id to avoid
+// the tracking view showing no stops when the shape_id is not a representative one.
+console.log("Filling shapeStops for all shape_ids...")
+const tripsByShape = trips.reduce((acc, trip) => {
+    if (trip.shape_id && !acc[trip.shape_id]) acc[trip.shape_id] = trip
+    return acc
+}, {})
+for (const [shapeId, trip] of Object.entries(tripsByShape)) {
+    if (shapeStops[shapeId]) continue
+    const times = (stopTimesByTrip[trip.trip_id] || [])
+        .sort((a, b) => parseInt(a.stop_sequence) - parseInt(b.stop_sequence))
+    shapeStops[shapeId] = times.map(st => {
+        const stop = stopsById[st.stop_id]
+        return {
+            stop_id: displayStopId(st.stop_id),
+            stop_name: stop?.stop_name || "Unknown",
+            stop_lat: parseFloat(stop?.stop_lat),
+            stop_lon: parseFloat(stop?.stop_lon),
+            arrival_time: st.arrival_time,
+            sequence: parseInt(st.stop_sequence)
+        }
+    }).filter(s => !isNaN(s.stop_lat) && !isNaN(s.stop_lon))
+}
+
 // Compute travel bearing per stop using circular averaging across all route directions.
-// Bearing 0° = North, 90° = East, etc.
+// Bearing 0 = North, 90 = East, etc.
 const toRad = (deg) => deg * Math.PI / 180
 const toDeg = (rad) => rad * 180 / Math.PI
 
 function computeBearing(lat1, lon1, lat2, lon2) {
     const dLon = toRad(lon2 - lon1)
-    const φ1 = toRad(lat1), φ2 = toRad(lat2)
-    const y = Math.sin(dLon) * Math.cos(φ2)
-    const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(dLon)
+    const lat1r = toRad(lat1)
+    const lat2r = toRad(lat2)
+    const y = Math.sin(dLon) * Math.cos(lat2r)
+    const x = Math.cos(lat1r) * Math.sin(lat2r) - Math.sin(lat1r) * Math.cos(lat2r) * Math.cos(dLon)
     return (toDeg(Math.atan2(y, x)) + 360) % 360
 }
 
 console.log("Computing stop bearings...")
-const bearingAccum = {} // stop_id -> { s: sinSum, c: cosSum }
+const bearingAccum = {}
 for (const rd of routeDirections) {
     const s = rd.stops
     if (s.length < 2) continue
     for (let i = 0; i < s.length; i++) {
-        // Use forward direction for all stops except the last, which uses the prior segment
         const b = i < s.length - 1
             ? computeBearing(s[i].stop_lat, s[i].stop_lon, s[i + 1].stop_lat, s[i + 1].stop_lon)
             : computeBearing(s[i - 1].stop_lat, s[i - 1].stop_lon, s[i].stop_lat, s[i].stop_lon)
