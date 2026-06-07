@@ -287,12 +287,7 @@ function App() {
           routeStops={routeStops}
           routeStopsLoading={routeStopsLoading}
           onSelectRoute={handleSelectRoute}
-          onClearRoute={!isMobile ? () => {
-            setSelectedRoute(null);
-            setRouteStops(null);
-            setRouteShape(null);
-            setRouteMapView(false);
-          } : null}
+          onClearRoute={null}
           onSelectStop={(stopId) => handleFetchArrivals(stopId, "routes")}
           onViewOnMap={isMobile ? () => setRouteMapView(true) : null}
           alertsForRoute={alertsForRoute}
@@ -451,7 +446,40 @@ function App() {
       <main className={styles.main}>
         {/* Desktop search bar */}
         <div className={styles.desktopSearch}>
-          {activeTab === "routes" ? (
+          {activeTab === "routes" && (selectedRoute || (arrivals && arrivalsTab === "routes")) ? (
+            <div className={styles.topBarSearch}>
+              <button
+                className={styles.topBarBack}
+                aria-label="Back"
+                onClick={() => {
+                  if (routeQuery) {
+                    setRouteQuery("");
+                  } else if (arrivals && arrivalsTab === "routes") {
+                    clearBusTracking();
+                    setTrackingView(false);
+                    setArrivalsTab(null);
+                  } else {
+                    setSelectedRoute(null);
+                    setRouteStops(null);
+                    setRouteShape(null);
+                    setRouteMapView(false);
+                  }
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+              </button>
+              <div className={styles.topBarSearchInput}>
+                <SearchInput
+                  value={routeQuery}
+                  onChange={handleRouteQueryChange}
+                  placeholder="Search routes"
+                  onClear={() => setRouteQuery("")}
+                />
+              </div>
+            </div>
+          ) : activeTab === "routes" ? (
             <SearchInput
               value={routeQuery}
               onChange={handleRouteQueryChange}
