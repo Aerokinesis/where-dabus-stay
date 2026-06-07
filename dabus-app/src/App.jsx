@@ -351,10 +351,8 @@ function App() {
             onBack={
               arrivalsTab === "favorites" ||
               arrivalsTab === "history" ||
-              arrivalsTab === "routes" ||
-              (arrivalsTab === "nearby" && isMobile)
+              arrivalsTab === "routes"
                 ? () => {
-                    if (arrivalsTab === "nearby") clearArrivals();
                     clearBusTracking();
                     setTrackingView(false);
                     setArrivalsTab(null);
@@ -373,14 +371,36 @@ function App() {
       {/* Mobile-only top search bar */}
       {(activeTab === "nearby" || activeTab === "routes") && !trackingView && (
         <div className={styles.topBar}>
-          {activeTab === "nearby" && <AddressSearch {...searchProps} />}
-          {activeTab === "routes" && (
-            <SearchInput
-              value={routeQuery}
-              onChange={setRouteQuery}
-              placeholder="Search routes"
-              onClear={() => setRouteQuery("")}
-            />
+          {activeTab === "nearby" && arrivals && arrivalsTab === "nearby" ? (
+            <div className={styles.topBarSearch}>
+              <button
+                className={styles.topBarBack}
+                aria-label="Back"
+                onClick={() => {
+                  clearArrivals();
+                  clearBusTracking();
+                  setTrackingView(false);
+                  setArrivalsTab(null);
+                }}
+              >
+                <span className="material-symbols-rounded">arrow_back</span>
+              </button>
+              <div className={styles.topBarSearchInput}>
+                <AddressSearch {...searchProps} />
+              </div>
+            </div>
+          ) : (
+            <>
+              {activeTab === "nearby" && <AddressSearch {...searchProps} />}
+              {activeTab === "routes" && (
+                <SearchInput
+                  value={routeQuery}
+                  onChange={setRouteQuery}
+                  placeholder="Search routes"
+                  onClear={() => setRouteQuery("")}
+                />
+              )}
+            </>
           )}
         </div>
       )}
