@@ -30,6 +30,9 @@ export function usePullToRefresh(onRefresh, enabled) {
       if (startY.current === null) return;
       const distance = e.touches[0].clientY - startY.current;
       if (distance <= 0) return;
+      // Prevent the browser's native pull-to-refresh / overscroll from firing
+      // while we're handling the gesture ourselves.
+      e.preventDefault();
       setPullDistance(Math.min(distance, THRESHOLD));
       setIsPulling(true);
     };
@@ -45,13 +48,15 @@ export function usePullToRefresh(onRefresh, enabled) {
       setPullDistance(0);
     };
 
-    window.addEventListener("touchstart", handleTouchStart);
-    window.addEventListener("touchmove", handleTouchMove);
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    // passive: false is required so we can call preventDefault() and suppress
+    // the browser's native pull-to-refresh / overscroll during a pull gesture.
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
     window.addEventListener("touchend", handleTouchEnd);
 
     return () => {
       window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchmove", handleTouchMove, { passive: false });
       window.removeEventListener("touchend", handleTouchEnd);
     };
   }, [enabled, onRefresh, pullDistance]);
