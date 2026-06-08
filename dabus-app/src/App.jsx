@@ -503,6 +503,8 @@ function App() {
                 mapCenter={mapCenter}
                 onMapMove={setMapCenter}
                 searchRadius={settings.searchRadius}
+                onRefreshLocation={findNearbyStops}
+                locating={locating}
               />
             </div>
           )}

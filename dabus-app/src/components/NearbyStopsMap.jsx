@@ -43,6 +43,8 @@ function NearbyStopsMap({
   onMapMove,
   fullHeight,
   searchRadius = 0.25,
+  onRefreshLocation,
+  locating = false,
 }) {
   const [recenterTrigger, setRecenterTrigger] = useState(0);
 
@@ -133,8 +135,32 @@ function NearbyStopsMap({
         />
       </MapContainer>
 
-      {userLocation && (
-        <div className={styles.fabStack}>
+      <div className={styles.fabStack}>
+        {onRefreshLocation && (
+          <MapFab
+            onClick={onRefreshLocation}
+            ariaLabel="Refresh my location"
+            disabled={locating}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              style={locating ? { animation: "spin 1s linear infinite" } : undefined}
+            >
+              <path d="M23 4v6h-6" />
+              <path d="M1 20v-6h6" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+          </MapFab>
+        )}
+        {userLocation && (
           <MapFab
             onClick={() => setRecenterTrigger((t) => t + 1)}
             ariaLabel="Recenter map on your location"
@@ -157,8 +183,8 @@ function NearbyStopsMap({
               <line x1="19" y1="12" x2="22" y2="12" />
             </svg>
           </MapFab>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
