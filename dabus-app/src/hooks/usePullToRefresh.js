@@ -23,11 +23,13 @@ function getScrollableAncestor(el) {
 }
 
 // onRefresh  -- callback to invoke when the user completes a pull gesture
-// enabled    -- when false the hook is a no-op (don't attach listeners at all)
-// strict     -- when true, skip pull-to-refresh if the touch started inside a
-//               scrollable container that is already scrolled down. Use for
-//               full-screen list views where scroll-up gestures must still work.
-//               Pass false for views where the pull area is small (home screen).
+// enabled    -- when false the hook is a no-op
+// strict     -- when true:
+//                 - skip pulls that start inside a scrollable container scrolled
+//                   down (the user is navigating content, not refreshing)
+//                 - exclude touches inside Leaflet maps (map pan/zoom)
+//               Pass false for the home screen where the map fills most of the
+//               view and there's no other pull surface.
 export function usePullToRefresh(onRefresh, enabled, strict = true) {
   const [isPulling, setIsPulling] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
@@ -39,13 +41,12 @@ export function usePullToRefresh(onRefresh, enabled, strict = true) {
 
     const handleTouchStart = (e) => {
       if (e.touches.length > 1) return;
-      // Don't capture touches that started inside a Leaflet map -- they're map
-      // drags (or pinch-zooms), not pull-to-refresh gestures.
-      if (e.target.closest?.(".leaflet-container")) return;
 
-      // In strict mode, skip if the touch started inside a scrollable container
-      // that's already scrolled down -- the user is navigating that content.
       if (strict) {
+        // Exclude map touches — they're pan/zoom gestures, not refreshes.
+        if (e.target.closest?.(".leaflet-container")) return;
+        // Skip if the touch started inside a scrollable container already
+        // scrolled down — the user is navigating that content.
         const ancestor = getScrollableAncestor(e.target);
         if (ancestor && ancestor.scrollTop > 0) return;
       }
@@ -64,9 +65,9 @@ export function usePullToRefresh(onRefresh, enabled, strict = true) {
       const distance = e.touches[0].clientY - startY.current;
       if (distance <= 0) return;
 
-      // Block native scroll immediately on any downward movement so the browser
-      // can't start scrolling the container (which would bump scrollTop and
-      // prevent us from ever showing the indicator).
+      // Block native scroll/pan immediately on any downward movement so the
+      // browser can't start scrolling (which would bump scrollTop and cancel
+      // the gesture) or the map from panning.
       e.preventDefault();
 
       // Don't show the indicator until past the deadzone.
