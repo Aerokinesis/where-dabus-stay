@@ -47,6 +47,9 @@ function App() {
   const [trackingView, setTrackingView] = useState(false);
   const [routeMapView, setRouteMapView] = useState(false);
   const [arrivalsTab, setArrivalsTab] = useState(null);
+  // Stop IDs previously visited on the nearby tab — used to navigate back.
+  const [nearbyStopStack, setNearbyStopStack] = useState([]);
+  const [stopSearchQuery, setStopSearchQuery] = useState("");
 
   // Toast state
   const [toast, setToast] = useState(null);
@@ -122,6 +125,11 @@ function App() {
   // Refetch nearby stops whenever the radius or user's location changes.
   // Runs regardless of active tab so changes from Settings take effect before
   // the user navigates back to Home.
+  // Keep the stop search bar in sync with whatever stop is currently loaded.
+  useEffect(() => {
+    setStopSearchQuery(currentStop ? String(currentStop.id) : "");
+  }, [currentStop]);
+
   useEffect(() => {
     if (userLocation) {
       refindNearbyStops(
@@ -390,7 +398,19 @@ function App() {
                 className={styles.topBarBack}
                 aria-label="Back"
                 onClick={() => {
-                  if (activeTab === "nearby") clearArrivals();
+                  if (activeTab === "nearby") {
+                    if (nearbyStopStack.length > 0) {
+                      // Go back to the previous stop in the stack.
+                      const prev = nearbyStopStack[nearbyStopStack.length - 1];
+                      setNearbyStopStack((s) => s.slice(0, -1));
+                      handleFetchArrivals(prev, "nearby");
+                    } else {
+                      clearArrivals();
+                      setNearbyStopStack([]);
+                      setStopSearchQuery("");
+                    }
+                    return;
+                  }
                   if (activeTab === "routes" && routeQuery) {
                     // Searching — always clear query first (restores whatever was behind)
                     setRouteQuery("");
@@ -415,7 +435,21 @@ function App() {
                 </svg>
               </button>
               <div className={styles.topBarSearchInput}>
-                {activeTab === "nearby" && <AddressSearch {...searchProps} />}
+                {activeTab === "nearby" && (
+                  <SearchInput
+                    value={stopSearchQuery}
+                    onChange={setStopSearchQuery}
+                    placeholder="Stop number"
+                    ariaLabel="Bus stop number"
+                    onClear={() => setStopSearchQuery("")}
+                    onSubmit={() => {
+                      const id = stopSearchQuery.trim();
+                      if (!id || id === String(currentStop?.id)) return;
+                      setNearbyStopStack((s) => [...s, currentStop.id]);
+                      handleFetchArrivals(id, "nearby");
+                    }}
+                  />
+                )}
                 {activeTab === "routes" && (
                   <SearchInput
                     value={routeQuery}
