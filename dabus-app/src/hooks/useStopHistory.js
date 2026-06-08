@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 const STORAGE_KEY = "dabus-stop-history";
-const MAX_HISTORY = 25;
+const MAX_HISTORY = 10;
 
 export function useStopHistory() {
   const [stopHistory, setStopHistory] = useState(() => {
