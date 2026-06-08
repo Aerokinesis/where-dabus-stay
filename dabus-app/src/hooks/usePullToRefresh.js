@@ -35,7 +35,7 @@ export function usePullToRefresh(onRefresh, enabled) {
 
     const handleTouchStart = (e) => {
       if (e.touches.length > 1) return;
-      // Don't capture touches that started inside a Leaflet map — they're map
+      // Don't capture touches that started inside a Leaflet map -- they're map
       // drags (or pinch-zooms), not pull-to-refresh gestures.
       if (e.target.closest?.(".leaflet-container")) return;
 
@@ -44,7 +44,7 @@ export function usePullToRefresh(onRefresh, enabled) {
       scrollAncestor.current = ancestor;
 
       // If the touch started inside a container that's already scrolled down,
-      // the user is navigating that content — don't intercept.
+      // the user is navigating that content -- don't intercept.
       if (ancestor && ancestor.scrollTop > 0) return;
 
       startY.current = e.touches[0].clientY;
@@ -63,3 +63,48 @@ export function usePullToRefresh(onRefresh, enabled) {
       if (distance <= 0) return;
 
       // Re-check scroll position in real-time: if the container scrolled since
+      // touchstart, the user is scrolling content, not pulling to refresh.
+      if (scrollAncestor.current && scrollAncestor.current.scrollTop > 0) {
+        startY.current = null;
+        scrollAncestor.current = null;
+        return;
+      }
+
+      // Wait for the deadzone before committing. This prevents a slight downward
+      // twitch at the start of an upward scroll from blocking native scroll.
+      if (distance < DEADZONE) return;
+
+      // Prevent the browser's native pull-to-refresh / overscroll from firing
+      // while we're handling the gesture ourselves.
+      e.preventDefault();
+      setPullDistance(Math.min(distance, THRESHOLD));
+      setIsPulling(true);
+    };
+
+    const handleTouchEnd = () => {
+      if (pullDistance >= THRESHOLD) {
+        onRefresh();
+        setTriggered(true);
+        setTimeout(() => setTriggered(false), 700);
+      }
+      startY.current = null;
+      scrollAncestor.current = null;
+      setIsPulling(false);
+      setPullDistance(0);
+    };
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    // passive: false is required so we can call preventDefault() and suppress
+    // the browser's native pull-to-refresh / overscroll during a pull gesture.
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd);
+
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove, { passive: false });
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [enabled, onRefresh, pullDistance]);
+
+  return { isPulling, pullDistance, triggered };
+}
