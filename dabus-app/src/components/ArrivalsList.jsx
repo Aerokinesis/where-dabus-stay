@@ -47,20 +47,6 @@ function ArrivalsList({
   return (
     
     <div className={styles.container}>
-      {onBack && (
-        <button className={styles.backBtn} onClick={onBack}>
-          ←{" "}
-          {arrivalsTab === "history"
-            ? "Recent"
-            : arrivalsTab === "routes"
-              ? routeShortName
-                ? `Route ${routeShortName}`
-                : "Stops"
-              : arrivalsTab === "nearby"
-                ? "Home"
-                : "Favorites"}
-        </button>
-      )}
       {onBackToTracking && (
         <button className={styles.backBtn} onClick={onBackToTracking}>
           ← Back to tracking

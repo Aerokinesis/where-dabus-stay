@@ -4,6 +4,7 @@ import {
   Marker,
   Popup,
   Polyline,
+  useMapEvents,
 } from "react-leaflet";
 import { useState } from "react";
 import L from "leaflet";
@@ -11,7 +12,12 @@ import styles from "./BusTrackingMap.module.css";
 import MapRecenterControl from "./MapRecenterControl";
 import MapFab from "./MapFab";
 
-function BusTrackingMap({ busLocation, userLocation, selectedBus, busShape, tripStops, onGetArrivals }) {
+function MapMoveTracker({ onMapMove }) {
+  useMapEvents({ moveend: (e) => onMapMove(e.target.getCenter()) });
+  return null;
+}
+
+function BusTrackingMap({ busLocation, userLocation, selectedBus, busShape, tripStops, onGetArrivals, initialCenter, onMapMove }) {
   const [satelliteView, setSatelliteView] = useState(false);
   const [busTrigger, setBusTrigger] = useState(0);
   const [userTrigger, setUserTrigger] = useState(0);
@@ -51,13 +57,11 @@ function BusTrackingMap({ busLocation, userLocation, selectedBus, busShape, trip
       </div>
       <div className={styles.mapWrapper}>
         <MapContainer
-          center={[
-            parseFloat(busLocation.latitude),
-            parseFloat(busLocation.longitude),
-          ]}
+          center={initialCenter || busCenter}
           zoom={15}
           style={{ height: "100%", width: "100%" }}
         >
+          {onMapMove && <MapMoveTracker onMapMove={onMapMove} />}
           {satelliteView ? (
             <TileLayer
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"

@@ -121,6 +121,7 @@ function App() {
   );
 
   const [mapCenter, setMapCenter] = useState(null);
+  const [trackingMapCenter, setTrackingMapCenter] = useState(null);
 
   // Refetch nearby stops whenever the radius or user's location changes.
   // Runs regardless of active tab so changes from Settings take effect before
@@ -129,6 +130,30 @@ function App() {
   useEffect(() => {
     setStopSearchQuery(currentStop ? String(currentStop.id) : "");
   }, [currentStop]);
+
+  // Seed trackingMapCenter when a bus is first tracked; clear it when tracking ends.
+  // Only seed when null so user panning during a session is preserved on remount.
+  useEffect(() => {
+    if (busLocation && !trackingMapCenter) {
+      setTrackingMapCenter([
+        parseFloat(busLocation.latitude),
+        parseFloat(busLocation.longitude),
+      ]);
+    }
+    if (!busLocation) {
+      setTrackingMapCenter(null);
+    }
+  }, [busLocation]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Seed mapCenter from userLocation the first time we get a fix so the map
+  // never resets to the user's position on remount (Leaflet doesn't fire
+  // moveend when setView is called with the same coordinates, so we can't rely
+  // on the MapRecenter component to populate mapCenter).
+  useEffect(() => {
+    if (userLocation && !mapCenter) {
+      setMapCenter({ lat: userLocation.lat, lng: userLocation.lon });
+    }
+  }, [userLocation]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (userLocation) {
@@ -389,10 +414,15 @@ function App() {
   return (
     <div className={styles.shell}>
       {/* Mobile-only top search bar */}
-      {(activeTab === "nearby" || activeTab === "routes") && !trackingView && (
+      {!trackingView && (
+        activeTab === "nearby" ||
+        activeTab === "routes" ||
+        ((activeTab === "history" || activeTab === "favorites") && arrivals && arrivalsTab === activeTab)
+      ) && (
         <div className={styles.topBar}>
           {(activeTab === "nearby" && arrivals && arrivalsTab === "nearby") ||
-          (activeTab === "routes" && (selectedRoute || (arrivals && arrivalsTab === "routes"))) ? (
+          (activeTab === "routes" && (selectedRoute || (arrivals && arrivalsTab === "routes"))) ||
+          ((activeTab === "history" || activeTab === "favorites") && arrivals && arrivalsTab === activeTab) ? (
             <div className={styles.topBarSearch}>
               <button
                 className={styles.topBarBack}
@@ -400,10 +430,13 @@ function App() {
                 onClick={() => {
                   if (activeTab === "nearby") {
                     if (nearbyStopStack.length > 0) {
-                      // Go back to the previous stop in the stack.
                       const prev = nearbyStopStack[nearbyStopStack.length - 1];
                       setNearbyStopStack((s) => s.slice(0, -1));
                       handleFetchArrivals(prev, "nearby");
+                    } else if (busLocation && isMobile) {
+                      setTrackingView(true);
+                      clearArrivals();
+                      setStopSearchQuery("");
                     } else {
                       clearArrivals();
                       setNearbyStopStack([]);
@@ -411,8 +444,14 @@ function App() {
                     }
                     return;
                   }
+                  if (activeTab === "history" || activeTab === "favorites") {
+                    clearBusTracking();
+                    setTrackingView(false);
+                    setArrivalsTab(null);
+                    clearArrivals();
+                    return;
+                  }
                   if (activeTab === "routes" && routeQuery) {
-                    // Searching — always clear query first (restores whatever was behind)
                     setRouteQuery("");
                   } else if (activeTab === "routes" && arrivals && arrivalsTab === "routes") {
                     clearBusTracking();
@@ -456,6 +495,20 @@ function App() {
                     onChange={handleRouteQueryChange}
                     placeholder="Search routes"
                     onClear={() => setRouteQuery("")}
+                  />
+                )}
+                {(activeTab === "history" || activeTab === "favorites") && (
+                  <SearchInput
+                    value={stopSearchQuery}
+                    onChange={setStopSearchQuery}
+                    placeholder="Stop number"
+                    ariaLabel="Bus stop number"
+                    onClear={() => setStopSearchQuery("")}
+                    onSubmit={() => {
+                      const id = stopSearchQuery.trim();
+                      if (!id || id === String(currentStop?.id)) return;
+                      handleFetchArrivals(id, activeTab);
+                    }}
                   />
                 )}
               </div>
@@ -550,6 +603,37 @@ function App() {
                 />
               </div>
             </div>
+          ) : (activeTab === "history" || activeTab === "favorites") && arrivals && arrivalsTab === activeTab ? (
+            <div className={styles.topBarSearch}>
+              <button
+                className={styles.topBarBack}
+                aria-label="Back"
+                onClick={() => {
+                  clearBusTracking();
+                  setTrackingView(false);
+                  setArrivalsTab(null);
+                  clearArrivals();
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+              </button>
+              <div className={styles.topBarSearchInput}>
+                <SearchInput
+                  value={stopSearchQuery}
+                  onChange={setStopSearchQuery}
+                  placeholder="Stop number"
+                  ariaLabel="Bus stop number"
+                  onClear={() => setStopSearchQuery("")}
+                  onSubmit={() => {
+                    const id = stopSearchQuery.trim();
+                    if (!id || id === String(currentStop?.id)) return;
+                    handleFetchArrivals(id, activeTab);
+                  }}
+                />
+              </div>
+            </div>
           ) : activeTab === "routes" ? (
             <SearchInput
               value={routeQuery}
@@ -589,39 +673,24 @@ function App() {
         <ErrorBoundary>
           {trackingView && busLocation ? (
             <>
-              <div
-                style={{
-                  padding: "12px 16px",
-                  background: "var(--surface)",
-                  borderBottom: "1px solid var(--border)",
-                  flexShrink: 0,
-                }}
-              >
-                <button
-                  onClick={() => {
-                    setTrackingView(false);
-                    clearBusTracking();
-                  }}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "var(--primary)",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
-                >
-                  ← Back to map
-                </button>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    color: "var(--text-muted)",
-                    marginTop: "4px",
-                  }}
-                >
-                  Route {busLocation.route_short_name} — {busLocation.headsign}
-                </p>
+              <div className={styles.desktopSearch}>
+                <div className={styles.topBarSearch}>
+                  <button
+                    className={styles.topBarBack}
+                    aria-label="Back to map"
+                    onClick={() => {
+                      setTrackingView(false);
+                      clearBusTracking();
+                    }}
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                  </button>
+                  <span className={styles.trackingLabel}>
+                    Route {busLocation.route_short_name} — {busLocation.headsign}
+                  </span>
+                </div>
               </div>
               <div style={{ flex: 1, minHeight: 0 }}>
                 <BusTrackingMap
@@ -630,10 +699,13 @@ function App() {
                   selectedBus={selectedBus}
                   busShape={busShape}
                   tripStops={tripStops}
+                  initialCenter={trackingMapCenter}
+                  onMapMove={setTrackingMapCenter}
                   onGetArrivals={(stopId) => {
+                    // Keep trackingView + busLocation intact so the mapPanel
+                    // stays on BusTrackingMap — same pattern as RouteMap.
                     if (activeTab !== "nearby") setActiveTab("nearby");
-                    setArrivalsTab(null);
-                    setTrackingView(false);
+                    setNearbyStopStack([]);
                     fetchArrivals(stopId).then((stopName) => {
                       addToHistory(stopId, stopName);
                       setArrivalsTab("nearby");
@@ -687,39 +759,24 @@ function App() {
               flexDirection: "column",
             }}
           >
-            <div
-              style={{
-                padding: "12px 16px",
-                background: "var(--surface)",
-                borderBottom: "1px solid var(--border)",
-                flexShrink: 0,
-              }}
-            >
-              <button
-                onClick={() => {
-                  setTrackingView(false);
-                  clearBusTracking();
-                }}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "var(--primary)",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  padding: 0,
-                }}
-              >
-                ← Back to arrivals
-              </button>
-              <p
-                style={{
-                  fontSize: "13px",
-                  color: "var(--text-muted)",
-                  marginTop: "4px",
-                }}
-              >
-                Route {busLocation.route_short_name} — {busLocation.headsign}
-              </p>
+            <div className={styles.topBar}>
+              <div className={styles.topBarSearch}>
+                <button
+                  className={styles.topBarBack}
+                  aria-label="Back to arrivals"
+                  onClick={() => {
+                    setTrackingView(false);
+                    clearBusTracking();
+                  }}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                  </svg>
+                </button>
+                <span className={styles.trackingLabel}>
+                  Route {busLocation.route_short_name} — {busLocation.headsign}
+                </span>
+              </div>
             </div>
             <div style={{ flex: 1, height: 0 }}>
               <BusTrackingMap
@@ -728,10 +785,17 @@ function App() {
                 selectedBus={selectedBus}
                 busShape={busShape}
                 tripStops={tripStops}
+                initialCenter={trackingMapCenter}
+                onMapMove={setTrackingMapCenter}
                 onGetArrivals={(stopId) => {
+                  setNearbyStopStack([]);
+                  // Close the overlay so arrivals are visible, but keep
+                  // busLocation so the back button can return to tracking.
+                  setTrackingView(false);
                   fetchArrivals(stopId).then((stopName) => {
                     addToHistory(stopId, stopName);
-                    setArrivalsTab(activeTab);
+                    setArrivalsTab("nearby");
+                    if (activeTab !== "nearby") setActiveTab("nearby");
                   });
                 }}
               />
@@ -753,36 +817,21 @@ function App() {
               flexDirection: "column",
             }}
           >
-            <div
-              style={{
-                padding: "12px 16px",
-                background: "var(--surface)",
-                borderBottom: "1px solid var(--border)",
-                flexShrink: 0,
-              }}
-            >
-              <button
-                onClick={() => setRouteMapView(false)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "var(--primary)",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  padding: 0,
-                }}
-              >
-                ← Back to stops
-              </button>
-              <p
-                style={{
-                  fontSize: "13px",
-                  color: "var(--text-muted)",
-                  marginTop: "4px",
-                }}
-              >
-                Route {selectedRoute.route_short_name} — {selectedRoute.route_long_name}
-              </p>
+            <div className={styles.topBar}>
+              <div className={styles.topBarSearch}>
+                <button
+                  className={styles.topBarBack}
+                  aria-label="Back to stops"
+                  onClick={() => setRouteMapView(false)}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                  </svg>
+                </button>
+                <span className={styles.trackingLabel}>
+                  Route {selectedRoute.route_short_name} — {selectedRoute.route_long_name}
+                </span>
+              </div>
             </div>
             <div style={{ flex: 1, height: 0 }}>
               <RouteMap
