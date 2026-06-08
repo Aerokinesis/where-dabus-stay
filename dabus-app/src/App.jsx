@@ -115,6 +115,7 @@ function App() {
   const { isPulling, pullDistance, triggered } = usePullToRefresh(
     () => fetchArrivals(currentStop.id),
     !!arrivals,
+    activeTab !== "nearby", // home screen has a small pull area — don't restrict by scroll container
   );
 
   const [mapCenter, setMapCenter] = useState(null);

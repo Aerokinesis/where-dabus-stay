@@ -22,7 +22,13 @@ function getScrollableAncestor(el) {
   return null;
 }
 
-export function usePullToRefresh(onRefresh, enabled) {
+// onRefresh  -- callback to invoke when the user completes a pull gesture
+// enabled    -- when false the hook is a no-op (don't attach listeners at all)
+// strict     -- when true, skip pull-to-refresh if the touch started inside a
+//               scrollable container that is already scrolled down. Use for
+//               full-screen list views where scroll-up gestures must still work.
+//               Pass false for views where the pull area is small (home screen).
+export function usePullToRefresh(onRefresh, enabled, strict = true) {
   const [isPulling, setIsPulling] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [triggered, setTriggered] = useState(false);
@@ -37,10 +43,12 @@ export function usePullToRefresh(onRefresh, enabled) {
       // drags (or pinch-zooms), not pull-to-refresh gestures.
       if (e.target.closest?.(".leaflet-container")) return;
 
-      // If the touch started inside a scrollable container that's already
-      // scrolled down, the user is navigating that content -- don't intercept.
-      const ancestor = getScrollableAncestor(e.target);
-      if (ancestor && ancestor.scrollTop > 0) return;
+      // In strict mode, skip if the touch started inside a scrollable container
+      // that's already scrolled down -- the user is navigating that content.
+      if (strict) {
+        const ancestor = getScrollableAncestor(e.target);
+        if (ancestor && ancestor.scrollTop > 0) return;
+      }
 
       startY.current = e.touches[0].clientY;
     };
@@ -90,7 +98,7 @@ export function usePullToRefresh(onRefresh, enabled) {
       window.removeEventListener("touchmove", handleTouchMove, { passive: false });
       window.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [enabled, onRefresh, pullDistance]);
+  }, [enabled, strict, onRefresh, pullDistance]);
 
   return { isPulling, pullDistance, triggered };
 }
