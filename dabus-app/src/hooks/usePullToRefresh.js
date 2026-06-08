@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 
 const THRESHOLD = 80;
-// Minimum downward movement before we commit to pull-to-refresh and block
-// native scrolling. Keeps diagonal/accidental touches from locking scroll.
+// Don't show the indicator until the user has pulled at least this far.
+// This avoids showing it for a slight downward twitch at the start of a scroll.
 const DEADZONE = 8;
 
 // Walk up the DOM from `el` and return the first element that has scrollable
@@ -27,8 +27,6 @@ export function usePullToRefresh(onRefresh, enabled) {
   const [pullDistance, setPullDistance] = useState(0);
   const [triggered, setTriggered] = useState(false);
   const startY = useRef(null);
-  // The scrollable container the touch started inside (if any).
-  const scrollAncestor = useRef(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -39,12 +37,9 @@ export function usePullToRefresh(onRefresh, enabled) {
       // drags (or pinch-zooms), not pull-to-refresh gestures.
       if (e.target.closest?.(".leaflet-container")) return;
 
-      // Find the nearest scrollable container for this touch.
+      // If the touch started inside a scrollable container that's already
+      // scrolled down, the user is navigating that content -- don't intercept.
       const ancestor = getScrollableAncestor(e.target);
-      scrollAncestor.current = ancestor;
-
-      // If the touch started inside a container that's already scrolled down,
-      // the user is navigating that content -- don't intercept.
       if (ancestor && ancestor.scrollTop > 0) return;
 
       startY.current = e.touches[0].clientY;
@@ -53,7 +48,6 @@ export function usePullToRefresh(onRefresh, enabled) {
     const handleTouchMove = (e) => {
       if (e.touches.length > 1) {
         startY.current = null;
-        scrollAncestor.current = null;
         setIsPulling(false);
         setPullDistance(0);
         return;
@@ -62,21 +56,14 @@ export function usePullToRefresh(onRefresh, enabled) {
       const distance = e.touches[0].clientY - startY.current;
       if (distance <= 0) return;
 
-      // Re-check scroll position in real-time: if the container scrolled since
-      // touchstart, the user is scrolling content, not pulling to refresh.
-      if (scrollAncestor.current && scrollAncestor.current.scrollTop > 0) {
-        startY.current = null;
-        scrollAncestor.current = null;
-        return;
-      }
+      // Block native scroll immediately on any downward movement so the browser
+      // can't start scrolling the container (which would bump scrollTop and
+      // prevent us from ever showing the indicator).
+      e.preventDefault();
 
-      // Wait for the deadzone before committing. This prevents a slight downward
-      // twitch at the start of an upward scroll from blocking native scroll.
+      // Don't show the indicator until past the deadzone.
       if (distance < DEADZONE) return;
 
-      // Prevent the browser's native pull-to-refresh / overscroll from firing
-      // while we're handling the gesture ourselves.
-      e.preventDefault();
       setPullDistance(Math.min(distance, THRESHOLD));
       setIsPulling(true);
     };
@@ -88,7 +75,6 @@ export function usePullToRefresh(onRefresh, enabled) {
         setTimeout(() => setTriggered(false), 700);
       }
       startY.current = null;
-      scrollAncestor.current = null;
       setIsPulling(false);
       setPullDistance(0);
     };
