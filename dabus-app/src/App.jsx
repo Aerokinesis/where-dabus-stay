@@ -112,10 +112,16 @@ function App() {
     restore: restoreAlerts,
   } = useAlerts();
 
+  // On the nearby tab, PTR refreshes the map (always enabled).
+  // On other tabs, PTR refreshes the open arrivals (only enabled when arrivals are showing).
+  const isNearbyHome = activeTab === "nearby" && !arrivals;
+  const pullRefreshCallback = isNearbyHome
+    ? () => userLocation && refindNearbyStops(userLocation.lat, userLocation.lon, settings.searchRadius)
+    : () => fetchArrivals(currentStop.id);
   const { isPulling, pullDistance, triggered } = usePullToRefresh(
-    () => fetchArrivals(currentStop.id),
-    !!arrivals,
-    activeTab !== "nearby", // home screen has a small pull area — don't restrict by scroll container
+    pullRefreshCallback,
+    isNearbyHome || !!arrivals,
+    !isNearbyHome, // strict=false on home screen (small pull area), strict=true elsewhere
   );
 
   const [mapCenter, setMapCenter] = useState(null);
