@@ -34,7 +34,12 @@ export function usePullToRefresh(onRefresh, enabled, strict = true) {
   const [isPulling, setIsPulling] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [triggered, setTriggered] = useState(false);
+
   const startY = useRef(null);
+  // Refs hold the live values so event handlers never read stale state.
+  const pullDistanceRef = useRef(0);
+  const onRefreshRef = useRef(onRefresh);
+  onRefreshRef.current = onRefresh;
 
   useEffect(() => {
     if (!enabled) return;
@@ -43,10 +48,10 @@ export function usePullToRefresh(onRefresh, enabled, strict = true) {
       if (e.touches.length > 1) return;
 
       if (strict) {
-        // Exclude map touches — they're pan/zoom gestures, not refreshes.
+        // Exclude map touches -- they're pan/zoom gestures, not refreshes.
         if (e.target.closest?.(".leaflet-container")) return;
         // Skip if the touch started inside a scrollable container already
-        // scrolled down — the user is navigating that content.
+        // scrolled down -- the user is navigating that content.
         const ancestor = getScrollableAncestor(e.target);
         if (ancestor && ancestor.scrollTop > 0) return;
       }
@@ -57,6 +62,7 @@ export function usePullToRefresh(onRefresh, enabled, strict = true) {
     const handleTouchMove = (e) => {
       if (e.touches.length > 1) {
         startY.current = null;
+        pullDistanceRef.current = 0;
         setIsPulling(false);
         setPullDistance(0);
         return;
@@ -73,17 +79,21 @@ export function usePullToRefresh(onRefresh, enabled, strict = true) {
       // Don't show the indicator until past the deadzone.
       if (distance < DEADZONE) return;
 
-      setPullDistance(Math.min(distance, THRESHOLD));
+      const clamped = Math.min(distance, THRESHOLD);
+      pullDistanceRef.current = clamped;
+      setPullDistance(clamped);
       setIsPulling(true);
     };
 
     const handleTouchEnd = () => {
-      if (pullDistance >= THRESHOLD) {
-        onRefresh();
+      // Use the ref so we always read the latest value, not a stale closure.
+      if (pullDistanceRef.current >= THRESHOLD) {
+        onRefreshRef.current?.();
         setTriggered(true);
         setTimeout(() => setTriggered(false), 700);
       }
       startY.current = null;
+      pullDistanceRef.current = 0;
       setIsPulling(false);
       setPullDistance(0);
     };
@@ -99,7 +109,9 @@ export function usePullToRefresh(onRefresh, enabled, strict = true) {
       window.removeEventListener("touchmove", handleTouchMove, { passive: false });
       window.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [enabled, strict, onRefresh, pullDistance]);
+  // pullDistance removed from deps -- the ref handles live reads in handlers.
+  // onRefresh removed from deps -- onRefreshRef.current is always up to date.
+  }, [enabled, strict]);
 
   return { isPulling, pullDistance, triggered };
 }
