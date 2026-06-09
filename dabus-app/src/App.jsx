@@ -624,7 +624,7 @@ function App() {
                     onSubmit={() => {
                       const id = stopSearchQuery.trim();
                       if (!id || id === String(currentStop?.id)) return;
-                      setNearbyStopStack((s) => [...s, currentStop.id]);
+                      if (currentStop) setNearbyStopStack((s) => [...s, currentStop.id]);
                       handleFetchArrivals(id, "nearby");
                     }}
                   />
