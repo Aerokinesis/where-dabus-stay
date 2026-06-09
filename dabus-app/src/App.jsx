@@ -59,6 +59,29 @@ function App() {
   const exitGuardRef = useRef(false);  // true while "press back again to exit" is active
   const exitTimerRef = useRef(null);
 
+  // PWA install prompt
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(
+    () => window.matchMedia("(display-mode: standalone)").matches
+  );
+
+  useEffect(() => {
+    const onBeforeInstall = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    const onInstalled = () => {
+      setInstallPrompt(null);
+      setIsInstalled(true);
+    };
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
   // Toast state
   const [toast, setToast] = useState(null);
   const [toastFading, setToastFading] = useState(false);
@@ -456,6 +479,17 @@ function App() {
           onClearFavorites={() => {
             clearFavorites();
             showToast("Favorites cleared", "remove");
+          }}
+          installPrompt={installPrompt}
+          isInstalled={isInstalled}
+          onInstall={async () => {
+            if (!installPrompt) return;
+            installPrompt.prompt();
+            const { outcome } = await installPrompt.userChoice;
+            if (outcome === "accepted") {
+              setInstallPrompt(null);
+              setIsInstalled(true);
+            }
           }}
         />
       )}

@@ -3,9 +3,12 @@ import { APP_VERSION } from "../constants";
 
 const RADIUS_OPTIONS = [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5];
 
-function SettingsTab({ settings, onUpdateSetting, onClearHistory, onClearFavorites }) {
+function SettingsTab({ settings, onUpdateSetting, onClearHistory, onClearFavorites, installPrompt, isInstalled, onInstall }) {
   const radiusIndex = RADIUS_OPTIONS.indexOf(settings.searchRadius);
   const sliderValue = radiusIndex === -1 ? 3 : radiusIndex;
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  const showInstallSection = !isInstalled && (installPrompt || isIOS);
 
   return (
     <div className={styles.container}>
@@ -80,6 +83,38 @@ function SettingsTab({ settings, onUpdateSetting, onClearHistory, onClearFavorit
           </button>
         </div>
       </div>
+
+      {showInstallSection && (
+        <div className={styles.section}>
+          <p className={styles.sectionLabel}>Install</p>
+          <div className={styles.group}>
+            {installPrompt ? (
+              <div className={styles.installRow}>
+                <div>
+                  <p className={styles.rowLabel}>Add to Home Screen</p>
+                  <p className={styles.rowSub}>Install for quick access, offline support, and a native app feel</p>
+                </div>
+                <button className={styles.installBtn} onClick={onInstall}>
+                  Install
+                </button>
+              </div>
+            ) : (
+              <div className={styles.iosInstallBlock}>
+                <p className={styles.rowLabel}>Add to Home Screen</p>
+                <p className={styles.rowSub}>
+                  Tap the{" "}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", verticalAlign: "middle" }}>
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                  </svg>
+                  {" "}Share button, then tap <strong>Add to Home Screen</strong>
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className={styles.section}>
         <p className={styles.sectionLabel}>About</p>
