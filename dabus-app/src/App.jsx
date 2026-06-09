@@ -522,7 +522,7 @@ function App() {
                   }
                 : null
             }
-            onBackToTracking={busLocation && isMobile ? () => setTrackingView(true) : null}
+
           />
         )}
       </ErrorBoundary>
@@ -617,7 +617,9 @@ function App() {
                 )}
                 {(activeTab === "history" || activeTab === "favorites") && currentStop && (
                   <span className={styles.trackingLabel}>
-                    {currentStop.name || `Stop #${currentStop.id}`}
+                    {activeTab === "favorites"
+                      ? (favorites.find(f => f.stop_id === currentStop.id)?.custom_name || currentStop.name || `Stop #${currentStop.id}`)
+                      : (currentStop.name || `Stop #${currentStop.id}`)}
                   </span>
                 )}
               </div>
@@ -736,7 +738,9 @@ function App() {
               </button>
               {currentStop && (
                 <span className={styles.trackingLabel}>
-                  {currentStop.name || `Stop #${currentStop.id}`}
+                  {activeTab === "favorites"
+                    ? (favorites.find(f => f.stop_id === currentStop.id)?.custom_name || currentStop.name || `Stop #${currentStop.id}`)
+                    : (currentStop.name || `Stop #${currentStop.id}`)}
                 </span>
               )}
             </div>

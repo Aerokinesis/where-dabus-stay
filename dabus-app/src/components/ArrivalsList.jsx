@@ -14,7 +14,6 @@ function ArrivalsList({
   onRefresh,
   onBack,
   arrivalsTab,
-  onBackToTracking,
   routeShortName,
   alerts,
   hiddenAlerts,
@@ -47,11 +46,6 @@ function ArrivalsList({
   return (
     
     <div className={styles.container}>
-      {onBackToTracking && (
-        <button className={styles.backBtn} onClick={onBackToTracking}>
-          ← Back to tracking
-        </button>
-      )}
       {currentStop && (
         <div className={styles.stopHeader}>
           <div className={styles.stopInfo}>
