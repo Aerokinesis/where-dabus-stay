@@ -48,8 +48,14 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
         await refindNearbyStops(lat, lon, searchRadius);
         setLocating(false);
       },
-      () => {
-        setError("Could not get your location. Please allow location access.");
+      (err) => {
+        if (err.code === 1) {
+          setError("Location access denied. Enable it in your browser settings, or search for a stop above.");
+        } else if (err.code === 2) {
+          setError("Unable to determine your location. You can search for a stop or address above.");
+        } else {
+          setError("Location request timed out. You can search for a stop or address above.");
+        }
         setLocating(false);
       },
       { maximumAge: 60000, timeout: 10000 }

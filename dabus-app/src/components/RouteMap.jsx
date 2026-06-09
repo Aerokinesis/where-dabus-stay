@@ -80,6 +80,7 @@ function RouteMap({
         {userValid && (
           <Marker
             position={[Number(userLocation.lat), Number(userLocation.lon)]}
+            zIndexOffset={-1000}
             icon={L.divIcon({
               className: "",
               html: '<div style="width:14px;height:14px;background:#1a6faf;border:2px solid #ffffff;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,0.5);"></div>',

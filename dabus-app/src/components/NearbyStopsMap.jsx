@@ -14,8 +14,19 @@ import MapRecenterControl from "./MapRecenterControl";
 import MapFab from "./MapFab";
 
 function MapMoveTracker({ onMapMove }) {
+  const lastCenter = useRef(null);
   useMapEvents({
-    moveend: (e) => onMapMove(e.target.getCenter()),
+    moveend: (e) => {
+      const c = e.target.getCenter();
+      if (
+        !lastCenter.current ||
+        Math.abs(c.lat - lastCenter.current.lat) > 0.00001 ||
+        Math.abs(c.lng - lastCenter.current.lng) > 0.00001
+      ) {
+        lastCenter.current = c;
+        onMapMove(c);
+      }
+    },
   });
   return null;
 }
@@ -77,7 +88,7 @@ function NearbyStopsMap({
         />
         {userLocation && (
           <>
-            <Marker position={[userLocation.lat, userLocation.lon]}>
+            <Marker position={[userLocation.lat, userLocation.lon]} zIndexOffset={-1000}>
               <Popup>You are here</Popup>
             </Marker>
 
@@ -134,6 +145,12 @@ function NearbyStopsMap({
           center={userLocation ? [userLocation.lat, userLocation.lon] : null}
         />
       </MapContainer>
+
+      {userLocation && Array.isArray(nearbyStopsMap) && nearbyStopsMap.length === 0 && (
+        <div className={styles.noStopsBanner}>
+          No stops found nearby — TheBus only serves Oahu, Hawaiʻi
+        </div>
+      )}
 
       <div className={styles.fabStack}>
         {onRefreshLocation && (
