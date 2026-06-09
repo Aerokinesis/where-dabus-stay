@@ -367,6 +367,11 @@ function App() {
 
   // Intercept the OS back gesture while inside the app.
   useEffect(() => {
+    // Push a sentinel so there is always at least one history entry behind us.
+    // Without this, Android fires no popstate when at the start of history —
+    // it just closes the PWA silently, bypassing all our back-button logic.
+    history.pushState({ dabusReady: true }, "");
+
     const onPopState = () => {
       if (suppressPopRef.current) {
         suppressPopRef.current = false;
