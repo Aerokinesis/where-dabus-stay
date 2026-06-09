@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import styles from "./App.module.css";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -50,6 +50,11 @@ function App() {
   // Stop IDs previously visited on the nearby tab — used to navigate back.
   const [nearbyStopStack, setNearbyStopStack] = useState([]);
   const [stopSearchQuery, setStopSearchQuery] = useState("");
+
+  // Refs for PWA system-back interception (see useEffects below)
+  const backHandlerRef = useRef(null);
+  const guardRef = useRef(false);
+  const suppressPopRef = useRef(false);
 
   // Toast state
   const [toast, setToast] = useState(null);
@@ -287,6 +292,91 @@ function App() {
     },
   };
 
+  // ── PWA system back button ────────────────────────────────────────────────
+  // True whenever the user has navigated "deeper" than the base tab list.
+  const isDeep =
+    (trackingView && !!busLocation) ||
+    routeMapView ||
+    (!!arrivals && arrivalsTab === activeTab) ||
+    (activeTab === "routes" && !!selectedRoute);
+
+  // Keep backHandlerRef current after every render (no-dep effect = runs each render).
+  // This avoids stale closures without needing an exhaustive dep array.
+  useEffect(() => {
+    backHandlerRef.current = () => {
+      if (trackingView && busLocation) {
+        setTrackingView(false);
+        clearBusTracking();
+      } else if (routeMapView) {
+        setRouteMapView(false);
+      } else if (arrivals && arrivalsTab === activeTab) {
+        if (activeTab === "nearby") {
+          if (nearbyStopStack.length > 0) {
+            const prev = nearbyStopStack[nearbyStopStack.length - 1];
+            setNearbyStopStack((s) => s.slice(0, -1));
+            handleFetchArrivals(prev, "nearby");
+          } else if (busLocation && isMobile) {
+            setTrackingView(true);
+            clearArrivals();
+            setStopSearchQuery("");
+          } else {
+            clearArrivals();
+            setNearbyStopStack([]);
+            setStopSearchQuery("");
+          }
+        } else if (activeTab === "history" || activeTab === "favorites") {
+          clearBusTracking();
+          setTrackingView(false);
+          setArrivalsTab(null);
+          clearArrivals();
+        } else if (activeTab === "routes") {
+          // Keep selectedRoute so the map stays on RouteMap; just dismiss arrivals.
+          clearBusTracking();
+          setTrackingView(false);
+          setArrivalsTab(null);
+        }
+      } else if (activeTab === "routes" && selectedRoute) {
+        setSelectedRoute(null);
+        setRouteStops(null);
+        setRouteShape(null);
+        setRouteMapView(false);
+        clearArrivals();
+      }
+    };
+  });
+
+  // Push a guard history entry when navigating deeper; remove it on the way back.
+  useEffect(() => {
+    if (isDeep && !guardRef.current) {
+      history.pushState({ dabusGuard: true }, "");
+      guardRef.current = true;
+    } else if (!isDeep && guardRef.current) {
+      // User returned to base via an in-app button — remove the orphaned guard entry.
+      guardRef.current = false;
+      suppressPopRef.current = true;
+      history.go(-1);
+    }
+  }, [isDeep]);
+
+  // Intercept the OS back gesture while inside the app.
+  useEffect(() => {
+    const onPopState = () => {
+      if (suppressPopRef.current) {
+        suppressPopRef.current = false;
+        return;
+      }
+      if (guardRef.current && backHandlerRef.current) {
+        // Restore the guard so subsequent back presses also stay in-app.
+        history.pushState({ dabusGuard: true }, "");
+        backHandlerRef.current();
+      }
+      // If !guardRef.current the user is at base — let the browser handle it (exit).
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+  // ─────────────────────────────────────────────────────────────────────────
+
   const tabContent = (
     <>
       {activeTab === "history" && (!arrivals || arrivalsTab !== "history") && (
@@ -497,19 +587,10 @@ function App() {
                     onClear={() => setRouteQuery("")}
                   />
                 )}
-                {(activeTab === "history" || activeTab === "favorites") && (
-                  <SearchInput
-                    value={stopSearchQuery}
-                    onChange={setStopSearchQuery}
-                    placeholder="Stop number"
-                    ariaLabel="Bus stop number"
-                    onClear={() => setStopSearchQuery("")}
-                    onSubmit={() => {
-                      const id = stopSearchQuery.trim();
-                      if (!id || id === String(currentStop?.id)) return;
-                      handleFetchArrivals(id, activeTab);
-                    }}
-                  />
+                {(activeTab === "history" || activeTab === "favorites") && currentStop && (
+                  <span className={styles.trackingLabel}>
+                    {currentStop.name || `Stop #${currentStop.id}`}
+                  </span>
                 )}
               </div>
             </div>
@@ -531,8 +612,14 @@ function App() {
 
       {/* Center column */}
       <main className={styles.main}>
-        {/* Desktop search bar */}
-        <div className={styles.desktopSearch}>
+        {/* Desktop search bar — hidden on history/favorites list view (no search needed) */}
+        <div className={styles.desktopSearch} style={
+          activeTab === "settings" ||
+          ((activeTab === "history" || activeTab === "favorites") &&
+            !(arrivals && arrivalsTab === activeTab))
+            ? { display: "none" }
+            : undefined
+        }>
           {activeTab === "nearby" && arrivals && arrivalsTab === "nearby" ? (
             <div className={styles.topBarSearch}>
               <button
@@ -619,20 +706,11 @@ function App() {
                   <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
                 </svg>
               </button>
-              <div className={styles.topBarSearchInput}>
-                <SearchInput
-                  value={stopSearchQuery}
-                  onChange={setStopSearchQuery}
-                  placeholder="Stop number"
-                  ariaLabel="Bus stop number"
-                  onClear={() => setStopSearchQuery("")}
-                  onSubmit={() => {
-                    const id = stopSearchQuery.trim();
-                    if (!id || id === String(currentStop?.id)) return;
-                    handleFetchArrivals(id, activeTab);
-                  }}
-                />
-              </div>
+              {currentStop && (
+                <span className={styles.trackingLabel}>
+                  {currentStop.name || `Stop #${currentStop.id}`}
+                </span>
+              )}
             </div>
           ) : activeTab === "routes" ? (
             <SearchInput
@@ -641,7 +719,7 @@ function App() {
               placeholder="Search routes"
               onClear={() => setRouteQuery("")}
             />
-          ) : (
+          ) : activeTab === "history" || activeTab === "favorites" || activeTab === "settings" ? null : (
             <AddressSearch {...searchProps} />
           )}
         </div>
