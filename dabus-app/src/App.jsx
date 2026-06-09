@@ -54,8 +54,8 @@ function App() {
   // Refs for PWA system-back interception (see useEffects below)
   const backHandlerRef = useRef(null);
   const showToastRef = useRef(null);   // always-current showToast (populated below)
-  const guardRef = useRef(false);
-  const suppressPopRef = useRef(false);
+  const isDeepRef = useRef(false);     // always-current isDeep value
+  const activeTabRef = useRef("nearby"); // always-current activeTab value
   const exitGuardRef = useRef(false);  // true while "press back again to exit" is active
   const exitTimerRef = useRef(null);
 
@@ -330,6 +330,8 @@ function App() {
   // popstate listener (registered once) never holds stale closures.
   useEffect(() => {
     showToastRef.current = showToast;
+    isDeepRef.current = isDeep;
+    activeTabRef.current = activeTab;
     backHandlerRef.current = () => {
       if (trackingView && busLocation) {
         setTrackingView(false);
@@ -375,24 +377,6 @@ function App() {
     };
   });
 
-  // Push a guard history entry when on a non-home tab or navigating deeper;
-  // remove it when back at home base so the exit guard can take over.
-  const needsGuard = isDeep || activeTab !== "nearby";
-  useEffect(() => {
-    if (needsGuard && !guardRef.current) {
-      // Also cancel any pending "press back to exit" prompt when re-entering the app.
-      clearTimeout(exitTimerRef.current);
-      exitGuardRef.current = false;
-      history.pushState({ dabusGuard: true }, "");
-      guardRef.current = true;
-    } else if (!needsGuard && guardRef.current) {
-      // User returned to home base via an in-app button — remove the orphaned guard entry.
-      guardRef.current = false;
-      suppressPopRef.current = true;
-      history.go(-1);
-    }
-  }, [needsGuard]);
-
   // Intercept the OS back gesture while inside the app.
   useEffect(() => {
     // Push a sentinel so there is always at least one history entry behind us.
@@ -401,26 +385,21 @@ function App() {
     history.pushState({ dabusReady: true }, "");
 
     const onPopState = () => {
-      if (suppressPopRef.current) {
-        suppressPopRef.current = false;
-        return;
-      }
-      if (guardRef.current && backHandlerRef.current) {
-        // Still inside the app — restore the guard and run the in-app back action.
-        history.pushState({ dabusGuard: true }, "");
-        backHandlerRef.current();
+      if (isDeepRef.current || activeTabRef.current !== "nearby") {
+        // Inside the app — re-push the sentinel so the next back press is also caught,
+        // then run the in-app back action (goes deeper → shallower → home tab).
+        history.pushState({ dabusReady: true }, "");
+        backHandlerRef.current?.();
+        // Cancel any stale exit prompt when navigating within the app.
+        clearTimeout(exitTimerRef.current);
+        exitGuardRef.current = false;
       } else if (!exitGuardRef.current) {
-        // First back at base level — push an exit guard and show the prompt.
-        history.pushState({ dabusExit: true }, "");
+        // First back at home base — re-push sentinel, show the exit prompt.
+        history.pushState({ dabusReady: true }, "");
         exitGuardRef.current = true;
         showToastRef.current?.("Press back again to exit", "info");
         exitTimerRef.current = setTimeout(() => {
-          if (exitGuardRef.current) {
-            // Prompt expired — quietly remove the exit guard.
-            exitGuardRef.current = false;
-            suppressPopRef.current = true;
-            history.go(-1);
-          }
+          exitGuardRef.current = false;
         }, 2000);
       } else {
         // Second back within the window — let the browser handle it (exits the PWA).
