@@ -58,8 +58,6 @@ function App() {
   const activeTabRef = useRef("nearby"); // always-current activeTab value
   const exitGuardRef = useRef(false);  // true while "press back again to exit" is active
   const exitTimerRef = useRef(null);
-  const homeBackRef = useRef(false);   // true after first silent back press at home
-  const homeBackTimerRef = useRef(null);
 
   // PWA install prompt
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -392,33 +390,23 @@ function App() {
         // then run the in-app back action (goes deeper → shallower → home tab).
         history.pushState({ dabusReady: true }, "");
         backHandlerRef.current?.();
-        // Cancel any stale exit state when navigating within the app.
+        // Cancel any stale exit prompt when navigating within the app.
         clearTimeout(exitTimerRef.current);
-        clearTimeout(homeBackTimerRef.current);
         exitGuardRef.current = false;
-        homeBackRef.current = false;
       } else if (!exitGuardRef.current) {
-        // At home base, exit guard not yet active.
+        // First back at home base — re-push sentinel and arm the exit guard.
+        // Use setTimeout(0) so React can commit the toast before Chrome's back
+        // gesture processing interferes with the render.
         history.pushState({ dabusReady: true }, "");
-        if (!homeBackRef.current) {
-          // 1st back at home — absorb silently; start the window for the 2nd press.
-          homeBackRef.current = true;
-          clearTimeout(homeBackTimerRef.current);
-          homeBackTimerRef.current = setTimeout(() => {
-            homeBackRef.current = false;
-          }, 3000);
-        } else {
-          // 2nd back at home — show the exit toast; next press will exit.
-          homeBackRef.current = false;
-          clearTimeout(homeBackTimerRef.current);
-          exitGuardRef.current = true;
+        exitGuardRef.current = true;
+        setTimeout(() => {
           showToastRef.current?.("Press back again to exit", "info");
-          exitTimerRef.current = setTimeout(() => {
-            exitGuardRef.current = false;
-          }, 3000);
-        }
+        }, 0);
+        exitTimerRef.current = setTimeout(() => {
+          exitGuardRef.current = false;
+        }, 3000);
       } else {
-        // Final back while toast is showing — let the browser handle it (exits the PWA).
+        // Second back while toast is active — let the browser handle it (exits PWA).
         clearTimeout(exitTimerRef.current);
         exitGuardRef.current = false;
       }
