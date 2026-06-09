@@ -368,25 +368,30 @@ function App() {
         setRouteShape(null);
         setRouteMapView(false);
         clearArrivals();
+      } else if (activeTab !== "nearby") {
+        // Base level of a non-home tab — go back to home.
+        setActiveTab("nearby");
       }
     };
   });
 
-  // Push a guard history entry when navigating deeper; remove it on the way back.
+  // Push a guard history entry when on a non-home tab or navigating deeper;
+  // remove it when back at home base so the exit guard can take over.
+  const needsGuard = isDeep || activeTab !== "nearby";
   useEffect(() => {
-    if (isDeep && !guardRef.current) {
+    if (needsGuard && !guardRef.current) {
       // Also cancel any pending "press back to exit" prompt when re-entering the app.
       clearTimeout(exitTimerRef.current);
       exitGuardRef.current = false;
       history.pushState({ dabusGuard: true }, "");
       guardRef.current = true;
-    } else if (!isDeep && guardRef.current) {
-      // User returned to base via an in-app button — remove the orphaned guard entry.
+    } else if (!needsGuard && guardRef.current) {
+      // User returned to home base via an in-app button — remove the orphaned guard entry.
       guardRef.current = false;
       suppressPopRef.current = true;
       history.go(-1);
     }
-  }, [isDeep]);
+  }, [needsGuard]);
 
   // Intercept the OS back gesture while inside the app.
   useEffect(() => {
