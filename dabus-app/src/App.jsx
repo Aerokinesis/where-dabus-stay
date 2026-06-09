@@ -53,8 +53,11 @@ function App() {
 
   // Refs for PWA system-back interception (see useEffects below)
   const backHandlerRef = useRef(null);
+  const showToastRef = useRef(null);   // always-current showToast (populated below)
   const guardRef = useRef(false);
   const suppressPopRef = useRef(false);
+  const exitGuardRef = useRef(false);  // true while "press back again to exit" is active
+  const exitTimerRef = useRef(null);
 
   // Toast state
   const [toast, setToast] = useState(null);
@@ -300,9 +303,10 @@ function App() {
     (!!arrivals && arrivalsTab === activeTab) ||
     (activeTab === "routes" && !!selectedRoute);
 
-  // Keep backHandlerRef current after every render (no-dep effect = runs each render).
-  // This avoids stale closures without needing an exhaustive dep array.
+  // Keep backHandlerRef and showToastRef current after every render so the
+  // popstate listener (registered once) never holds stale closures.
   useEffect(() => {
+    showToastRef.current = showToast;
     backHandlerRef.current = () => {
       if (trackingView && busLocation) {
         setTrackingView(false);
@@ -348,6 +352,9 @@ function App() {
   // Push a guard history entry when navigating deeper; remove it on the way back.
   useEffect(() => {
     if (isDeep && !guardRef.current) {
+      // Also cancel any pending "press back to exit" prompt when re-entering the app.
+      clearTimeout(exitTimerRef.current);
+      exitGuardRef.current = false;
       history.pushState({ dabusGuard: true }, "");
       guardRef.current = true;
     } else if (!isDeep && guardRef.current) {
@@ -366,11 +373,27 @@ function App() {
         return;
       }
       if (guardRef.current && backHandlerRef.current) {
-        // Restore the guard so subsequent back presses also stay in-app.
+        // Still inside the app — restore the guard and run the in-app back action.
         history.pushState({ dabusGuard: true }, "");
         backHandlerRef.current();
+      } else if (!exitGuardRef.current) {
+        // First back at base level — push an exit guard and show the prompt.
+        history.pushState({ dabusExit: true }, "");
+        exitGuardRef.current = true;
+        showToastRef.current?.("Press back again to exit", "info");
+        exitTimerRef.current = setTimeout(() => {
+          if (exitGuardRef.current) {
+            // Prompt expired — quietly remove the exit guard.
+            exitGuardRef.current = false;
+            suppressPopRef.current = true;
+            history.go(-1);
+          }
+        }, 2000);
+      } else {
+        // Second back within the window — let the browser handle it (exits the PWA).
+        clearTimeout(exitTimerRef.current);
+        exitGuardRef.current = false;
       }
-      // If !guardRef.current the user is at base — let the browser handle it (exit).
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
