@@ -375,6 +375,15 @@ function App() {
         setActiveTab("nearby");
       }
     };
+
+    // If the exit prompt is armed but the user navigated within the app
+    // (tapped a tab, opened a stop, etc.) instead of pressing back, the
+    // sentinel is gone — re-push it so back presses are intercepted again.
+    if (exitGuardRef.current && (isDeep || activeTab !== "nearby")) {
+      clearTimeout(exitTimerRef.current);
+      exitGuardRef.current = false;
+      history.pushState({ dabusReady: true }, "");
+    }
   });
 
   // Intercept the OS back gesture while inside the app.
@@ -394,21 +403,27 @@ function App() {
         clearTimeout(exitTimerRef.current);
         exitGuardRef.current = false;
       } else if (!exitGuardRef.current) {
-        // First back at home base — re-push sentinel and arm the exit guard.
-        // Use setTimeout(0) so React can commit the toast before Chrome's back
-        // gesture processing interferes with the render.
-        history.pushState({ dabusReady: true }, "");
+        // First back at home base — arm the exit guard but do NOT re-push the
+        // sentinel. We are now at the start of history, so the next system
+        // back press has nothing to pop and Android closes the PWA natively.
+        // (popstate fires AFTER the browser pops the entry, so an exit can
+        // only happen by leaving no entry for the next press to consume.)
         exitGuardRef.current = true;
+        // setTimeout(0) so React can commit the toast before Chrome's back
+        // gesture processing interferes with the render.
         setTimeout(() => {
           showToastRef.current?.("Press back again to exit", "info");
         }, 0);
         exitTimerRef.current = setTimeout(() => {
+          // Toast expired without a second press — re-arm interception.
           exitGuardRef.current = false;
+          history.pushState({ dabusReady: true }, "");
         }, 3000);
       } else {
-        // Second back while toast is active — let the browser handle it (exits PWA).
-        clearTimeout(exitTimerRef.current);
-        exitGuardRef.current = false;
+        // Guard armed but popstate still fired — there are extra history
+        // entries (e.g. dev StrictMode double-pushing the sentinel). Keep
+        // unwinding; once history is exhausted the OS closes the app.
+        history.back();
       }
     };
     window.addEventListener("popstate", onPopState);
