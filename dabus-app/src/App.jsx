@@ -394,7 +394,7 @@ function App() {
       }
     };
     ensureSentinel();
-    console.log("[back-nav] v3 active"); // build marker -- remove once verified
+    console.log("[back-nav] v4 active"); // build marker -- remove once verified
 
     const disarmExit = () => {
       clearTimeout(exitTimerRef.current);
@@ -403,13 +403,12 @@ function App() {
 
     const onPopState = () => {
       if (isDeepRef.current || activeTabRef.current !== "nearby") {
-        // Inside the app — re-push the sentinel so the next press is caught,
-        // then run the in-app back action (deeper → shallower → home tab).
-        // The re-push MUST be deferred: Chrome on Android finishes processing
-        // the system-back gesture after this handler returns, and a
-        // synchronous pushState here gets silently dropped (same race that
-        // required deferring the exit toast below).
-        setTimeout(ensureSentinel, 50);
+        // Inside the app — run the in-app back action (deeper → shallower →
+        // home tab). We deliberately do NOT pushState here: entries pushed
+        // from a popstate handler carry no user activation, so Chrome's
+        // history manipulation intervention treats them as transparent — the
+        // next back press falls straight through them and closes the PWA.
+        // Interception is funded by real taps instead (see onTap below).
         backHandlerRef.current?.();
         disarmExit();
       } else if (!exitGuardRef.current) {
@@ -423,7 +422,7 @@ function App() {
         // gesture processing interferes with the render.
         setTimeout(() => {
           // "v2" prefix is a temporary build marker -- remove once verified.
-          showToastRef.current?.("v3 · Press back again to exit", "info");
+          showToastRef.current?.("v4 · Press back again to exit", "info");
         }, 0);
         exitTimerRef.current = setTimeout(() => {
           // Toast fully gone without a second press — re-arm interception.
@@ -431,20 +430,24 @@ function App() {
           ensureSentinel();
         }, EXIT_WINDOW_MS);
       } else {
-        // Guard armed but popstate still fired — extra history entries exist
-        // (e.g. dev StrictMode artifacts). Keep unwinding; once history is
-        // exhausted the OS closes the app.
+        // Guard armed but popstate still fired — surplus entries exist
+        // (non-navigation taps each fund one; see onTap). Keep unwinding;
+        // once history is exhausted the next press closes the app.
         history.back();
       }
     };
 
-    // Any tap means the user is staying: cancel a pending exit prompt and
-    // repair the sentinel. Runs inside a real input event, so the pushed
-    // entry carries user activation (Chrome won't skip it), and it covers
-    // states where the sentinel went missing (resume from recents, etc.).
-    const onPointerDown = () => {
-      if (exitGuardRef.current) disarmExit();
-      ensureSentinel();
+    // Every real tap funds ONE history entry. Taps are the only moments the
+    // page holds user activation, and only activation-backed entries are
+    // honored by the system back button (see note in onPopState). Surplus
+    // entries from non-navigation taps are harmless: deep states consume one
+    // per back press, and leftovers at home are unwound silently by the
+    // exit-guard branch above. A tap also means the user is staying, so
+    // cancel any pending exit prompt. 'click' (not pointerdown) so that
+    // scroll gestures don't fund entries.
+    const onTap = () => {
+      disarmExit();
+      history.pushState({ dabusReady: true }, "");
     };
 
     // App resumed (PWA from recents / bfcache restore): the mount effect does
@@ -457,12 +460,12 @@ function App() {
     };
 
     window.addEventListener("popstate", onPopState);
-    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("click", onTap, true);
     document.addEventListener("visibilitychange", onResume);
     window.addEventListener("pageshow", onResume);
     return () => {
       window.removeEventListener("popstate", onPopState);
-      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("click", onTap, true);
       document.removeEventListener("visibilitychange", onResume);
       window.removeEventListener("pageshow", onResume);
     };
