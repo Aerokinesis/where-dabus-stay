@@ -23,6 +23,7 @@ import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import PullToRefreshIndicator from "./components/PullToRefreshIndicator";
 import { useStopHistory } from "./hooks/useStopHistory";
 import { useSettings } from "./hooks/useSettings";
+import { useToast, TOAST_GONE_MS } from "./hooks/useToast";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import { useAlerts } from "./hooks/useAlerts";
 import { API_BASE } from "./constants";
@@ -82,10 +83,7 @@ function App() {
     };
   }, []);
 
-  // Toast state
-  const [toast, setToast] = useState(null);
-  const [toastFading, setToastFading] = useState(false);
-  const [toastType, setToastType] = useState("add");
+  const { toast, toastType, toastFading, showToast } = useToast();
 
   // Routes state
   const [routes, setRoutes] = useState(null);
@@ -220,14 +218,6 @@ function App() {
     clearBusTracking();
     setTrackingView(false);
     setActiveTab(tab);
-  };
-
-  const showToast = (message, type = "add") => {
-    setToast(message);
-    setToastType(type);
-    setToastFading(false);
-    setTimeout(() => setToastFading(true), 2000);
-    setTimeout(() => setToast(null), 3200);
   };
 
   const fetchRoutes = async () => {
@@ -380,9 +370,9 @@ function App() {
 
   // Intercept the OS back gesture while inside the app.
   useEffect(() => {
-    // Must match the Toast lifecycle in showToast (fade 2000ms, gone 3200ms):
-    // back exits ONLY while some part of the toast is still on screen.
-    const EXIT_WINDOW_MS = 3200;
+    // Must match the Toast lifecycle: back exits ONLY while some part of the
+    // toast is still on screen.
+    const EXIT_WINDOW_MS = TOAST_GONE_MS;
 
     // Push a sentinel so there is at least one history entry behind us.
     // Without it, Android fires no popstate at the start of history — it just
