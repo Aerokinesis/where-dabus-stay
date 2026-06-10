@@ -376,32 +376,38 @@ function App() {
       }
     };
 
-    // If the exit prompt is armed but the user navigated within the app
-    // (tapped a tab, opened a stop, etc.) instead of pressing back, the
-    // sentinel is gone — re-push it so back presses are intercepted again.
-    if (exitGuardRef.current && (isDeep || activeTab !== "nearby")) {
-      clearTimeout(exitTimerRef.current);
-      exitGuardRef.current = false;
-      history.pushState({ dabusReady: true }, "");
-    }
   });
 
   // Intercept the OS back gesture while inside the app.
   useEffect(() => {
-    // Push a sentinel so there is always at least one history entry behind us.
-    // Without this, Android fires no popstate when at the start of history —
-    // it just closes the PWA silently, bypassing all our back-button logic.
-    history.pushState({ dabusReady: true }, "");
+    // Must match the Toast lifecycle in showToast (fade 2000ms, gone 3200ms):
+    // back exits ONLY while some part of the toast is still on screen.
+    const EXIT_WINDOW_MS = 3200;
+
+    // Push a sentinel so there is at least one history entry behind us.
+    // Without it, Android fires no popstate at the start of history — it just
+    // closes the PWA silently. Idempotent: checks history.state first, so
+    // repeated calls (StrictMode remount, taps, resume) never stack entries.
+    const ensureSentinel = () => {
+      if (!history.state?.dabusReady) {
+        history.pushState({ dabusReady: true }, "");
+      }
+    };
+    ensureSentinel();
+    console.log("[back-nav] v2 active"); // build marker -- remove once verified
+
+    const disarmExit = () => {
+      clearTimeout(exitTimerRef.current);
+      exitGuardRef.current = false;
+    };
 
     const onPopState = () => {
       if (isDeepRef.current || activeTabRef.current !== "nearby") {
-        // Inside the app — re-push the sentinel so the next back press is also caught,
-        // then run the in-app back action (goes deeper → shallower → home tab).
-        history.pushState({ dabusReady: true }, "");
+        // Inside the app — re-push the sentinel so the next press is caught,
+        // then run the in-app back action (deeper → shallower → home tab).
+        ensureSentinel();
         backHandlerRef.current?.();
-        // Cancel any stale exit prompt when navigating within the app.
-        clearTimeout(exitTimerRef.current);
-        exitGuardRef.current = false;
+        disarmExit();
       } else if (!exitGuardRef.current) {
         // First back at home base — arm the exit guard but do NOT re-push the
         // sentinel. We are now at the start of history, so the next system
@@ -415,19 +421,46 @@ function App() {
           showToastRef.current?.("Press back again to exit", "info");
         }, 0);
         exitTimerRef.current = setTimeout(() => {
-          // Toast expired without a second press — re-arm interception.
+          // Toast fully gone without a second press — re-arm interception.
           exitGuardRef.current = false;
-          history.pushState({ dabusReady: true }, "");
-        }, 3000);
+          ensureSentinel();
+        }, EXIT_WINDOW_MS);
       } else {
-        // Guard armed but popstate still fired — there are extra history
-        // entries (e.g. dev StrictMode double-pushing the sentinel). Keep
-        // unwinding; once history is exhausted the OS closes the app.
+        // Guard armed but popstate still fired — extra history entries exist
+        // (e.g. dev StrictMode artifacts). Keep unwinding; once history is
+        // exhausted the OS closes the app.
         history.back();
       }
     };
+
+    // Any tap means the user is staying: cancel a pending exit prompt and
+    // repair the sentinel. Runs inside a real input event, so the pushed
+    // entry carries user activation (Chrome won't skip it), and it covers
+    // states where the sentinel went missing (resume from recents, etc.).
+    const onPointerDown = () => {
+      if (exitGuardRef.current) disarmExit();
+      ensureSentinel();
+    };
+
+    // App resumed (PWA from recents / bfcache restore): the mount effect does
+    // NOT re-run in these cases, so re-arm interception here.
+    const onResume = () => {
+      if (document.visibilityState === "visible") {
+        disarmExit();
+        ensureSentinel();
+      }
+    };
+
     window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("visibilitychange", onResume);
+    window.addEventListener("pageshow", onResume);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("visibilitychange", onResume);
+      window.removeEventListener("pageshow", onResume);
+    };
   }, []);
   // ─────────────────────────────────────────────────────────────────────────
 
