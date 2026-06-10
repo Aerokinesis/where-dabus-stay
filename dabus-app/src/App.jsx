@@ -394,7 +394,7 @@ function App() {
       }
     };
     ensureSentinel();
-    console.log("[back-nav] v2 active"); // build marker -- remove once verified
+    console.log("[back-nav] v3 active"); // build marker -- remove once verified
 
     const disarmExit = () => {
       clearTimeout(exitTimerRef.current);
@@ -405,7 +405,11 @@ function App() {
       if (isDeepRef.current || activeTabRef.current !== "nearby") {
         // Inside the app — re-push the sentinel so the next press is caught,
         // then run the in-app back action (deeper → shallower → home tab).
-        ensureSentinel();
+        // The re-push MUST be deferred: Chrome on Android finishes processing
+        // the system-back gesture after this handler returns, and a
+        // synchronous pushState here gets silently dropped (same race that
+        // required deferring the exit toast below).
+        setTimeout(ensureSentinel, 50);
         backHandlerRef.current?.();
         disarmExit();
       } else if (!exitGuardRef.current) {
@@ -419,7 +423,7 @@ function App() {
         // gesture processing interferes with the render.
         setTimeout(() => {
           // "v2" prefix is a temporary build marker -- remove once verified.
-          showToastRef.current?.("v2 · Press back again to exit", "info");
+          showToastRef.current?.("v3 · Press back again to exit", "info");
         }, 0);
         exitTimerRef.current = setTimeout(() => {
           // Toast fully gone without a second press — re-arm interception.
