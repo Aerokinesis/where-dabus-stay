@@ -18,11 +18,13 @@ Personal project, actively in development.
 
 **Still ahead:** trip planner for routing between two places.
 
-## Screenshot
+## Screenshots
 
-<!-- ![Where Da Bus Stay? on mobile](docs/screenshot.png) -->
+<img src="/docs/desktop.png" width="800" alt="Where Da Bus Stay? on desktop — nearby stops map with split layout">
 
-_Coming soon — drop a screenshot here once the UI feels camera-ready._
+| Nearby stops | Live arrivals | Bus tracking |
+|:---:|:---:|:---:|
+| <img src="docs/nearby.png" width="250" alt="Nearby stops map with directional arrows showing bus travel direction"> | <img src="docs/arrivals.png" width="250" alt="Real-time arrivals for stop 45 with service alerts and live tracking"> | <img src="docs/tracking.png" width="250" alt="Live tracking of Route 53 with route line and stop markers"> |
 
 ## Tech stack
 
