@@ -1,9 +1,12 @@
-function Toast({ message, type, fading }) {
+function Toast({ message, type, fading, onClick, bottom = "80px" }) {
   return (
     <div
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
       style={{
+        cursor: onClick ? "pointer" : undefined,
         position: "fixed",
-        bottom: "80px",
+        bottom,
         left: "50%",
         transform: "translateX(-50%)",
         background: "var(--surface)",

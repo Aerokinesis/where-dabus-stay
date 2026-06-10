@@ -24,6 +24,7 @@ import PullToRefreshIndicator from "./components/PullToRefreshIndicator";
 import { useStopHistory } from "./hooks/useStopHistory";
 import { useSettings } from "./hooks/useSettings";
 import { useToast, TOAST_GONE_MS } from "./hooks/useToast";
+import { useUpdateCheck } from "./hooks/useUpdateCheck";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import { useAlerts } from "./hooks/useAlerts";
 import { API_BASE } from "./constants";
@@ -84,6 +85,7 @@ function App() {
   }, []);
 
   const { toast, toastType, toastFading, showToast } = useToast();
+  const updateAvailable = useUpdateCheck();
 
   // Routes state
   const [routes, setRoutes] = useState(null);
@@ -1137,6 +1139,19 @@ function App() {
       )}
 
       {toast && <Toast message={toast} type={toastType} fading={toastFading} />}
+
+      {/* Persistent until tapped; sits above the regular toast slot so the
+          two never overlap. Reload fetches the new index.html (the service
+          worker passes navigations through network-first). */}
+      {updateAvailable && (
+        <Toast
+          message="Update available — tap to refresh"
+          type="info"
+          fading={false}
+          bottom="130px"
+          onClick={() => window.location.reload()}
+        />
+      )}
     </div>
   );
 }
