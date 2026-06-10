@@ -418,7 +418,8 @@ function App() {
         // setTimeout(0) so React can commit the toast before Chrome's back
         // gesture processing interferes with the render.
         setTimeout(() => {
-          showToastRef.current?.("Press back again to exit", "info");
+          // "v2" prefix is a temporary build marker -- remove once verified.
+          showToastRef.current?.("v2 · Press back again to exit", "info");
         }, 0);
         exitTimerRef.current = setTimeout(() => {
           // Toast fully gone without a second press — re-arm interception.
