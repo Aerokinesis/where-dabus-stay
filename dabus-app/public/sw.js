@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'dabus-shell-v2'
+const SHELL_CACHE = 'dabus-shell-v3'
 const STOPS_CACHE = 'dabus-stops-v1'
 
 // Pre-cached on install. index.html MUST be here: it's the offline fallback
@@ -68,6 +68,12 @@ self.addEventListener('fetch', (e) => {
 
   // Arrivals are real-time — always go to network, no cache
   if (isArrivalsRequest(url)) return
+
+  // version.json is how the app detects new deployments (useUpdateCheck).
+  // It must NEVER be cached: a cache-first copy here freezes the build id
+  // and produces a permanent false "Update available" toast after the next
+  // deploy — one that tapping refresh can't clear.
+  if (new URL(url).pathname === '/version.json') return
 
   // Stops/routes data — network first, fall back to cache
   if (isStopsRequest(url)) {
