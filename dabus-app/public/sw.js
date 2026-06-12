@@ -22,10 +22,26 @@ const isStopsRequest = (url) =>
 const isArrivalsRequest = (url) =>
   new URL(url).pathname.startsWith('/api/arrivals')
 
-// Install: cache the app shell
+// Install: cache the app shell, then parse index.html for the hashed
+// JS/CSS bundle URLs and pre-cache those too. Without this, a freshly
+// installed SW has index.html cached but not the bundle (the page that
+// triggered the install was served before this SW took over) — an offline
+// restore then renders index.html with no JS: a white blank screen.
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(SHELL_CACHE).then((c) => c.addAll(SHELL_ASSETS))
+    (async () => {
+      const c = await caches.open(SHELL_CACHE)
+      await c.addAll(SHELL_ASSETS)
+      try {
+        const res = await c.match('/index.html')
+        const html = await res.text()
+        const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)]
+          .map((m) => m[1])
+        if (assets.length) await c.addAll(assets)
+      } catch {
+        // Best effort — runtime write-back caching still covers these.
+      }
+    })()
   )
   self.skipWaiting()
 })
