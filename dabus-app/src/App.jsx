@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import styles from "./App.module.css";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -23,8 +23,9 @@ import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import PullToRefreshIndicator from "./components/PullToRefreshIndicator";
 import { useStopHistory } from "./hooks/useStopHistory";
 import { useSettings } from "./hooks/useSettings";
-import { useToast, TOAST_GONE_MS } from "./hooks/useToast";
+import { useToast } from "./hooks/useToast";
 import { useUpdateCheck } from "./hooks/useUpdateCheck";
+import { useAndroidBack } from "./hooks/useAndroidBack";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import { useAlerts } from "./hooks/useAlerts";
 import { API_BASE } from "./constants";
@@ -52,14 +53,6 @@ function App() {
   // Stop IDs previously visited on the nearby tab — used to navigate back.
   const [nearbyStopStack, setNearbyStopStack] = useState([]);
   const [stopSearchQuery, setStopSearchQuery] = useState("");
-
-  // Refs for PWA system-back interception (see useEffects below)
-  const backHandlerRef = useRef(null);
-  const showToastRef = useRef(null);   // always-current showToast (populated below)
-  const isDeepRef = useRef(false);     // always-current isDeep value
-  const activeTabRef = useRef("nearby"); // always-current activeTab value
-  const exitGuardRef = useRef(false);  // true while "press back again to exit" is active
-  const exitTimerRef = useRef(null);
 
   // PWA install prompt
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -318,148 +311,60 @@ function App() {
     (!!arrivals && arrivalsTab === activeTab) ||
     (activeTab === "routes" && !!selectedRoute);
 
-  // Keep backHandlerRef and showToastRef current after every render so the
-  // popstate listener (registered once) never holds stale closures.
-  useEffect(() => {
-    showToastRef.current = showToast;
-    isDeepRef.current = isDeep;
-    activeTabRef.current = activeTab;
-    backHandlerRef.current = () => {
-      if (trackingView && busLocation) {
-        setTrackingView(false);
-        clearBusTracking();
-      } else if (routeMapView) {
-        setRouteMapView(false);
-      } else if (arrivals && arrivalsTab === activeTab) {
-        if (activeTab === "nearby") {
-          if (nearbyStopStack.length > 0) {
-            const prev = nearbyStopStack[nearbyStopStack.length - 1];
-            setNearbyStopStack((s) => s.slice(0, -1));
-            handleFetchArrivals(prev, "nearby");
-          } else if (busLocation && isMobile) {
-            setTrackingView(true);
-            clearArrivals();
-            setStopSearchQuery("");
-          } else {
-            clearArrivals();
-            setNearbyStopStack([]);
-            setStopSearchQuery("");
-          }
-        } else if (activeTab === "history" || activeTab === "favorites") {
-          clearBusTracking();
-          setTrackingView(false);
-          setArrivalsTab(null);
+  // Performs ONE in-app back step (deeper → shallower → home tab).
+  // Recreated every render so it always sees fresh state; useAndroidBack
+  // keeps it in a ref for its once-registered popstate listener.
+  const handleSystemBack = () => {
+    if (trackingView && busLocation) {
+      setTrackingView(false);
+      clearBusTracking();
+    } else if (routeMapView) {
+      setRouteMapView(false);
+    } else if (arrivals && arrivalsTab === activeTab) {
+      if (activeTab === "nearby") {
+        if (nearbyStopStack.length > 0) {
+          const prev = nearbyStopStack[nearbyStopStack.length - 1];
+          setNearbyStopStack((s) => s.slice(0, -1));
+          handleFetchArrivals(prev, "nearby");
+        } else if (busLocation && isMobile) {
+          setTrackingView(true);
           clearArrivals();
-        } else if (activeTab === "routes") {
-          // Keep selectedRoute so the map stays on RouteMap; just dismiss arrivals.
-          clearBusTracking();
-          setTrackingView(false);
-          setArrivalsTab(null);
+          setStopSearchQuery("");
+        } else {
+          clearArrivals();
+          setNearbyStopStack([]);
+          setStopSearchQuery("");
         }
-      } else if (activeTab === "routes" && selectedRoute) {
-        setSelectedRoute(null);
-        setRouteStops(null);
-        setRouteShape(null);
-        setRouteMapView(false);
+      } else if (activeTab === "history" || activeTab === "favorites") {
+        clearBusTracking();
+        setTrackingView(false);
+        setArrivalsTab(null);
         clearArrivals();
-      } else if (activeTab !== "nearby") {
-        // Base level of a non-home tab — go back to home.
-        setActiveTab("nearby");
+      } else if (activeTab === "routes") {
+        // Keep selectedRoute so the map stays on RouteMap; just dismiss arrivals.
+        clearBusTracking();
+        setTrackingView(false);
+        setArrivalsTab(null);
       }
-    };
+    } else if (activeTab === "routes" && selectedRoute) {
+      setSelectedRoute(null);
+      setRouteStops(null);
+      setRouteShape(null);
+      setRouteMapView(false);
+      clearArrivals();
+    } else if (activeTab !== "nearby") {
+      // Base level of a non-home tab — go back to home.
+      setActiveTab("nearby");
+    }
+  };
 
+  useAndroidBack({
+    isDeep,
+    isHome: activeTab === "nearby",
+    onBack: handleSystemBack,
+    showToast,
   });
 
-  // Intercept the OS back gesture while inside the app.
-  useEffect(() => {
-    // Must match the Toast lifecycle: back exits ONLY while some part of the
-    // toast is still on screen.
-    const EXIT_WINDOW_MS = TOAST_GONE_MS;
-
-    // Push a sentinel so there is at least one history entry behind us.
-    // Without it, Android fires no popstate at the start of history — it just
-    // closes the PWA silently. Idempotent: checks history.state first, so
-    // repeated calls (StrictMode remount, taps, resume) never stack entries.
-    const ensureSentinel = () => {
-      if (!history.state?.dabusReady) {
-        history.pushState({ dabusReady: true }, "");
-      }
-    };
-    ensureSentinel();
-
-    const disarmExit = () => {
-      clearTimeout(exitTimerRef.current);
-      exitGuardRef.current = false;
-    };
-
-    const onPopState = () => {
-      if (isDeepRef.current || activeTabRef.current !== "nearby") {
-        // Inside the app — run the in-app back action (deeper → shallower →
-        // home tab). We deliberately do NOT pushState here: entries pushed
-        // from a popstate handler carry no user activation, so Chrome's
-        // history manipulation intervention treats them as transparent — the
-        // next back press falls straight through them and closes the PWA.
-        // Interception is funded by real taps instead (see onTap below).
-        backHandlerRef.current?.();
-        disarmExit();
-      } else if (!exitGuardRef.current) {
-        // First back at home base — arm the exit guard but do NOT re-push the
-        // sentinel. We are now at the start of history, so the next system
-        // back press has nothing to pop and Android closes the PWA natively.
-        // (popstate fires AFTER the browser pops the entry, so an exit can
-        // only happen by leaving no entry for the next press to consume.)
-        exitGuardRef.current = true;
-        // setTimeout(0) so React can commit the toast before Chrome's back
-        // gesture processing interferes with the render.
-        setTimeout(() => {
-          showToastRef.current?.("Press back again to exit", "info");
-        }, 0);
-        exitTimerRef.current = setTimeout(() => {
-          // Toast fully gone without a second press — re-arm interception.
-          exitGuardRef.current = false;
-          ensureSentinel();
-        }, EXIT_WINDOW_MS);
-      } else {
-        // Guard armed but popstate still fired — surplus entries exist
-        // (non-navigation taps each fund one; see onTap). Keep unwinding;
-        // once history is exhausted the next press closes the app.
-        history.back();
-      }
-    };
-
-    // Every real tap funds ONE history entry. Taps are the only moments the
-    // page holds user activation, and only activation-backed entries are
-    // honored by the system back button (see note in onPopState). Surplus
-    // entries from non-navigation taps are harmless: deep states consume one
-    // per back press, and leftovers at home are unwound silently by the
-    // exit-guard branch above. A tap also means the user is staying, so
-    // cancel any pending exit prompt. 'click' (not pointerdown) so that
-    // scroll gestures don't fund entries.
-    const onTap = () => {
-      disarmExit();
-      history.pushState({ dabusReady: true }, "");
-    };
-
-    // App resumed (PWA from recents / bfcache restore): the mount effect does
-    // NOT re-run in these cases, so re-arm interception here.
-    const onResume = () => {
-      if (document.visibilityState === "visible") {
-        disarmExit();
-        ensureSentinel();
-      }
-    };
-
-    window.addEventListener("popstate", onPopState);
-    document.addEventListener("click", onTap, true);
-    document.addEventListener("visibilitychange", onResume);
-    window.addEventListener("pageshow", onResume);
-    return () => {
-      window.removeEventListener("popstate", onPopState);
-      document.removeEventListener("click", onTap, true);
-      document.removeEventListener("visibilitychange", onResume);
-      window.removeEventListener("pageshow", onResume);
-    };
-  }, []);
   // ─────────────────────────────────────────────────────────────────────────
 
   const tabContent = (
