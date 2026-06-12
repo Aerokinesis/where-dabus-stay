@@ -201,6 +201,60 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
+  // ── Deep links ────────────────────────────────────────────────────────────
+  // Restore state from the URL on launch: /?stop=45 opens that stop's
+  // arrivals, /?route=53 opens that route on the routes tab.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stopId = params.get("stop");
+    const routeId = params.get("route");
+    if (stopId && /^\d+$/.test(stopId)) {
+      handleFetchArrivals(stopId, "nearby");
+    } else if (routeId) {
+      (async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/routes`);
+          const data = await res.json();
+          const route = data.routes?.find(
+            (r) => String(r.route_id) === routeId,
+          );
+          if (route) {
+            setRoutes(data.routes);
+            setActiveTab("routes");
+            fetchRouteStops(route);
+          }
+        } catch {
+          // Bad or offline deep link — just start at home.
+        }
+      })();
+    }
+    // Run once on mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Mirror the current view into the URL so refresh keeps your place and the
+  // address bar is always shareable. IMPORTANT: replaceState only — it
+  // rewrites the CURRENT history entry (preserving its dabusReady state) and
+  // never adds or removes entries, so the useAndroidBack tap-funded history
+  // discipline is unaffected.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (arrivals && currentStop) {
+      params.set("stop", currentStop.id);
+    } else if (activeTab === "routes" && selectedRoute) {
+      params.set("route", selectedRoute.route_id);
+    }
+    const next = params.toString() ? `?${params.toString()}` : "";
+    if (next !== window.location.search) {
+      history.replaceState(
+        history.state,
+        "",
+        `${window.location.pathname}${next}`,
+      );
+    }
+  }, [arrivals, currentStop, activeTab, selectedRoute]);
+  // ──────────────────────────────────────────────────────────────────────────
+
   const handleFetchArrivals = async (stopId, tab) => {
     clearBusTracking();
     setTrackingView(false);
