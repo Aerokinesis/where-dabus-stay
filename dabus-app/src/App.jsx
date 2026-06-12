@@ -15,6 +15,7 @@ import RouteMap from "./components/RouteMap";
 import SettingsTab from "./components/SettingsTab";
 import Toast from "./components/Toast";
 import SearchInput from "./components/SearchInput";
+import BackButton from "./components/BackButton";
 import { useArrivals } from "./hooks/useArrivals";
 import { useFavorites } from "./hooks/useFavorites";
 import { useNearbyStops } from "./hooks/useNearbyStops";
@@ -215,6 +216,60 @@ function App() {
     setActiveTab(tab);
   };
 
+  // ── Shared back actions ───────────────────────────────────────────────────
+  // Used by both the on-screen back buttons and the system back handler so
+  // the two can never drift apart.
+
+  // Dismiss the bus-tracking view.
+  const exitTracking = () => {
+    setTrackingView(false);
+    clearBusTracking();
+  };
+
+  // Step back out of arrivals on the nearby tab: previous stop from the
+  // stack, else back to tracking (mobile only), else clear arrivals.
+  const backFromNearbyArrivals = () => {
+    if (nearbyStopStack.length > 0) {
+      const prev = nearbyStopStack[nearbyStopStack.length - 1];
+      setNearbyStopStack((s) => s.slice(0, -1));
+      handleFetchArrivals(prev, "nearby");
+    } else if (busLocation && isMobile) {
+      setTrackingView(true);
+      clearArrivals();
+      setStopSearchQuery("");
+    } else {
+      clearArrivals();
+      setNearbyStopStack([]);
+      setStopSearchQuery("");
+    }
+  };
+
+  // Dismiss the arrivals panel. Pass false to keep the loaded arrivals data
+  // (the routes tab keeps the stop selected on its map).
+  const dismissArrivals = (clear = true) => {
+    clearBusTracking();
+    setTrackingView(false);
+    setArrivalsTab(null);
+    if (clear) clearArrivals();
+  };
+
+  // Deselect the route on the routes tab.
+  const clearSelectedRoute = () => {
+    setSelectedRoute(null);
+    setRouteStops(null);
+    setRouteShape(null);
+    setRouteMapView(false);
+  };
+
+  // Stop-number search submit (mobile top bar + desktop sidebar share this).
+  const submitStopSearch = () => {
+    const id = stopSearchQuery.trim();
+    if (!id || id === String(currentStop?.id)) return;
+    if (currentStop) setNearbyStopStack((s) => [...s, currentStop.id]);
+    handleFetchArrivals(id, "nearby");
+  };
+  // ──────────────────────────────────────────────────────────────────────────
+
   const fetchRoutes = async () => {
     setRoutesLoading(true);
     try {
@@ -316,41 +371,20 @@ function App() {
   // keeps it in a ref for its once-registered popstate listener.
   const handleSystemBack = () => {
     if (trackingView && busLocation) {
-      setTrackingView(false);
-      clearBusTracking();
+      exitTracking();
     } else if (routeMapView) {
       setRouteMapView(false);
     } else if (arrivals && arrivalsTab === activeTab) {
       if (activeTab === "nearby") {
-        if (nearbyStopStack.length > 0) {
-          const prev = nearbyStopStack[nearbyStopStack.length - 1];
-          setNearbyStopStack((s) => s.slice(0, -1));
-          handleFetchArrivals(prev, "nearby");
-        } else if (busLocation && isMobile) {
-          setTrackingView(true);
-          clearArrivals();
-          setStopSearchQuery("");
-        } else {
-          clearArrivals();
-          setNearbyStopStack([]);
-          setStopSearchQuery("");
-        }
+        backFromNearbyArrivals();
       } else if (activeTab === "history" || activeTab === "favorites") {
-        clearBusTracking();
-        setTrackingView(false);
-        setArrivalsTab(null);
-        clearArrivals();
+        dismissArrivals();
       } else if (activeTab === "routes") {
         // Keep selectedRoute so the map stays on RouteMap; just dismiss arrivals.
-        clearBusTracking();
-        setTrackingView(false);
-        setArrivalsTab(null);
+        dismissArrivals(false);
       }
     } else if (activeTab === "routes" && selectedRoute) {
-      setSelectedRoute(null);
-      setRouteStops(null);
-      setRouteShape(null);
-      setRouteMapView(false);
+      clearSelectedRoute();
       clearArrivals();
     } else if (activeTab !== "nearby") {
       // Base level of a non-home tab — go back to home.
@@ -488,11 +522,7 @@ function App() {
               arrivalsTab === "favorites" ||
               arrivalsTab === "history" ||
               (arrivalsTab === "routes" && !isMobile)
-                ? () => {
-                    clearBusTracking();
-                    setTrackingView(false);
-                    setArrivalsTab(null);
-                  }
+                ? () => dismissArrivals(false)
                 : null
             }
 
@@ -515,55 +545,18 @@ function App() {
           (activeTab === "routes" && (selectedRoute || (arrivals && arrivalsTab === "routes"))) ||
           ((activeTab === "history" || activeTab === "favorites") && arrivals && arrivalsTab === activeTab) ? (
             <div className={styles.topBarSearch}>
-              <button
-                className={styles.topBarBack}
-                aria-label="Back"
+              <BackButton
                 onClick={() => {
-                  if (activeTab === "nearby") {
-                    if (nearbyStopStack.length > 0) {
-                      const prev = nearbyStopStack[nearbyStopStack.length - 1];
-                      setNearbyStopStack((s) => s.slice(0, -1));
-                      handleFetchArrivals(prev, "nearby");
-                    } else if (busLocation && isMobile) {
-                      setTrackingView(true);
-                      clearArrivals();
-                      setStopSearchQuery("");
-                    } else {
-                      clearArrivals();
-                      setNearbyStopStack([]);
-                      setStopSearchQuery("");
-                    }
-                    return;
-                  }
-                  if (activeTab === "history" || activeTab === "favorites") {
-                    clearBusTracking();
-                    setTrackingView(false);
-                    setArrivalsTab(null);
-                    clearArrivals();
-                    return;
-                  }
-                  if (activeTab === "routes" && routeQuery) {
-                    setRouteQuery("");
-                  } else if (activeTab === "routes" && arrivals && arrivalsTab === "routes") {
-                    clearBusTracking();
-                    setTrackingView(false);
-                    setArrivalsTab(null);
-                  } else if (activeTab === "routes") {
-                    setSelectedRoute(null);
-                    setRouteStops(null);
-                    setRouteShape(null);
-                    setRouteMapView(false);
-                  } else {
-                    clearBusTracking();
-                    setTrackingView(false);
-                    setArrivalsTab(null);
-                  }
+                  if (activeTab === "nearby") return backFromNearbyArrivals();
+                  if (activeTab === "history" || activeTab === "favorites")
+                    return dismissArrivals();
+                  if (activeTab === "routes" && routeQuery) return setRouteQuery("");
+                  if (activeTab === "routes" && arrivals && arrivalsTab === "routes")
+                    return dismissArrivals(false);
+                  if (activeTab === "routes") return clearSelectedRoute();
+                  dismissArrivals(false);
                 }}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-                </svg>
-              </button>
+              />
               <div className={styles.topBarSearchInput}>
                 {activeTab === "nearby" && (
                   <SearchInput
@@ -572,12 +565,7 @@ function App() {
                     placeholder="Stop number"
                     ariaLabel="Bus stop number"
                     onClear={() => setStopSearchQuery("")}
-                    onSubmit={() => {
-                      const id = stopSearchQuery.trim();
-                      if (!id || id === String(currentStop?.id)) return;
-                      if (currentStop) setNearbyStopStack((s) => [...s, currentStop.id]);
-                      handleFetchArrivals(id, "nearby");
-                    }}
+                    onSubmit={submitStopSearch}
                   />
                 )}
                 {activeTab === "routes" && (
@@ -625,25 +613,8 @@ function App() {
         }>
           {activeTab === "nearby" && arrivals && arrivalsTab === "nearby" ? (
             <div className={styles.topBarSearch}>
-              <button
-                className={styles.topBarBack}
-                aria-label="Back"
-                onClick={() => {
-                  if (nearbyStopStack.length > 0) {
-                    const prev = nearbyStopStack[nearbyStopStack.length - 1];
-                    setNearbyStopStack((s) => s.slice(0, -1));
-                    handleFetchArrivals(prev, "nearby");
-                  } else {
-                    clearArrivals();
-                    setNearbyStopStack([]);
-                    setStopSearchQuery("");
-                  }
-                }}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-                </svg>
-              </button>
+              {/* isMobile is false here, so the tracking branch self-skips */}
+              <BackButton onClick={backFromNearbyArrivals} />
               <div className={styles.topBarSearchInput}>
                 <SearchInput
                   value={stopSearchQuery}
@@ -651,39 +622,19 @@ function App() {
                   placeholder="Stop number"
                   ariaLabel="Bus stop number"
                   onClear={() => setStopSearchQuery("")}
-                  onSubmit={() => {
-                    const id = stopSearchQuery.trim();
-                    if (!id || id === String(currentStop?.id)) return;
-                    setNearbyStopStack((s) => [...s, currentStop.id]);
-                    handleFetchArrivals(id, "nearby");
-                  }}
+                  onSubmit={submitStopSearch}
                 />
               </div>
             </div>
           ) : activeTab === "routes" && (selectedRoute || (arrivals && arrivalsTab === "routes")) ? (
             <div className={styles.topBarSearch}>
-              <button
-                className={styles.topBarBack}
-                aria-label="Back"
+              <BackButton
                 onClick={() => {
-                  if (routeQuery) {
-                    setRouteQuery("");
-                  } else if (arrivals && arrivalsTab === "routes") {
-                    clearBusTracking();
-                    setTrackingView(false);
-                    setArrivalsTab(null);
-                  } else {
-                    setSelectedRoute(null);
-                    setRouteStops(null);
-                    setRouteShape(null);
-                    setRouteMapView(false);
-                  }
+                  if (routeQuery) return setRouteQuery("");
+                  if (arrivals && arrivalsTab === "routes") return dismissArrivals(false);
+                  clearSelectedRoute();
                 }}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-                </svg>
-              </button>
+              />
               <div className={styles.topBarSearchInput}>
                 <SearchInput
                   value={routeQuery}
@@ -695,20 +646,7 @@ function App() {
             </div>
           ) : (activeTab === "history" || activeTab === "favorites") && arrivals && arrivalsTab === activeTab ? (
             <div className={styles.topBarSearch}>
-              <button
-                className={styles.topBarBack}
-                aria-label="Back"
-                onClick={() => {
-                  clearBusTracking();
-                  setTrackingView(false);
-                  setArrivalsTab(null);
-                  clearArrivals();
-                }}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-                </svg>
-              </button>
+              <BackButton onClick={() => dismissArrivals()} />
               {currentStop && (
                 <span className={styles.trackingLabel}>
                   {activeTab === "favorites"
@@ -758,18 +696,7 @@ function App() {
             <>
               <div className={styles.desktopSearch}>
                 <div className={styles.topBarSearch}>
-                  <button
-                    className={styles.topBarBack}
-                    aria-label="Back to map"
-                    onClick={() => {
-                      setTrackingView(false);
-                      clearBusTracking();
-                    }}
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-                    </svg>
-                  </button>
+                  <BackButton label="Back to map" onClick={exitTracking} />
                   <span className={styles.trackingLabel}>
                     Route {busLocation.route_short_name} — {busLocation.headsign}
                   </span>
@@ -844,18 +771,7 @@ function App() {
           >
             <div className={styles.topBar}>
               <div className={styles.topBarSearch}>
-                <button
-                  className={styles.topBarBack}
-                  aria-label="Back to arrivals"
-                  onClick={() => {
-                    setTrackingView(false);
-                    clearBusTracking();
-                  }}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-                  </svg>
-                </button>
+                <BackButton label="Back to arrivals" onClick={exitTracking} />
                 <span className={styles.trackingLabel}>
                   Route {busLocation.route_short_name} — {busLocation.headsign}
                 </span>
@@ -902,15 +818,10 @@ function App() {
           >
             <div className={styles.topBar}>
               <div className={styles.topBarSearch}>
-                <button
-                  className={styles.topBarBack}
-                  aria-label="Back to stops"
+                <BackButton
+                  label="Back to stops"
                   onClick={() => setRouteMapView(false)}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-                  </svg>
-                </button>
+                />
                 <span className={styles.trackingLabel}>
                   Route {selectedRoute.route_short_name} — {selectedRoute.route_long_name}
                 </span>
