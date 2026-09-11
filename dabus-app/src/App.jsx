@@ -1076,7 +1076,6 @@ function App() {
           stopHistory={stopHistory}
           onSelectStop={selectRecentStop}
           onRemoveStop={removeFromHistory}
-          onClearHistory={requestClearHistory}
           onClose={() => setShowRecentSheet(false)}
         />
       )}

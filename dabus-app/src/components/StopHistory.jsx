@@ -1,6 +1,6 @@
 import styles from "./StopHistory.module.css";
 
-function StopHistory({ stopHistory, onSelectStop, onRemoveStop, onClearHistory }) {
+function StopHistory({ stopHistory, onSelectStop, onRemoveStop }) {
   if (stopHistory.length === 0)
     return <div className={styles.empty}>No recent stops.</div>;
 
@@ -8,9 +8,6 @@ function StopHistory({ stopHistory, onSelectStop, onRemoveStop, onClearHistory }
     <div className={styles.container}>
       <div className={styles.header}>
         <span className={styles.title}>Recent</span>
-        <button className={styles.clearBtn} onClick={onClearHistory}>
-          Clear all
-        </button>
       </div>
       {stopHistory.map((entry) => (
         <div key={entry.stopId} className={styles.row}>

@@ -6,7 +6,7 @@ import StopHistory from "./StopHistory";
 // in AddressSearch's dropdown now that Recent no longer has its own tab.
 // Reuses StopHistory as-is for the list/remove/clear-all behavior — this
 // component is just the sheet chrome around it.
-function RecentStopsSheet({ stopHistory, onSelectStop, onRemoveStop, onClearHistory, onClose }) {
+function RecentStopsSheet({ stopHistory, onSelectStop, onRemoveStop, onClose }) {
   const modalRef = useRef(null);
   const closeRef = useRef(null);
 
@@ -69,7 +69,6 @@ function RecentStopsSheet({ stopHistory, onSelectStop, onRemoveStop, onClearHist
               onClose();
             }}
             onRemoveStop={onRemoveStop}
-            onClearHistory={onClearHistory}
           />
         </div>
       </div>

@@ -7,6 +7,9 @@ import "../dabus-portal.css";
 // How many recent stops show inline before "See all" takes over.
 const RECENT_PREVIEW_COUNT = 5;
 
+// Gap between the search bar and the results/recents dropdown below it.
+const DROPDOWN_GAP = 6;
+
 function AddressSearch({
   query,
   setQuery,
@@ -59,10 +62,13 @@ function AddressSearch({
       const viewportHeight = window.visualViewport
         ? window.visualViewport.height
         : window.innerHeight;
-      const availableHeight = Math.max(viewportHeight - rect.bottom - 8, 120);
+      // Small gap below the search bar instead of sitting flush against it
+      // (matches the "Recents in Search" prototype).
+      const top = rect.bottom + DROPDOWN_GAP;
+      const availableHeight = Math.max(viewportHeight - top - 8, 120);
       setPortalStyle({
         position: "fixed",
-        top: `${rect.bottom}px`,
+        top: `${top}px`,
         left: `${rect.left}px`,
         width: `${rect.width}px`,
         maxHeight: `${availableHeight}px`,

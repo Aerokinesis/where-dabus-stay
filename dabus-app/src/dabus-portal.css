@@ -6,6 +6,7 @@
   overflow-y: auto;
   z-index: 9999;
   position: fixed;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .dabus-result-item {
