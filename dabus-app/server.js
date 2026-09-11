@@ -26,17 +26,26 @@ app.use("/api", rateLimit({
     message: { error: "Too many requests, slow down." },
 }))
 
-// CORS: allow only origins listed in ALLOWED_ORIGINS (comma-separated).
+// CORS: allow only origins listed in ALLOWED_ORIGINS (comma-separated),
+// plus any Vercel preview URL, so a new preview deployment works without
+// having to update ALLOWED_ORIGINS by hand every time.
 // Defaults to common local dev origins if the env var is unset.
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "https://localhost:5173,https://192.168.4.27:5173")
     .split(",")
     .map(o => o.trim())
     .filter(Boolean)
 
+// Matches any *.vercel.app origin — covers both the per-commit preview URL
+// and the stable per-branch preview URL Vercel generates.
+const vercelPreviewPattern = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i
+
 app.use(cors({
     origin: (origin, cb) => {
-        // Allow non-browser tools (curl, server-to-server) and explicitly listed origins
-        if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
+        // Allow non-browser tools (curl, server-to-server), explicitly listed
+        // origins, and any Vercel preview deployment
+        if (!origin || allowedOrigins.includes(origin) || vercelPreviewPattern.test(origin)) {
+            return cb(null, true)
+        }
         return cb(new Error("Not allowed by CORS"))
     },
 }))
