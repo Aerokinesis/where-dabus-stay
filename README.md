@@ -14,7 +14,7 @@ This app is the answer for those folks. Real-time arrivals, nearby stops, live b
 
 Personal project, actively in development.
 
-**Working today:** real-time arrivals by stop number or street name, GPS-based nearby stops with directional arrows showing which way each bus travels, adjustable search radius, live bus tracking with route line and stop markers, favorites and recent stops (saved in your browser), full routes browser with stop lists, service alerts, PWA install ("add to home screen") with offline stop caching, responsive layouts for both phone and desktop.
+**Working today:** real-time arrivals by stop number or street name, GPS-based nearby stops with directional arrows showing which way each bus travels, adjustable search radius, live bus tracking with route line and stop markers, favorites and recent stops (saved in your browser), full routes browser with stop lists, service alerts, PWA install ("add to home screen") with offline stop caching, responsive layouts for both phone and desktop, FAQ and a contact/feedback form.
 
 **Still ahead:** trip planner for routing between two places.
 
@@ -31,6 +31,8 @@ Personal project, actively in development.
 Frontend is React with Vite, maps via Leaflet through react-leaflet, styled with CSS Modules. Backend is a small Express server that proxies the OTS Web API (browsers can't call it directly) and indexes the GTFS static feed for stop and route lookups. Real-time arrivals and vehicle positions come from Oahu Transit Services' Web API at `api.thebus.org`; schedule, stop, and route data come from TheBus's GTFS feed.
 
 Security: `helmet` for headers, `express-rate-limit` for abuse protection, CORS locked to an allowlist, input validation on every endpoint.
+
+The contact/feedback form sends through [Resend](https://resend.com) — its free tier's shared sending domain works without verifying your own DNS, since messages only need to reach one recipient (the app owner). It's gated behind its own tighter rate limit and a honeypot field.
 
 ## Getting started
 
@@ -57,6 +59,12 @@ THEBUS_API_KEY=your_ots_api_key_here
 # Optional — override default mkcert cert paths
 # SSL_KEY_PATH=./certs/key.pem
 # SSL_CERT_PATH=./certs/cert.pem
+
+# Optional — contact form email. Without these, submissions are just logged
+# to the console instead of emailed (fine for local dev).
+# RESEND_API_KEY=your_resend_api_key
+# CONTACT_TO_EMAIL=you@example.com
+# CONTACT_FROM_EMAIL=WhereDaBusStay <onboarding@resend.dev>
 ```
 
 ### Download and preprocess the GTFS feed
@@ -146,6 +154,9 @@ Frontend is hosted on **Vercel** (auto-deploys from `main`). Backend is hosted o
 | `THEBUS_API_KEY` | OTS API key |
 | `USE_HTTPS` | Set to `false` — Railway handles TLS |
 | `ALLOWED_ORIGINS` | Comma-separated frontend URLs (e.g. `https://where-dabus-stay.vercel.app`) |
+| `RESEND_API_KEY` | Optional — enables the contact form to actually send email |
+| `CONTACT_TO_EMAIL` | Optional — where contact form submissions are delivered |
+| `CONTACT_FROM_EMAIL` | Optional — sender name/address (defaults to Resend's shared sender) |
 
 **Vercel environment variables:**
 
