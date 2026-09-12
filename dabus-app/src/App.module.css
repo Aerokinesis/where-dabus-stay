@@ -91,6 +91,33 @@
   height: 22px;
 }
 
+.navIconWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Unread dot on the announcements icon. */
+.navDot {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 2px solid var(--surface);
+  box-sizing: content-box;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .brandMark {
   display: none;
 }

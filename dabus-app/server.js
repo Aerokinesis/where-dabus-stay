@@ -9,6 +9,7 @@ import { parse } from "csv-parse/sync"
 import http from "http"
 import https from "https"
 import { parseListingAlerts, parseDisruptionAlerts, mergeAlerts } from "./alerts.js"
+import { getPosts, postsToAlerts, isConfigured as announcementsConfigured } from "./announcements.js"
 
 dotenv.config()
 
@@ -264,11 +265,23 @@ const fetchAlertSource = async (url, parse) => {
     return parse(html, knownRouteShortNames)
 }
 
+// Appends community (Supabase) alerts to a scraped-alerts list. Never throws:
+// if Supabase is unreachable and nothing is cached, the OTS list goes out alone.
+const withCommunityAlerts = async (scraped) => {
+    if (!announcementsConfigured()) return scraped
+    try {
+        const { posts } = await getPosts()
+        return [...postsToAlerts(posts, knownRouteShortNames), ...scraped]
+    } catch {
+        return scraped
+    }
+}
+
 app.get("/api/alerts", async (req, res) => {
     const now = Date.now()
     if (alertsCache.alerts && now - alertsCache.fetchedAt < ALERTS_CACHE_MS) {
         return res.json({
-            alerts: alertsCache.alerts,
+            alerts: await withCommunityAlerts(alertsCache.alerts),
             cached: true,
             stale: false,
             fetched_at: alertsCache.fetchedAt,
@@ -286,17 +299,36 @@ app.get("/api/alerts", async (req, res) => {
         // still better served as a partial list than as a stale/error response.
         const parsed = mergeAlerts(...fulfilled)
         alertsCache = { alerts: parsed, fetchedAt: now }
-        res.json({ alerts: parsed, cached: false, stale: false, fetched_at: now })
+        res.json({ alerts: await withCommunityAlerts(parsed), cached: false, stale: false, fetched_at: now })
     } else if (alertsCache.alerts) {
         // Better to serve a stale list than a hard error — alerts are advisory.
         res.json({
-            alerts: alertsCache.alerts,
+            alerts: await withCommunityAlerts(alertsCache.alerts),
             cached: true,
             stale: true,
             fetched_at: alertsCache.fetchedAt,
         })
     } else {
+        // OTS is down and we have nothing cached — still surface any
+        // community-posted alerts rather than a hard error.
+        const community = await withCommunityAlerts([])
+        if (community.length > 0) {
+            return res.json({ alerts: community, cached: false, stale: true, fetched_at: now })
+        }
         res.status(502).json({ error: "Could not fetch alerts" })
+    }
+})
+
+// ── Community announcements ──────────────────────────────────────────────────
+// Editor-authored posts from Supabase (see announcements.js). Served as their
+// own feed for the Announcements tab, and route/stop-targeted ones are also
+// appended to /api/alerts above so they show on Routes and arrivals.
+app.get("/api/announcements", async (req, res) => {
+    try {
+        const { posts, stale, fetchedAt, configured } = await getPosts()
+        res.json({ posts, stale, fetched_at: fetchedAt, configured })
+    } catch {
+        res.status(502).json({ error: "Could not fetch announcements" })
     }
 })
 

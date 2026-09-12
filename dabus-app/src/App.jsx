@@ -14,6 +14,7 @@ import RecentStopsSheet from "./components/RecentStopsSheet";
 import RoutesTab from "./components/RoutesTab";
 import RouteMap from "./components/RouteMap";
 import SettingsTab from "./components/SettingsTab";
+import AnnouncementsTab from "./components/AnnouncementsTab";
 import FaqScreen from "./components/FaqScreen";
 import ContactScreen from "./components/ContactScreen";
 import Toast from "./components/Toast";
@@ -35,6 +36,7 @@ import { usePwaInstall } from "./hooks/usePwaInstall";
 import InstallBanner from "./components/InstallBanner";
 import { useRoutes } from "./hooks/useRoutes";
 import { useAlerts } from "./hooks/useAlerts";
+import { useAnnouncements } from "./hooks/useAnnouncements";
 import { useAppMeta } from "./hooks/useAppMeta";
 import { API_BASE } from "./constants";
 
@@ -178,6 +180,16 @@ function App() {
     dismiss: dismissAlert,
     restore: restoreAlerts,
   } = useAlerts();
+
+  // Community announcements feed + unread dot on the nav icon.
+  const {
+    posts: announcementPosts,
+    loading: announcementsLoading,
+    error: announcementsError,
+    configured: announcementsConfigured,
+    unreadCount: announcementsUnread,
+    markSeen: markAnnouncementsSeen,
+  } = useAnnouncements();
 
   const { isPulling, pullDistance, triggered } = usePullToRefresh(
     () => fetchArrivals(currentStop.id),
@@ -559,6 +571,27 @@ function App() {
     setShowRecentSheet(false);
   };
 
+  // "Route 42" chip on an announcement -> open that route on the Routes tab.
+  // Mirrors the ?route= deep link: routes may not be loaded yet if the user
+  // hasn't visited the tab, so fetch the list here rather than rely on state.
+  const openRouteByShortName = async (shortName) => {
+    try {
+      const list =
+        routes ||
+        (await (await fetch(`${API_BASE}/api/routes`)).json()).routes ||
+        [];
+      const route = list.find((r) => r.route_short_name === shortName);
+      if (!route) return showToast(`Route ${shortName} not found`, "info");
+      if (!routes) setRoutes(list);
+      clearBusTracking();
+      setTrackingView(false);
+      setActiveTab("routes");
+      fetchRouteStops(route);
+    } catch {
+      showToast("Couldn't open route", "info");
+    }
+  };
+
   // ─────────────────────────────────────────────────────────────────────────
 
   const tabContent = (
@@ -594,6 +627,17 @@ function App() {
           dismissedAlertsForRoute={dismissedAlertsForRoute}
           onDismissAlert={dismissAlert}
           onRestoreAlerts={restoreAlerts}
+        />
+      )}
+
+      {activeTab === "announcements" && (
+        <AnnouncementsTab
+          posts={announcementPosts}
+          loading={announcementsLoading}
+          error={announcementsError}
+          configured={announcementsConfigured}
+          onShown={markAnnouncementsSeen}
+          onSelectRoute={openRouteByShortName}
         />
       )}
 
@@ -753,6 +797,7 @@ function App() {
         {/* Desktop search bar — hidden on favorites list view (no search needed) */}
         <div className={styles.desktopSearch} style={
           activeTab === "settings" ||
+          activeTab === "announcements" ||
           (activeTab === "favorites" &&
             !(arrivals && arrivalsTab === activeTab))
             ? { display: "none" }
@@ -800,7 +845,7 @@ function App() {
               placeholder="Search routes"
               onClear={() => setRouteQuery("")}
             />
-          ) : activeTab === "favorites" || activeTab === "settings" ? null : (
+          ) : activeTab === "favorites" || activeTab === "settings" || activeTab === "announcements" ? null : (
             <AddressSearch {...searchProps} />
           )}
         </div>
@@ -998,6 +1043,38 @@ function App() {
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
           <span>Favorites</span>
+        </button>
+
+        <button
+          className={`${styles.navBtn} ${activeTab === "announcements" ? styles.active : ""}`}
+          aria-current={activeTab === "announcements" ? "page" : undefined}
+          onClick={() => switchTab("announcements")}
+        >
+          <span className={styles.navIconWrap}>
+            <svg
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z" />
+              <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+              <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+            </svg>
+            {announcementsUnread > 0 && activeTab !== "announcements" && (
+              <span className={styles.navDot} aria-hidden="true" />
+            )}
+          </span>
+          <span>
+            News
+            {announcementsUnread > 0 && activeTab !== "announcements" && (
+              <span className={styles.srOnly}>, {announcementsUnread} new</span>
+            )}
+          </span>
         </button>
 
         <button
