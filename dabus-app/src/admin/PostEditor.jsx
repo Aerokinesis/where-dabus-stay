@@ -5,6 +5,8 @@ import { resizeImage } from "../lib/resizeImage";
 import { CATEGORIES } from "../lib/posts";
 import PostCard from "../components/PostCard";
 import ConfirmDialog from "../components/ConfirmDialog";
+import StopPicker from "./StopPicker";
+import { API_BASE } from "../constants";
 import styles from "./AdminPage.module.css";
 
 export const BUCKET = "post-images";
@@ -56,7 +58,7 @@ const formFromPost = (post) =>
         title: post.title || "",
         body: post.body || "",
         routes: (post.route_ids || []).join(", "),
-        stops: (post.stop_ids || []).join(", "),
+        stops: [...(post.stop_ids || [])],
         link_url: post.link_url || "",
         pinned: !!post.pinned,
         starts_at: toLocalInput(post.starts_at),
@@ -67,7 +69,7 @@ const formFromPost = (post) =>
         title: "",
         body: "",
         routes: "",
-        stops: "",
+        stops: [],
         link_url: "",
         pinned: false,
         starts_at: toLocalInput(new Date()),
@@ -100,6 +102,8 @@ export default function PostEditor({ user, post, onSaved, onCancel, onError }) {
   const [busy, setBusy] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  // id -> { name, routes } for showing stop names; not part of the saved row.
+  const [stopInfo, setStopInfo] = useState({});
   const titleRef = useRef(null);
   const newUploads = useRef(new Set());
 
@@ -113,8 +117,7 @@ export default function PostEditor({ user, post, onSaved, onCancel, onError }) {
     setForm((f) => ({ ...f, [key]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
 
   const routeList = parseList(form.routes);
-  const stopList = parseList(form.stops);
-  const badStops = stopList.filter((s) => !/^\d+$/.test(s));
+  const stopList = form.stops;
   const uploading = images.some((i) => i.uploading);
   const endsBeforeStart = form.ends_at && form.starts_at && new Date(form.ends_at) <= new Date(form.starts_at);
 
@@ -122,6 +125,24 @@ export default function PostEditor({ user, post, onSaved, onCancel, onError }) {
     JSON.stringify(form) !== JSON.stringify(initialForm) ||
     images.length !== initialImages.length ||
     images.some((img, i) => img.url !== initialImages[i]?.url);
+
+  // Editing a post with stops: fetch their names once so chips read
+  // "#45 S Beretania St + Punchbowl St", not just "#45".
+  useEffect(() => {
+    const ids = initialForm.stops;
+    if (!ids.length) return;
+    const ctrl = new AbortController();
+    fetch(`${API_BASE}/api/stops/lookup?ids=${ids.join(",")}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : { stops: [] }))
+      .then((d) => {
+        const next = {};
+        for (const st of d.stops || [])
+          next[st.stop_id] = st.stop_name ? { name: st.stop_name, routes: st.routes } : { missing: true };
+        setStopInfo((cur) => ({ ...next, ...cur }));
+      })
+      .catch(() => {}); // names are a nicety; numbers still work without them
+    return () => ctrl.abort();
+  }, [initialForm]);
 
   // Warn before closing the tab with unsaved work.
   useEffect(() => {
@@ -194,7 +215,6 @@ export default function PostEditor({ user, post, onSaved, onCancel, onError }) {
   const submit = async (e) => {
     e.preventDefault();
     if (uploading) return onError("Wait for photos to finish uploading.");
-    if (badStops.length) return onError(`Stop numbers should be digits only: ${badStops.join(", ")}`);
     if (endsBeforeStart) return onError("“Hide after” must be later than “Show from”.");
 
     setBusy(true);
@@ -232,7 +252,8 @@ export default function PostEditor({ user, post, onSaved, onCancel, onError }) {
     title: form.title.trim(),
     body: form.body.trim(),
     route_ids: routeList,
-    stop_ids: stopList.filter((s) => /^\d+$/.test(s)),
+    stop_ids: stopList,
+    stops: stopList.map((id) => ({ id, name: stopInfo[id]?.name || null })),
     images: images.map(({ url, path }) => ({ url, path })),
     link_url: form.link_url.trim() || null,
     pinned: form.pinned,
@@ -356,28 +377,19 @@ export default function PostEditor({ user, post, onSaved, onCancel, onError }) {
             <p className={styles.sectionHint}>
               Optional. Adding routes or stops also shows this post as an alert on those routes and stops.
             </p>
-            <div className={styles.row}>
-              <label className={styles.field}>
-                <span className={styles.label}>Routes</span>
-                <input type="text" value={form.routes} onChange={set("routes")} placeholder="e.g. 2, 13, 40" inputMode="text" />
-              </label>
-              <label className={styles.field}>
-                <span className={styles.label}>Stop numbers</span>
-                <input
-                  type="text"
-                  value={form.stops}
-                  onChange={set("stops")}
-                  placeholder="e.g. 4511, 986"
-                  inputMode="numeric"
-                  aria-invalid={badStops.length > 0}
-                  aria-describedby={badStops.length ? "stops-error" : undefined}
-                />
-                {badStops.length > 0 && (
-                  <span id="stops-error" className={styles.fieldError}>
-                    Digits only — check {badStops.join(", ")}
-                  </span>
-                )}
-              </label>
+            <label className={styles.field}>
+              <span className={styles.label}>Routes</span>
+              <input type="text" value={form.routes} onChange={set("routes")} placeholder="e.g. 2, 13, 40" inputMode="text" />
+            </label>
+            <div className={styles.field}>
+              <span className={styles.label}>Stops</span>
+              <StopPicker
+                value={form.stops}
+                onChange={(stops) => setForm((f) => ({ ...f, stops }))}
+                info={stopInfo}
+                onInfo={(more) => setStopInfo((cur) => ({ ...cur, ...more }))}
+                routes={routeList}
+              />
             </div>
           </fieldset>
 

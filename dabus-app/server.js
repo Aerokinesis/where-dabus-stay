@@ -205,6 +205,108 @@ app.get("/api/search-stops", (req, res) => {
     res.json({ stops: results })
 })
 
+// ── Stop suggestions (admin editor) ─────────────────────────────────────────
+// Typeahead for the /admin "Stops" field. Different from /api/search-stops on
+// purpose: that one needs whole words, so it finds nothing mid-word ("beret")
+// and nothing for "S Beretania St + Punchbowl St" because of the "+". Here
+// every typed term only has to be the START of a word in the stop name, and
+// punctuation is ignored ("S." and "S" match the same stop).
+//
+// Stops served by the routes the editor already entered (?routes=2,13) rank
+// first — at Beretania + Punchbowl there are two stops (#45 and #4860) and the
+// route is what tells them apart.
+
+// display stop id -> Set of route_short_names serving it.
+const routesByStop = new Map()
+for (const r of routeDirections) {
+    for (const s of r.stops || []) {
+        const id = displayStopId(String(s.stop_id))
+        if (!routesByStop.has(id)) routesByStop.set(id, new Set())
+        if (r.route_short_name) routesByStop.get(id).add(r.route_short_name)
+    }
+}
+const byRouteNumber = (a, b) => a.localeCompare(b, undefined, { numeric: true })
+const routesForStop = (id) => [...(routesByStop.get(id) || [])].sort(byRouteNumber)
+
+const normalizeStopText = (str) =>
+    normalizeQuery(
+        String(str)
+            .toLowerCase()
+            .replace(/[.,'’`]/g, "")
+            .replace(/[+&@/()-]/g, " ")
+    )
+        .replace(/\b(and|at)\b/g, " ")
+        .split(/\s+/)
+        .filter(Boolean)
+
+// Built once: one entry per displayed stop id.
+const stopSearchIndex = []
+{
+    const seen = new Set()
+    for (const stop of stops) {
+        const id = displayStopId(stop.stop_id)
+        if (seen.has(id)) continue
+        seen.add(id)
+        stopSearchIndex.push({ id, name: stop.stop_name, words: normalizeStopText(stop.stop_name) })
+    }
+}
+
+const stopSummary = (id, name) => ({ stop_id: id, stop_name: name, routes: routesForStop(id) })
+
+const parseRouteParam = (raw) =>
+    String(raw || "")
+        .split(",")
+        .map((r) => r.trim().toUpperCase())
+        .filter((r) => /^[A-Z0-9 ]{1,12}$/.test(r))
+        .slice(0, 20)
+
+app.get("/api/stops/suggest", (req, res) => {
+    const raw = String(req.query.q ?? "").slice(0, 80)
+    const terms = normalizeStopText(raw)
+    if (terms.length === 0) return res.json({ stops: [] })
+    const wanted = new Set(parseRouteParam(req.query.routes))
+    const digitsOnly = /^\d+$/.test(raw.trim())
+
+    const scored = []
+    for (const s of stopSearchIndex) {
+        const nameMatch = terms.every((t) => s.words.some((w) => w.startsWith(t)))
+        const idMatch = digitsOnly && s.id.startsWith(raw.trim())
+        if (!nameMatch && !idMatch) continue
+        const served = routesByStop.get(s.id)
+        const onRoute = wanted.size > 0 && served && [...wanted].some((r) => served.has(r))
+        let score = 0
+        if (digitsOnly && s.id === raw.trim()) score += 1000
+        if (onRoute) score += 100
+        if (terms.every((t) => s.words.includes(t))) score += 10
+        if (idMatch) score += 5
+        scored.push({ s, score, onRoute })
+    }
+    scored.sort((a, b) => b.score - a.score || a.s.name.length - b.s.name.length || byRouteNumber(a.s.id, b.s.id))
+
+    res.json({
+        stops: scored.slice(0, 12).map(({ s, onRoute }) => ({
+            ...stopSummary(s.id, s.name),
+            on_selected_routes: Boolean(onRoute),
+        })),
+    })
+})
+
+// Names + routes for stop ids already on a post (so the editor can show
+// "#45 S Beretania St + Punchbowl St" instead of a bare number).
+app.get("/api/stops/lookup", (req, res) => {
+    const ids = String(req.query.ids ?? "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => /^\d{1,6}$/.test(s))
+        .slice(0, 50)
+    res.json({
+        stops: ids.map((id) => {
+            const stop = getStopByDisplayId(id)
+            return stop ? stopSummary(id, stop.stop_name) : { stop_id: id, stop_name: null, routes: [] }
+        }),
+    })
+})
+
 // Nearby stops by coordinates endpoint
 app.get("/api/nearby-stops-by-coords", (req, res) => {
     const lat = parseFloat(req.query.lat)
@@ -326,7 +428,12 @@ app.get("/api/alerts", async (req, res) => {
 app.get("/api/announcements", async (req, res) => {
     try {
         const { posts, stale, fetchedAt, configured } = await getPosts()
-        res.json({ posts, stale, fetched_at: fetchedAt, configured })
+        // Attach stop names so the News card can say where, not just "#45".
+        const withStops = posts.map((p) => ({
+            ...p,
+            stops: p.stop_ids.map((id) => ({ id, name: getStopByDisplayId(id)?.stop_name || null })),
+        }))
+        res.json({ posts: withStops, stale, fetched_at: fetchedAt, configured })
     } catch {
         res.status(502).json({ error: "Could not fetch announcements" })
     }

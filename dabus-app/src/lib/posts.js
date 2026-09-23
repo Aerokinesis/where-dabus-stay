@@ -42,3 +42,7 @@ export const untilLabel = (iso) => {
   const time = hasTime ? d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }).replace(":00", "") : "";
   return `Until ${date}${time ? `, ${time}` : ""}`;
 };
+
+// GTFS stop names are ALL CAPS ("S BERETANIA ST + PUNCHBOWL ST"); the rest of
+// the app title-cases them the same way.
+export const stopName = (raw) => (raw ? raw.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : "");

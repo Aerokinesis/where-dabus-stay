@@ -190,3 +190,62 @@
 .link:hover {
   text-decoration: underline;
 }
+
+/* Stops with names: one tappable row each instead of number chips. */
+.targetRowStack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.targetRowStack dt {
+  flex: none; /* the 44px label width would become 44px of height here */
+}
+
+.targetRowStack dd {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stopRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stopRow:hover:not(:disabled) {
+  border-color: var(--primary-text);
+}
+
+.stopRow:disabled {
+  cursor: default;
+}
+
+.stopRowNum {
+  flex: 0 0 auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.stopRowName {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.stopRowGo {
+  color: var(--text-muted);
+  font-size: 16px;
+}

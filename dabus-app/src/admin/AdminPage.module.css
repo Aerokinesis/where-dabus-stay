@@ -912,3 +912,182 @@ details.listSection[open] > summary {
   font-weight: 600;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
+
+/* ── Stop picker ────────────────────────────────────────────────────────── */
+
+.stopPicker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stopChips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stopChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 4px 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 14px;
+}
+
+.stopChipNum {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.stopChipName {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.stopChip button {
+  flex: 0 0 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stopChip button:hover {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.stopChip button:focus-visible {
+  outline: 2px solid var(--primary-text);
+}
+
+.comboWrap {
+  position: relative;
+}
+
+.comboWrap input {
+  font: inherit;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-height: var(--control-h);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.comboWrap input:focus-visible {
+  outline: 2px solid var(--primary-text);
+  outline-offset: 1px;
+}
+
+.comboPanel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.comboNote {
+  margin: 0;
+  padding: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.comboList {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+}
+
+.comboOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.comboActive {
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface));
+}
+
+.comboPicked {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.comboNum {
+  flex: 0 0 52px;
+  font-weight: 700;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  padding-top: 1px;
+}
+
+.comboText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.comboName {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.comboRoutes {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+
+.comboOnRoute {
+  color: var(--live-text);
+  font-weight: 600;
+}
+
+.comboAdded {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding-top: 2px;
+}
+
+.stopChipMissing {
+  border-color: var(--danger);
+}
+
+.stopChipMissing .stopChipName {
+  color: var(--danger);
+  font-size: 13px;
+}

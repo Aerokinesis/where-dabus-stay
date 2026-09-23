@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
 import ImageCarousel from "./ImageCarousel";
-import { categoryLabel, postedLabel, untilLabel } from "../lib/posts";
+import { categoryLabel, postedLabel, stopName, untilLabel } from "../lib/posts";
 import styles from "./PostCard.module.css";
 
 // Splits body text on blank lines so editors can write paragraphs without
@@ -34,6 +34,9 @@ function PostCard({ post, onSelectRoute, onSelectStop, preview = false }) {
   const images = post.images || [];
   const routes = post.route_ids || [];
   const stops = post.stop_ids || [];
+  // The server attaches names ({ id, name }); fall back to bare numbers.
+  const named = new Map((post.stops || []).map((s) => [String(s.id), s.name]));
+  const anyNamed = stops.some((id) => named.get(String(id)));
   const label = post.category_label || categoryLabel(post.category);
   const until = untilLabel(post.ends_at);
 
@@ -109,21 +112,36 @@ function PostCard({ post, onSelectRoute, onSelectStop, preview = false }) {
               </div>
             )}
             {stops.length > 0 && (
-              <div className={styles.targetRow}>
+              <div className={`${styles.targetRow} ${anyNamed ? styles.targetRowStack : ""}`}>
                 <dt>{stops.length === 1 ? "Stop" : "Stops"}</dt>
                 <dd>
-                  {stops.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      className={`${styles.chip} ${styles.stopChip}`}
-                      onClick={() => onSelectStop?.(s)}
-                      disabled={!onSelectStop}
-                      aria-label={`Arrivals for stop ${s}`}
-                    >
-                      {s}
-                    </button>
-                  ))}
+                  {anyNamed
+                    ? stops.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          className={styles.stopRow}
+                          onClick={() => onSelectStop?.(s)}
+                          disabled={!onSelectStop}
+                          aria-label={`Arrivals for stop ${s}${named.get(String(s)) ? `, ${stopName(named.get(String(s)))}` : ""}`}
+                        >
+                          <span className={styles.stopRowNum}>#{s}</span>
+                          <span className={styles.stopRowName}>{stopName(named.get(String(s))) || "Stop"}</span>
+                          {onSelectStop && <span className={styles.stopRowGo} aria-hidden="true">›</span>}
+                        </button>
+                      ))
+                    : stops.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          className={`${styles.chip} ${styles.stopChip}`}
+                          onClick={() => onSelectStop?.(s)}
+                          disabled={!onSelectStop}
+                          aria-label={`Arrivals for stop ${s}`}
+                        >
+                          {s}
+                        </button>
+                      ))}
                 </dd>
               </div>
             )}
