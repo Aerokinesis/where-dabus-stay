@@ -2,16 +2,19 @@ import { useEffect, useRef, useState } from "react";
 
 import styles from "./ImageCarousel.module.css";
 
-// Horizontal scroll-snap carousel. No JS-driven animation — native scrolling
-// handles swipe on touch and trackpad; the arrow buttons and dots just call
-// scrollTo. Keyboard: the scroller is focusable and left/right arrows move it.
-function ImageCarousel({ images, alt }) {
+// Horizontal scroll-snap carousel. Native scrolling handles swipe on touch and
+// trackpad; arrows (mouse devices only) and dots just call scrollTo.
+//
+// Each image is shown whole (object-fit: contain) over a blurred, zoomed copy
+// of itself, so portrait event flyers and wide photos are never cropped —
+// organizers post flyers with the date at the top, and cropping cut it off.
+function ImageCarousel({ images, alt, compact = false }) {
   const scrollerRef = useRef(null);
   const [index, setIndex] = useState(0);
 
   const count = images?.length || 0;
 
-  // Track which slide is centered so the dots stay in sync with swipes.
+  // Track which slide is showing so dots and the counter follow swipes.
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el || count < 2) return;
@@ -49,36 +52,45 @@ function ImageCarousel({ images, alt }) {
     }
   };
 
+  const multi = count > 1;
+
   return (
-    <div className={styles.carousel}>
+    <div className={`${styles.carousel} ${compact ? styles.compact : ""}`}>
       <div
         ref={scrollerRef}
         className={styles.scroller}
-        tabIndex={count > 1 ? 0 : -1}
+        tabIndex={multi ? 0 : -1}
         onKeyDown={onKeyDown}
-        role={count > 1 ? "group" : undefined}
-        aria-roledescription={count > 1 ? "carousel" : undefined}
-        aria-label={count > 1 ? `${count} images` : undefined}
+        role={multi ? "group" : undefined}
+        aria-roledescription={multi ? "carousel" : undefined}
+        aria-label={multi ? `${count} photos` : undefined}
       >
         {images.map((img, i) => (
-          <div key={img.url || i} className={styles.slide}>
+          <div
+            key={img.url || i}
+            className={styles.slide}
+            style={{ "--slide-bg": `url("${img.url}")` }}
+          >
             <img
               src={img.url}
-              alt={img.alt || (count > 1 ? `${alt} (${i + 1} of ${count})` : alt)}
-              loading="lazy"
+              alt={img.alt || (multi ? `${alt} (photo ${i + 1} of ${count})` : alt)}
+              loading={i === 0 ? "eager" : "lazy"}
               draggable={false}
             />
           </div>
         ))}
       </div>
 
-      {count > 1 && (
+      {multi && (
         <>
+          <span className={styles.counter} aria-hidden="true">
+            {index + 1}/{count}
+          </span>
           <button
             type="button"
             className={`${styles.arrow} ${styles.arrowLeft}`}
             onClick={() => goTo(index - 1)}
-            aria-label="Previous image"
+            aria-label="Previous photo"
           >
             ‹
           </button>
@@ -86,23 +98,17 @@ function ImageCarousel({ images, alt }) {
             type="button"
             className={`${styles.arrow} ${styles.arrowRight}`}
             onClick={() => goTo(index + 1)}
-            aria-label="Next image"
+            aria-label="Next photo"
           >
             ›
           </button>
           <div className={styles.dots} aria-hidden="true">
             {images.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                tabIndex={-1}
-                className={`${styles.dot} ${i === index ? styles.dotActive : ""}`}
-                onClick={() => goTo(i)}
-              />
+              <span key={i} className={`${styles.dot} ${i === index ? styles.dotActive : ""}`} />
             ))}
           </div>
           <span className={styles.srOnly} aria-live="polite">
-            Image {index + 1} of {count}
+            Photo {index + 1} of {count}
           </span>
         </>
       )}

@@ -1,0 +1,192 @@
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.pinned {
+  border-color: var(--accent);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px 14px;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Category tags. Colors come from theme tokens so they keep AA contrast in
+   both light and dark (the old hard-coded amber was ~3:1 on light). */
+.tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--time-chip-text);
+  background: var(--time-chip-bg);
+}
+
+.tag_event {
+  color: var(--primary-text);
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.tag_volunteer {
+  color: var(--live-text);
+  background: var(--live-bg);
+}
+
+.tag_otr_update {
+  color: var(--arrived-text);
+  background: var(--arrived-bg);
+}
+
+.pinnedTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.date {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.until {
+  margin: -4px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.body {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.body p {
+  margin: 0 0 8px;
+}
+
+.body p:last-child {
+  margin-bottom: 0;
+}
+
+/* ~4 lines. max-height rather than line-clamp because the body is several
+   <p> blocks, which -webkit-line-clamp doesn't handle reliably. */
+.clamped {
+  max-height: calc(1.5em * 4);
+  overflow: hidden;
+}
+
+.faded {
+  -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent);
+  mask-image: linear-gradient(to bottom, #000 60%, transparent);
+}
+
+.moreBtn {
+  align-self: flex-start;
+  margin-top: -4px;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  color: var(--primary-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.moreBtn:hover {
+  text-decoration: underline;
+}
+
+.targets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 2px 0 0;
+}
+
+.targetRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.targetRow dt {
+  flex: 0 0 44px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.targetRow dd {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  min-width: 32px;
+  min-height: 28px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.stopChip {
+  font-weight: 500;
+}
+
+.chip:hover:not(:disabled) {
+  border-color: var(--primary-text);
+  color: var(--primary-text);
+}
+
+.chip:disabled {
+  cursor: default;
+}
+
+.link {
+  align-self: flex-start;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-text);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}

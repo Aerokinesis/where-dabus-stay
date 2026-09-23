@@ -1,7 +1,13 @@
+/* ── Page shell ─────────────────────────────────────────────────────────── */
+
 .page {
-  max-width: 720px;
+  /* #root is a flex row: without an explicit width + min-width: 0 the page
+     grows to its longest unbreakable line and scrolls sideways on phones. */
+  width: 100%;
+  min-width: 0;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 16px 16px 48px;
+  padding: 16px 16px 120px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -11,54 +17,61 @@
   box-sizing: border-box;
 }
 
+/* Editor gets room for the side-by-side preview. */
+.pageWide {
+  max-width: 1120px;
+}
+
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 600;
+  min-width: 0;
 }
 
 .brand img {
-  height: 36px;
+  height: 32px;
   width: auto;
-}
-
-.brand h1 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
 }
 
 .who {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+}
+
+.whoEmail {
   font-size: 13px;
   color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.who button,
-.postActions button {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 13px;
-  font-family: inherit;
-  cursor: pointer;
+@media (max-width: 480px) {
+  .whoEmail {
+    display: none;
+  }
 }
 
-.who button:hover,
-.postActions button:hover {
-  border-color: var(--primary-text);
+.viewTitle {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
 }
 
 .card {
@@ -66,20 +79,460 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
+}
+
+.card p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.empty {
+  font-size: 14px;
+  color: var(--text-muted);
+  padding: 24px 0;
+  text-align: center;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+
+.primaryBtn,
+.secondaryBtn {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.primaryBtn {
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid var(--primary);
+}
+
+.primaryBtn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.secondaryBtn {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.secondaryBtn:hover {
+  border-color: var(--text-muted);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.primaryBtn:focus-visible,
+.secondaryBtn:focus-visible,
+.postActions button:focus-visible,
+.backBtn:focus-visible,
+.preset:focus-visible,
+.thumbActions button:focus-visible {
+  outline: 2px solid var(--primary-text);
+  outline-offset: 2px;
+}
+
+/* ── Login ──────────────────────────────────────────────────────────────── */
+
+.loginCard {
+  width: 100%;
+  max-width: 380px;
+  margin: 12vh auto 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 24px 24px;
   display: flex;
   flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+.loginIcon {
+  height: 48px;
+  width: auto;
+  align-self: center;
+}
+
+.loginTitle {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  text-align: center;
+}
+
+.loginSub {
+  margin: -8px 0 4px;
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ── List view ──────────────────────────────────────────────────────────── */
+
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
 }
 
-.cardTitle,
-.sectionTitle {
-  font-size: 16px;
-  font-weight: 600;
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+.emptyState p {
   margin: 0;
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.listSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.listSectionTitle {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+summary.listSectionTitle {
+  cursor: pointer;
+  list-style-position: inside;
+  padding: 4px 0;
+}
+
+details.listSection[open] > summary {
+  margin-bottom: 8px;
+}
+
+.sectionCount {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 5px;
+  margin-left: 4px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.sectionEmpty {
+  margin: 0;
+  padding: 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+.postList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.postRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.postRowEnded {
+  opacity: 0.7;
+}
+
+.postMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.postMain:focus-visible {
+  outline: 2px solid var(--primary-text);
+  outline-offset: 4px;
+}
+
+.postMain:hover .postTitle {
+  text-decoration: underline;
+}
+
+.postThumb {
+  position: relative;
+  flex: 0 0 64px;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--time-chip-text);
+  background: var(--time-chip-bg);
+}
+
+.thumb_event {
+  color: var(--primary-text);
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.thumb_volunteer {
+  color: var(--live-text);
+  background: var(--live-bg);
+}
+
+.thumb_otr_update {
+  color: var(--arrived-text);
+  background: var(--arrived-bg);
+}
+
+.postThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbCount {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.postText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.postMeta {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.postCat {
+  font-weight: 600;
+}
+
+.pinBadge {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.postTitle {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.postSub {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.postActions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.postActions button {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.postActions button:hover {
+  border-color: var(--primary-text);
+}
+
+.postActions .danger {
+  color: var(--danger);
+}
+
+.postActions .danger:hover {
+  border-color: var(--danger);
+}
+
+/* Narrow screens: actions drop under the post instead of squeezing it. */
+@media (max-width: 640px) {
+  .postRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .postActions {
+    flex-wrap: wrap;
+  }
+
+  .postActions button {
+    flex: 1 1 auto;
+    min-height: 36px;
+  }
+}
+
+/* ── Editor view ────────────────────────────────────────────────────────── */
+
+.editorView {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.editorHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.backBtn {
+  padding: 4px 0;
+  background: none;
+  border: none;
+  color: var(--primary-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.editorGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@media (min-width: 960px) {
+  .editorGrid {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+
+  .previewPane {
+    position: sticky;
+    top: 16px;
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.section {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
 }
 
 .sectionTitle {
-  margin-bottom: 10px;
+  float: left; /* pulls the legend inside the fieldset's padding box */
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.sectionTitle + * {
+  clear: both;
+}
+
+.sectionHint {
+  margin: -6px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-muted);
 }
 
 .row {
@@ -95,16 +548,29 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  display: flex;
+  justify-content: space-between;
   font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.count {
+  font-weight: 400;
   color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .field input,
 .field select,
 .field textarea {
   font: inherit;
-  font-size: 15px;
+  font-size: 16px; /* 16px stops iOS zooming into the field on focus */
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
@@ -112,11 +578,12 @@
   padding: 8px 10px;
   min-height: var(--control-h);
   box-sizing: border-box;
+  width: 100%;
 }
 
 .field textarea {
   resize: vertical;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .field input:focus-visible,
@@ -126,59 +593,137 @@
   outline-offset: 1px;
 }
 
-.checkbox {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  align-self: flex-end;
-  min-height: var(--control-h);
-  flex: 0 0 auto;
+.field input[aria-invalid="true"] {
+  border-color: var(--danger);
 }
 
-.checkbox input {
-  min-height: 0;
-  width: 18px;
-  height: 18px;
-  accent-color: var(--primary);
-}
-
-.hint {
-  margin: -6px 0 0;
+.fieldError {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--danger);
 }
 
-.primaryBtn {
-  align-self: flex-start;
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 0 18px;
-  min-height: var(--control-h);
-  font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
+/* Type picker: one tap instead of a dropdown, and all four options visible. */
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 6px;
 }
 
-.primaryBtn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.dropzone {
+.segment {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  padding: 18px 12px;
-  border: 1px dashed var(--border);
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
   border-radius: 8px;
+  background: var(--bg);
+  font-size: 14px;
   color: var(--text-muted);
+  cursor: pointer;
+  text-align: center;
+}
+
+.segment input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.segment:has(input:focus-visible) {
+  outline: 2px solid var(--primary-text);
+  outline-offset: 1px;
+}
+
+.segmentOn {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 15%, var(--bg));
+  color: var(--text);
+  font-weight: 600;
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: -4px;
+}
+
+.preset {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  font: inherit;
   font-size: 13px;
   cursor: pointer;
+}
+
+.preset:hover {
+  color: var(--text);
+}
+
+.presetOn,
+.presetOn:hover {
+  border-color: var(--primary);
+  color: var(--text);
+  background: color-mix(in srgb, var(--primary) 15%, var(--bg));
+}
+
+.toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+
+.toggle > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggleHint {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Photos */
+
+.dropzone {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.dropzone strong {
+  color: var(--primary-text);
+  font-size: 14px;
 }
 
 .dropzone input {
@@ -190,55 +735,75 @@
   height: 100%;
 }
 
-.dropzone:hover {
+.dropzone:hover,
+.dropzoneOn {
   border-color: var(--primary-text);
+  background: color-mix(in srgb, var(--primary) 8%, var(--bg));
+}
+
+.dropzone:has(input:focus-visible) {
+  outline: 2px solid var(--primary-text);
+  outline-offset: 2px;
 }
 
 .thumbs {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
 }
 
 .thumb {
-  position: relative;
-  width: 96px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.thumb img {
-  width: 96px;
-  height: 72px;
-  object-fit: cover;
+.thumbImg {
+  position: relative;
+  aspect-ratio: 4 / 3;
   border-radius: 6px;
+  overflow: hidden;
   border: 1px solid var(--border);
+  background: #000;
+}
+
+.thumbImg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   display: block;
 }
 
+.coverBadge,
 .thumbBadge {
   position: absolute;
-  top: 4px;
   left: 4px;
+  top: 4px;
   font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
   background: rgba(0, 0, 0, 0.7);
   color: #fff;
-  padding: 2px 5px;
-  border-radius: 4px;
+}
+
+.thumbBadge {
+  top: auto;
+  bottom: 4px;
 }
 
 .thumbActions {
   display: flex;
   justify-content: space-between;
+  gap: 4px;
 }
 
 .thumbActions button {
-  width: 28px;
-  height: 28px;
+  flex: 1;
+  height: 30px;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--bg);
@@ -253,8 +818,60 @@
   cursor: default;
 }
 
-.error,
-.notice {
+.thumbActions .thumbRemove {
+  color: var(--danger);
+}
+
+/* Preview */
+
+.previewPane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.previewTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+/* Rider-app width, so line breaks match what people will see on a phone. */
+.previewFrame {
+  max-width: 360px;
+  width: 100%;
+  pointer-events: auto;
+}
+
+/* Sticky Save/Cancel so the main action is reachable from anywhere in a long
+   form, especially on phones. */
+.actionBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 0 -16px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 480px) {
+  .actionBar > button {
+    flex: 1;
+  }
+}
+
+/* ── Feedback ───────────────────────────────────────────────────────────── */
+
+.error {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -262,9 +879,6 @@
   padding: 10px 12px;
   border-radius: 8px;
   font-size: 14px;
-}
-
-.error {
   background: var(--danger-bg);
   color: var(--danger);
 }
@@ -273,104 +887,28 @@
   background: none;
   border: none;
   color: inherit;
-  font-size: 18px;
+  font-size: 20px;
+  line-height: 1;
   cursor: pointer;
 }
 
-.notice {
-  background: var(--live-bg);
-  color: var(--live-text);
+.toastSlot {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 88px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 20;
 }
 
-.empty {
+.toast {
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
   font-size: 14px;
-  color: var(--text-muted);
-  padding: 24px 0;
-  text-align: center;
-}
-
-.list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.post {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.postImages {
-  max-width: 100%;
-}
-
-.postBody {
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.postMeta {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.status {
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   font-weight: 600;
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.status_live {
-  background: var(--live-bg);
-  color: var(--live-text);
-}
-
-.status_scheduled {
-  background: var(--sched-bg);
-  color: var(--sched-text);
-}
-
-.status_expired {
-  background: var(--danger-bg);
-  color: var(--danger);
-}
-
-.postTitle {
-  font-size: 15px;
-}
-
-.postTargets,
-.postWhen {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.postActions {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-  flex-wrap: wrap;
-}
-
-.postActions .danger {
-  color: var(--danger);
-}
-
-.postActions .danger:hover {
-  border-color: var(--danger);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }

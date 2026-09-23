@@ -177,6 +177,8 @@ function App() {
   const {
     alertsForRoute,
     dismissedAlertsForRoute,
+    alertsForStop,
+    dismissedAlertsForStop,
     dismiss: dismissAlert,
     restore: restoreAlerts,
   } = useAlerts();
@@ -189,6 +191,7 @@ function App() {
     configured: announcementsConfigured,
     unreadCount: announcementsUnread,
     markSeen: markAnnouncementsSeen,
+    refresh: refreshAnnouncements,
   } = useAnnouncements();
 
   const { isPulling, pullDistance, triggered } = usePullToRefresh(
@@ -638,6 +641,13 @@ function App() {
           configured={announcementsConfigured}
           onShown={markAnnouncementsSeen}
           onSelectRoute={openRouteByShortName}
+          onSelectStop={(stopId) => {
+            clearBusTracking();
+            setTrackingView(false);
+            setActiveTab("nearby");
+            handleFetchArrivals(stopId, "nearby");
+          }}
+          onRetry={refreshAnnouncements}
         />
       )}
 
@@ -700,8 +710,10 @@ function App() {
             arrivalsTab={arrivalsTab}
             routeShortName={arrivalsTab === "routes" ? selectedRoute?.route_short_name : null}
             alerts={(() => {
-              // Union of alerts across every route arriving at this stop, deduped by id.
+              // Alerts posted for this specific stop first, then the union of
+              // alerts across every route arriving here, deduped by id.
               const seen = new Map();
+              for (const a of alertsForStop(currentStop?.id)) seen.set(a.id, a);
               for (const bus of arrivals || []) {
                 for (const a of alertsForRoute(bus.route)) {
                   if (!seen.has(a.id)) seen.set(a.id, a);
@@ -713,6 +725,7 @@ function App() {
               // Same union, but for previously dismissed alerts. Drives the
               // "Show N hidden alerts" link.
               const seen = new Map();
+              for (const a of dismissedAlertsForStop(currentStop?.id)) seen.set(a.id, a);
               for (const bus of arrivals || []) {
                 for (const a of dismissedAlertsForRoute(bus.route)) {
                   if (!seen.has(a.id)) seen.set(a.id, a);

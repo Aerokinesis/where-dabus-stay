@@ -27,17 +27,22 @@ const writeDismissed = (set) => {
   }
 };
 
-// Two parallel indexes are built off this: route_short_name -> alerts.
-const indexByRoute = (list) => {
+// Builds key -> alerts indexes. Routes are keyed by route_short_name; stops by
+// the displayed stop code (community posts carry `affected_stops`; scraped OTS
+// alerts don't, so they only ever appear in the route index).
+const indexBy = (field) => (list) => {
   const map = new Map();
   for (const alert of list) {
-    for (const route of alert.affected_routes || []) {
-      if (!map.has(route)) map.set(route, []);
-      map.get(route).push(alert);
+    for (const key of alert[field] || []) {
+      const k = String(key);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(alert);
     }
   }
   return map;
 };
+const indexByRoute = indexBy("affected_routes");
+const indexByStop = indexBy("affected_stops");
 
 // Fetches and exposes service alerts. Dismissed IDs persist in localStorage so a
 // user who dismisses an alert won't see it again until OTS rotates to a new ID.
@@ -112,6 +117,8 @@ export function useAlerts() {
 
   const alertsByRoute = useMemo(() => indexByRoute(visibleAlerts), [visibleAlerts]);
   const dismissedByRoute = useMemo(() => indexByRoute(dismissedAlerts), [dismissedAlerts]);
+  const alertsByStop = useMemo(() => indexByStop(visibleAlerts), [visibleAlerts]);
+  const dismissedByStop = useMemo(() => indexByStop(dismissedAlerts), [dismissedAlerts]);
 
   const alertsForRoute = useCallback(
     (routeShortName) => alertsByRoute.get(routeShortName) || [],
@@ -123,12 +130,24 @@ export function useAlerts() {
     [dismissedByRoute],
   );
 
+  const alertsForStop = useCallback(
+    (stopId) => (stopId == null ? [] : alertsByStop.get(String(stopId)) || []),
+    [alertsByStop],
+  );
+
+  const dismissedAlertsForStop = useCallback(
+    (stopId) => (stopId == null ? [] : dismissedByStop.get(String(stopId)) || []),
+    [dismissedByStop],
+  );
+
   return {
     alerts,
     visibleAlerts,
     dismissedAlerts,
     alertsForRoute,
     dismissedAlertsForRoute,
+    alertsForStop,
+    dismissedAlertsForStop,
     loading,
     error,
     stale,
