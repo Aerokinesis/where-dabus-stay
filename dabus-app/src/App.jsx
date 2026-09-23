@@ -930,6 +930,7 @@ function App() {
           {/* Nearby map — mobile only (desktop uses mapPanel) */}
           {activeTab === "nearby" && (!arrivals || arrivalsTab !== "nearby") && (
             <div className={styles.mobileMapOnly}>
+              <h2 className={styles.nearbyHeading}>Nearby bus stops</h2>
               <NearbyStopsMap
                 userLocation={userLocation}
                 nearbyStopsMap={nearbyStopsMap}
