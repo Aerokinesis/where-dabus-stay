@@ -66,7 +66,7 @@ function RouteAlerts({ alerts, hiddenAlerts, onDismiss, onRestore, compact = fal
                         ▾
                       </span>
                     </button>
-                  ) : (
+                  ) : alert.url ? (
                     <a
                       href={alert.url}
                       target="_blank"
@@ -75,6 +75,8 @@ function RouteAlerts({ alerts, hiddenAlerts, onDismiss, onRestore, compact = fal
                     >
                       {alert.title}
                     </a>
+                  ) : (
+                    <span className={styles.title}>{alert.title}</span>
                   )}
                 </div>
                 {onDismiss && (
@@ -94,14 +96,30 @@ function RouteAlerts({ alerts, hiddenAlerts, onDismiss, onRestore, compact = fal
               {isExpanded && (
                 <div className={styles.description}>
                   <p>{alert.description}</p>
-                  <a
-                    href={alert.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.sourceLink}
-                  >
-                    See all disruptions on thebus.org ↗
-                  </a>
+                  {/* Community posts (from the app's own editors) carry an
+                      optional link of their own; scraped OTS alerts always
+                      point back at thebus.org. */}
+                  {alert.source === "community" ? (
+                    alert.url && (
+                      <a
+                        href={alert.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.sourceLink}
+                      >
+                        More info ↗
+                      </a>
+                    )
+                  ) : (
+                    <a
+                      href={alert.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.sourceLink}
+                    >
+                      See all disruptions on thebus.org ↗
+                    </a>
+                  )}
                 </div>
               )}
             </div>

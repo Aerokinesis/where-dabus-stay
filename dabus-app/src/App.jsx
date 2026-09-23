@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import styles from "./App.module.css";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -10,10 +10,11 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Favorites from "./components/Favorites";
 import SaveStopModal from "./components/SaveStopModal";
 import ConfirmDialog from "./components/ConfirmDialog";
-import StopHistory from "./components/StopHistory";
+import RecentStopsSheet from "./components/RecentStopsSheet";
 import RoutesTab from "./components/RoutesTab";
 import RouteMap from "./components/RouteMap";
 import SettingsTab from "./components/SettingsTab";
+import AnnouncementsTab from "./components/AnnouncementsTab";
 import FaqScreen from "./components/FaqScreen";
 import ContactScreen from "./components/ContactScreen";
 import Toast from "./components/Toast";
@@ -35,6 +36,7 @@ import { usePwaInstall } from "./hooks/usePwaInstall";
 import InstallBanner from "./components/InstallBanner";
 import { useRoutes } from "./hooks/useRoutes";
 import { useAlerts } from "./hooks/useAlerts";
+import { useAnnouncements } from "./hooks/useAnnouncements";
 import { useAppMeta } from "./hooks/useAppMeta";
 import { API_BASE } from "./constants";
 
@@ -96,6 +98,16 @@ function App() {
   // Stop IDs previously visited on the nearby tab — used to navigate back.
   const [nearbyStopStack, setNearbyStopStack] = useState([]);
   const [stopSearchQuery, setStopSearchQuery] = useState("");
+  const [showRecentSheet, setShowRecentSheet] = useState(false);
+  // True while a route opened from a News post is showing on the Routes tab,
+  // so its back arrow returns to News instead of the routes list.
+  const [routeFromNews, setRouteFromNews] = useState(false);
+  // Scroll containers (mobile: <main>, desktop: .desktopContent) and the News
+  // feed's scroll position when a post's route/stop was opened, restored on
+  // the way back so riders land where they left off.
+  const mainRef = useRef(null);
+  const contentRef = useRef(null);
+  const newsScroll = useRef(null);
 
   // PWA install prompt — see usePwaInstall.
   const {
@@ -174,9 +186,22 @@ function App() {
   const {
     alertsForRoute,
     dismissedAlertsForRoute,
+    alertsForStop,
+    dismissedAlertsForStop,
     dismiss: dismissAlert,
     restore: restoreAlerts,
   } = useAlerts();
+
+  // Community announcements feed + unread dot on the nav icon.
+  const {
+    posts: announcementPosts,
+    loading: announcementsLoading,
+    error: announcementsError,
+    configured: announcementsConfigured,
+    unreadCount: announcementsUnread,
+    markSeen: markAnnouncementsSeen,
+    refresh: refreshAnnouncements,
+  } = useAnnouncements();
 
   const { isPulling, pullDistance, triggered } = usePullToRefresh(
     () => fetchArrivals(currentStop.id),
@@ -282,6 +307,17 @@ function App() {
   }, [arrivals, currentStop, activeTab, selectedRoute]);
   // ──────────────────────────────────────────────────────────────────────────
 
+  // Back on the News feed (from a stop or route opened off a post): put the
+  // scroll position back. Layout effect so there's no visible jump to the top.
+  const newsFeedVisible = activeTab === "announcements" && !(arrivals && arrivalsTab === "announcements");
+  useLayoutEffect(() => {
+    if (!newsFeedVisible || !newsScroll.current) return;
+    const { main, content } = newsScroll.current;
+    newsScroll.current = null;
+    if (mainRef.current) mainRef.current.scrollTop = main;
+    if (contentRef.current) contentRef.current.scrollTop = content;
+  }, [newsFeedVisible]);
+
   const handleFetchArrivals = async (stopId, tab) => {
     clearBusTracking();
     setTrackingView(false);
@@ -296,6 +332,7 @@ function App() {
     clearBusTracking();
     setTrackingView(false);
     setFaqView(false);
+    setRouteFromNews(false);
     setActiveTab(tab);
   };
 
@@ -309,6 +346,7 @@ function App() {
     // tap while ALREADY on nearby performs the full clean-home reset below.
     if (activeTab !== "nearby") {
       setFaqView(false);
+      setRouteFromNews(false);
       setActiveTab("nearby");
       return;
     }
@@ -367,6 +405,24 @@ function App() {
   const clearSelectedRoute = () => {
     clearRouteSelection();
     setRouteMapView(false);
+  };
+
+  // ── News drill-in / back ──────────────────────────────────────────────────
+  const rememberNewsScroll = () => {
+    newsScroll.current = {
+      main: mainRef.current?.scrollTop ?? 0,
+      content: contentRef.current?.scrollTop ?? 0,
+    };
+  };
+
+  // Top back arrow on a route opened from News: back to the feed, not to the
+  // routes list the rider never saw.
+  const backFromRoute = () => {
+    clearSelectedRoute();
+    if (routeFromNews) {
+      setRouteFromNews(false);
+      setActiveTab("announcements");
+    }
   };
 
   // Stop-number-or-street search submit (mobile top bar + desktop sidebar
@@ -443,6 +499,8 @@ function App() {
       setSearchQuery("");
       clearNearbyStops();
     },
+    recentStops: stopHistory,
+    onSeeAllRecent: () => setShowRecentSheet(true),
   };
 
   // Same stop-number-or-street search as searchProps above, but for the
@@ -464,6 +522,8 @@ function App() {
       setStopSearchQuery("");
       clearNearbyStops();
     },
+    recentStops: stopHistory,
+    onSeeAllRecent: () => setShowRecentSheet(true),
   };
 
   // Shared map props — the desktop panel and the mobile overlays render the
@@ -507,14 +567,14 @@ function App() {
     } else if (arrivals && arrivalsTab === activeTab) {
       if (activeTab === "nearby") {
         backFromNearbyArrivals();
-      } else if (activeTab === "history" || activeTab === "favorites") {
+      } else if (activeTab === "favorites" || activeTab === "announcements") {
         dismissArrivals();
       } else if (activeTab === "routes") {
         // Keep selectedRoute so the map stays on RouteMap; just dismiss arrivals.
         dismissArrivals(false);
       }
     } else if (activeTab === "routes" && selectedRoute) {
-      clearSelectedRoute();
+      backFromRoute();
       clearArrivals();
     } else if (activeTab === "settings" && (faqView || contactView)) {
       setFaqView(false);
@@ -532,7 +592,7 @@ function App() {
     showToast,
   });
 
-  // Clear-all guardrail: every entry point (Recents screen, Favorites edit
+  // Clear-all guardrail: every entry point (the recents sheet, Favorites edit
   // mode, both Settings buttons) routes through a confirm dialog instead of
   // clearing immediately.
   const requestClearHistory = () => {
@@ -544,19 +604,45 @@ function App() {
     setConfirmClear("favorites");
   };
 
+  // Selecting a stop from the recent-stops sheet or dropdown always lands on
+  // the nearby tab's arrivals — Recent no longer has its own tab to select
+  // "into", so this mirrors stopSearchProps.onSelectStop below.
+  const selectRecentStop = (stopId) => {
+    if (currentStop) setNearbyStopStack((s) => [...s, currentStop.id]);
+    handleFetchArrivals(stopId, "nearby");
+    clearNearbyStops();
+    setShowRecentSheet(false);
+  };
+
+  // "Route 42" chip on an announcement -> open that route on the Routes tab.
+  // Mirrors the ?route= deep link: routes may not be loaded yet if the user
+  // hasn't visited the tab, so fetch the list here rather than rely on state.
+  const openRouteByShortName = async (shortName) => {
+    try {
+      const list =
+        routes ||
+        (await (await fetch(`${API_BASE}/api/routes`)).json()).routes ||
+        [];
+      const route = list.find((r) => r.route_short_name === shortName);
+      if (!route) return showToast(`Route ${shortName} not found`, "info");
+      if (!routes) setRoutes(list);
+      rememberNewsScroll();
+      clearBusTracking();
+      setTrackingView(false);
+      setRouteQuery("");
+      if (arrivalsTab === "routes") setArrivalsTab(null);
+      setRouteFromNews(true);
+      setActiveTab("routes");
+      fetchRouteStops(route);
+    } catch {
+      showToast("Couldn't open route", "info");
+    }
+  };
+
   // ─────────────────────────────────────────────────────────────────────────
 
   const tabContent = (
     <>
-      {activeTab === "history" && (!arrivals || arrivalsTab !== "history") && (
-        <StopHistory
-          stopHistory={stopHistory}
-          onSelectStop={(stopId) => handleFetchArrivals(stopId, "history")}
-          onRemoveStop={removeFromHistory}
-          onClearHistory={requestClearHistory}
-        />
-      )}
-
       {activeTab === "favorites" &&
         (!arrivals || arrivalsTab !== "favorites") && (
           <Favorites
@@ -589,6 +675,28 @@ function App() {
           onDismissAlert={dismissAlert}
           onRestoreAlerts={restoreAlerts}
         />
+      )}
+
+      {/* Kept mounted (just hidden) while a stop opened from a post is showing,
+          so the category filter survives the round trip. */}
+      {activeTab === "announcements" && (
+        <div hidden={!!(arrivals && arrivalsTab === "announcements")}>
+        <AnnouncementsTab
+          posts={announcementPosts}
+          loading={announcementsLoading}
+          error={announcementsError}
+          configured={announcementsConfigured}
+          onShown={markAnnouncementsSeen}
+          onSelectRoute={openRouteByShortName}
+          onSelectStop={(stopId) => {
+            // Arrivals open inside the News tab (like Favorites), so the top
+            // back arrow returns to the feed.
+            rememberNewsScroll();
+            handleFetchArrivals(stopId, "announcements");
+          }}
+          onRetry={refreshAnnouncements}
+        />
+        </div>
       )}
 
       {activeTab === "settings" &&
@@ -650,8 +758,10 @@ function App() {
             arrivalsTab={arrivalsTab}
             routeShortName={arrivalsTab === "routes" ? selectedRoute?.route_short_name : null}
             alerts={(() => {
-              // Union of alerts across every route arriving at this stop, deduped by id.
+              // Alerts posted for this specific stop first, then the union of
+              // alerts across every route arriving here, deduped by id.
               const seen = new Map();
+              for (const a of alertsForStop(currentStop?.id)) seen.set(a.id, a);
               for (const bus of arrivals || []) {
                 for (const a of alertsForRoute(bus.route)) {
                   if (!seen.has(a.id)) seen.set(a.id, a);
@@ -663,6 +773,7 @@ function App() {
               // Same union, but for previously dismissed alerts. Drives the
               // "Show N hidden alerts" link.
               const seen = new Map();
+              for (const a of dismissedAlertsForStop(currentStop?.id)) seen.set(a.id, a);
               for (const bus of arrivals || []) {
                 for (const a of dismissedAlertsForRoute(bus.route)) {
                   if (!seen.has(a.id)) seen.set(a.id, a);
@@ -674,7 +785,6 @@ function App() {
             onRestoreAlerts={restoreAlerts}
             onBack={
               arrivalsTab === "favorites" ||
-              arrivalsTab === "history" ||
               (arrivalsTab === "routes" && !isMobile)
                 ? () => dismissArrivals(false)
                 : null
@@ -692,22 +802,27 @@ function App() {
       {!trackingView && (
         activeTab === "nearby" ||
         activeTab === "routes" ||
-        ((activeTab === "history" || activeTab === "favorites") && arrivals && arrivalsTab === activeTab)
+        ((activeTab === "favorites" || activeTab === "announcements") && arrivals && arrivalsTab === activeTab)
       ) && (
         <div className={styles.topBar}>
           {(activeTab === "nearby" && arrivals && arrivalsTab === "nearby") ||
           (activeTab === "routes" && (selectedRoute || (arrivals && arrivalsTab === "routes"))) ||
-          ((activeTab === "history" || activeTab === "favorites") && arrivals && arrivalsTab === activeTab) ? (
+          ((activeTab === "favorites" || activeTab === "announcements") && arrivals && arrivalsTab === activeTab) ? (
             <div className={styles.topBarSearch}>
               <BackButton
+                label={
+                  activeTab === "announcements" ||
+                  (activeTab === "routes" && routeFromNews && !routeQuery && !(arrivals && arrivalsTab === "routes"))
+                    ? "Back to News"
+                    : "Back"
+                }
                 onClick={() => {
                   if (activeTab === "nearby") return backFromNearbyArrivals();
-                  if (activeTab === "history" || activeTab === "favorites")
-                    return dismissArrivals();
+                  if (activeTab === "favorites" || activeTab === "announcements") return dismissArrivals();
                   if (activeTab === "routes" && routeQuery) return setRouteQuery("");
                   if (activeTab === "routes" && arrivals && arrivalsTab === "routes")
                     return dismissArrivals(false);
-                  if (activeTab === "routes") return clearSelectedRoute();
+                  if (activeTab === "routes") return backFromRoute();
                   dismissArrivals(false);
                 }}
               />
@@ -721,11 +836,14 @@ function App() {
                     onClear={() => setRouteQuery("")}
                   />
                 )}
-                {(activeTab === "history" || activeTab === "favorites") && currentStop && (
+                {activeTab === "favorites" && currentStop && (
                   <span className={styles.trackingLabel}>
-                    {activeTab === "favorites"
-                      ? (favorites.find(f => f.stop_id === currentStop.id)?.custom_name || currentStop.name || `Stop #${currentStop.id}`)
-                      : (currentStop.name || `Stop #${currentStop.id}`)}
+                    {favorites.find(f => f.stop_id === currentStop.id)?.custom_name || currentStop.name || `Stop #${currentStop.id}`}
+                  </span>
+                )}
+                {activeTab === "announcements" && currentStop && (
+                  <span className={styles.trackingLabel}>
+                    {currentStop.name || `Stop #${currentStop.id}`}
                   </span>
                 )}
               </div>
@@ -747,11 +865,12 @@ function App() {
       )}
 
       {/* Center column */}
-      <main className={styles.main}>
-        {/* Desktop search bar — hidden on history/favorites list view (no search needed) */}
+      <main className={styles.main} ref={mainRef}>
+        {/* Desktop search bar — hidden on favorites list view (no search needed) */}
         <div className={styles.desktopSearch} style={
           activeTab === "settings" ||
-          ((activeTab === "history" || activeTab === "favorites") &&
+          (activeTab === "announcements" && !(arrivals && arrivalsTab === activeTab)) ||
+          (activeTab === "favorites" &&
             !(arrivals && arrivalsTab === activeTab))
             ? { display: "none" }
             : undefined
@@ -770,8 +889,9 @@ function App() {
                 onClick={() => {
                   if (routeQuery) return setRouteQuery("");
                   if (arrivals && arrivalsTab === "routes") return dismissArrivals(false);
-                  clearSelectedRoute();
+                  backFromRoute();
                 }}
+                label={routeFromNews && !routeQuery && !(arrivals && arrivalsTab === "routes") ? "Back to News" : "Back"}
               />
               <div className={styles.topBarSearchInput}>
                 <SearchInput
@@ -782,14 +902,15 @@ function App() {
                 />
               </div>
             </div>
-          ) : (activeTab === "history" || activeTab === "favorites") && arrivals && arrivalsTab === activeTab ? (
+          ) : (activeTab === "favorites" || activeTab === "announcements") && arrivals && arrivalsTab === activeTab ? (
             <div className={styles.topBarSearch}>
-              <BackButton onClick={() => dismissArrivals()} />
+              <BackButton
+                onClick={() => dismissArrivals()}
+                label={activeTab === "announcements" ? "Back to News" : "Back"}
+              />
               {currentStop && (
                 <span className={styles.trackingLabel}>
-                  {activeTab === "favorites"
-                    ? (favorites.find(f => f.stop_id === currentStop.id)?.custom_name || currentStop.name || `Stop #${currentStop.id}`)
-                    : (currentStop.name || `Stop #${currentStop.id}`)}
+                  {(activeTab === "favorites" && favorites.find(f => f.stop_id === currentStop.id)?.custom_name) || currentStop.name || `Stop #${currentStop.id}`}
                 </span>
               )}
             </div>
@@ -800,12 +921,12 @@ function App() {
               placeholder="Search routes"
               onClear={() => setRouteQuery("")}
             />
-          ) : activeTab === "history" || activeTab === "favorites" || activeTab === "settings" ? null : (
+          ) : activeTab === "favorites" || activeTab === "settings" || activeTab === "announcements" ? null : (
             <AddressSearch {...searchProps} />
           )}
         </div>
 
-        <div className={styles.desktopContent}>
+        <div className={styles.desktopContent} ref={contentRef}>
           {/* Nearby map — mobile only (desktop uses mapPanel) */}
           {activeTab === "nearby" && (!arrivals || arrivalsTab !== "nearby") && (
             <div className={styles.mobileMapOnly}>
@@ -983,25 +1104,6 @@ function App() {
         </button>
 
         <button
-          className={`${styles.navBtn} ${activeTab === "history" ? styles.active : ""}`}
-          aria-current={activeTab === "history" ? "page" : undefined}
-          onClick={() => switchTab("history")}
-        >
-          <svg
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          <span>Recent</span>
-        </button>
-
-        <button
           className={`${styles.navBtn} ${activeTab === "favorites" ? styles.active : ""}`}
           aria-current={activeTab === "favorites" ? "page" : undefined}
           onClick={() => switchTab("favorites")}
@@ -1017,6 +1119,38 @@ function App() {
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
           <span>Favorites</span>
+        </button>
+
+        <button
+          className={`${styles.navBtn} ${activeTab === "announcements" ? styles.active : ""}`}
+          aria-current={activeTab === "announcements" ? "page" : undefined}
+          onClick={() => switchTab("announcements")}
+        >
+          <span className={styles.navIconWrap}>
+            <svg
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z" />
+              <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+              <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+            </svg>
+            {announcementsUnread > 0 && activeTab !== "announcements" && (
+              <span className={styles.navDot} aria-hidden="true" />
+            )}
+          </span>
+          <span>
+            News
+            {announcementsUnread > 0 && activeTab !== "announcements" && (
+              <span className={styles.srOnly}>, {announcementsUnread} new</span>
+            )}
+          </span>
         </button>
 
         <button
@@ -1087,6 +1221,15 @@ function App() {
             setConfirmClear(null);
           }}
           onCancel={() => setConfirmClear(null)}
+        />
+      )}
+
+      {showRecentSheet && (
+        <RecentStopsSheet
+          stopHistory={stopHistory}
+          onSelectStop={selectRecentStop}
+          onRemoveStop={removeFromHistory}
+          onClose={() => setShowRecentSheet(false)}
         />
       )}
 

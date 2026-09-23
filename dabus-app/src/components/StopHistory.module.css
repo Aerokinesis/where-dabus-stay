@@ -26,19 +26,6 @@
   color: var(--text-muted);
 }
 
-.clearBtn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0;
-}
-
-.clearBtn:hover {
-  color: var(--text);
-}
-
 .row {
   display: flex;
   justify-content: space-between;

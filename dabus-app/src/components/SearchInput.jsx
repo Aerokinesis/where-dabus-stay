@@ -1,6 +1,6 @@
 import styles from "./SearchInput.module.css";
 
-function SearchInput({ value, onChange, placeholder, onClear, onSubmit, ariaLabel }) {
+function SearchInput({ value, onChange, placeholder, onClear, onSubmit, ariaLabel, onFocus }) {
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && onSubmit) onSubmit();
   };
@@ -26,6 +26,7 @@ function SearchInput({ value, onChange, placeholder, onClear, onSubmit, ariaLabe
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
+        onFocus={onFocus}
       />
       {value && (
         <button

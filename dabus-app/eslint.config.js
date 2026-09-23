@@ -29,7 +29,7 @@ export default defineConfig([
   },
   {
     // Build-time config files run in Node, not the browser
-    files: ['*.config.js', 'server.js', 'alerts.js','preprocess.js'],
+    files: ['*.config.js', 'server.js', 'alerts.js', 'announcements.js', 'preprocess.js'],
     languageOptions: {
       globals: globals.node,
     },
