@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import styles from "./App.module.css";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -99,6 +99,15 @@ function App() {
   const [nearbyStopStack, setNearbyStopStack] = useState([]);
   const [stopSearchQuery, setStopSearchQuery] = useState("");
   const [showRecentSheet, setShowRecentSheet] = useState(false);
+  // True while a route opened from a News post is showing on the Routes tab,
+  // so its back arrow returns to News instead of the routes list.
+  const [routeFromNews, setRouteFromNews] = useState(false);
+  // Scroll containers (mobile: <main>, desktop: .desktopContent) and the News
+  // feed's scroll position when a post's route/stop was opened, restored on
+  // the way back so riders land where they left off.
+  const mainRef = useRef(null);
+  const contentRef = useRef(null);
+  const newsScroll = useRef(null);
 
   // PWA install prompt — see usePwaInstall.
   const {
@@ -298,6 +307,17 @@ function App() {
   }, [arrivals, currentStop, activeTab, selectedRoute]);
   // ──────────────────────────────────────────────────────────────────────────
 
+  // Back on the News feed (from a stop or route opened off a post): put the
+  // scroll position back. Layout effect so there's no visible jump to the top.
+  const newsFeedVisible = activeTab === "announcements" && !(arrivals && arrivalsTab === "announcements");
+  useLayoutEffect(() => {
+    if (!newsFeedVisible || !newsScroll.current) return;
+    const { main, content } = newsScroll.current;
+    newsScroll.current = null;
+    if (mainRef.current) mainRef.current.scrollTop = main;
+    if (contentRef.current) contentRef.current.scrollTop = content;
+  }, [newsFeedVisible]);
+
   const handleFetchArrivals = async (stopId, tab) => {
     clearBusTracking();
     setTrackingView(false);
@@ -312,6 +332,7 @@ function App() {
     clearBusTracking();
     setTrackingView(false);
     setFaqView(false);
+    setRouteFromNews(false);
     setActiveTab(tab);
   };
 
@@ -325,6 +346,7 @@ function App() {
     // tap while ALREADY on nearby performs the full clean-home reset below.
     if (activeTab !== "nearby") {
       setFaqView(false);
+      setRouteFromNews(false);
       setActiveTab("nearby");
       return;
     }
@@ -383,6 +405,24 @@ function App() {
   const clearSelectedRoute = () => {
     clearRouteSelection();
     setRouteMapView(false);
+  };
+
+  // ── News drill-in / back ──────────────────────────────────────────────────
+  const rememberNewsScroll = () => {
+    newsScroll.current = {
+      main: mainRef.current?.scrollTop ?? 0,
+      content: contentRef.current?.scrollTop ?? 0,
+    };
+  };
+
+  // Top back arrow on a route opened from News: back to the feed, not to the
+  // routes list the rider never saw.
+  const backFromRoute = () => {
+    clearSelectedRoute();
+    if (routeFromNews) {
+      setRouteFromNews(false);
+      setActiveTab("announcements");
+    }
   };
 
   // Stop-number-or-street search submit (mobile top bar + desktop sidebar
@@ -527,14 +567,14 @@ function App() {
     } else if (arrivals && arrivalsTab === activeTab) {
       if (activeTab === "nearby") {
         backFromNearbyArrivals();
-      } else if (activeTab === "favorites") {
+      } else if (activeTab === "favorites" || activeTab === "announcements") {
         dismissArrivals();
       } else if (activeTab === "routes") {
         // Keep selectedRoute so the map stays on RouteMap; just dismiss arrivals.
         dismissArrivals(false);
       }
     } else if (activeTab === "routes" && selectedRoute) {
-      clearSelectedRoute();
+      backFromRoute();
       clearArrivals();
     } else if (activeTab === "settings" && (faqView || contactView)) {
       setFaqView(false);
@@ -586,8 +626,12 @@ function App() {
       const route = list.find((r) => r.route_short_name === shortName);
       if (!route) return showToast(`Route ${shortName} not found`, "info");
       if (!routes) setRoutes(list);
+      rememberNewsScroll();
       clearBusTracking();
       setTrackingView(false);
+      setRouteQuery("");
+      if (arrivalsTab === "routes") setArrivalsTab(null);
+      setRouteFromNews(true);
       setActiveTab("routes");
       fetchRouteStops(route);
     } catch {
@@ -633,7 +677,10 @@ function App() {
         />
       )}
 
+      {/* Kept mounted (just hidden) while a stop opened from a post is showing,
+          so the category filter survives the round trip. */}
       {activeTab === "announcements" && (
+        <div hidden={!!(arrivals && arrivalsTab === "announcements")}>
         <AnnouncementsTab
           posts={announcementPosts}
           loading={announcementsLoading}
@@ -642,13 +689,14 @@ function App() {
           onShown={markAnnouncementsSeen}
           onSelectRoute={openRouteByShortName}
           onSelectStop={(stopId) => {
-            clearBusTracking();
-            setTrackingView(false);
-            setActiveTab("nearby");
-            handleFetchArrivals(stopId, "nearby");
+            // Arrivals open inside the News tab (like Favorites), so the top
+            // back arrow returns to the feed.
+            rememberNewsScroll();
+            handleFetchArrivals(stopId, "announcements");
           }}
           onRetry={refreshAnnouncements}
         />
+        </div>
       )}
 
       {activeTab === "settings" &&
@@ -754,21 +802,27 @@ function App() {
       {!trackingView && (
         activeTab === "nearby" ||
         activeTab === "routes" ||
-        (activeTab === "favorites" && arrivals && arrivalsTab === activeTab)
+        ((activeTab === "favorites" || activeTab === "announcements") && arrivals && arrivalsTab === activeTab)
       ) && (
         <div className={styles.topBar}>
           {(activeTab === "nearby" && arrivals && arrivalsTab === "nearby") ||
           (activeTab === "routes" && (selectedRoute || (arrivals && arrivalsTab === "routes"))) ||
-          (activeTab === "favorites" && arrivals && arrivalsTab === activeTab) ? (
+          ((activeTab === "favorites" || activeTab === "announcements") && arrivals && arrivalsTab === activeTab) ? (
             <div className={styles.topBarSearch}>
               <BackButton
+                label={
+                  activeTab === "announcements" ||
+                  (activeTab === "routes" && routeFromNews && !routeQuery && !(arrivals && arrivalsTab === "routes"))
+                    ? "Back to News"
+                    : "Back"
+                }
                 onClick={() => {
                   if (activeTab === "nearby") return backFromNearbyArrivals();
-                  if (activeTab === "favorites") return dismissArrivals();
+                  if (activeTab === "favorites" || activeTab === "announcements") return dismissArrivals();
                   if (activeTab === "routes" && routeQuery) return setRouteQuery("");
                   if (activeTab === "routes" && arrivals && arrivalsTab === "routes")
                     return dismissArrivals(false);
-                  if (activeTab === "routes") return clearSelectedRoute();
+                  if (activeTab === "routes") return backFromRoute();
                   dismissArrivals(false);
                 }}
               />
@@ -785,6 +839,11 @@ function App() {
                 {activeTab === "favorites" && currentStop && (
                   <span className={styles.trackingLabel}>
                     {favorites.find(f => f.stop_id === currentStop.id)?.custom_name || currentStop.name || `Stop #${currentStop.id}`}
+                  </span>
+                )}
+                {activeTab === "announcements" && currentStop && (
+                  <span className={styles.trackingLabel}>
+                    {currentStop.name || `Stop #${currentStop.id}`}
                   </span>
                 )}
               </div>
@@ -806,11 +865,11 @@ function App() {
       )}
 
       {/* Center column */}
-      <main className={styles.main}>
+      <main className={styles.main} ref={mainRef}>
         {/* Desktop search bar — hidden on favorites list view (no search needed) */}
         <div className={styles.desktopSearch} style={
           activeTab === "settings" ||
-          activeTab === "announcements" ||
+          (activeTab === "announcements" && !(arrivals && arrivalsTab === activeTab)) ||
           (activeTab === "favorites" &&
             !(arrivals && arrivalsTab === activeTab))
             ? { display: "none" }
@@ -830,8 +889,9 @@ function App() {
                 onClick={() => {
                   if (routeQuery) return setRouteQuery("");
                   if (arrivals && arrivalsTab === "routes") return dismissArrivals(false);
-                  clearSelectedRoute();
+                  backFromRoute();
                 }}
+                label={routeFromNews && !routeQuery && !(arrivals && arrivalsTab === "routes") ? "Back to News" : "Back"}
               />
               <div className={styles.topBarSearchInput}>
                 <SearchInput
@@ -842,12 +902,15 @@ function App() {
                 />
               </div>
             </div>
-          ) : activeTab === "favorites" && arrivals && arrivalsTab === activeTab ? (
+          ) : (activeTab === "favorites" || activeTab === "announcements") && arrivals && arrivalsTab === activeTab ? (
             <div className={styles.topBarSearch}>
-              <BackButton onClick={() => dismissArrivals()} />
+              <BackButton
+                onClick={() => dismissArrivals()}
+                label={activeTab === "announcements" ? "Back to News" : "Back"}
+              />
               {currentStop && (
                 <span className={styles.trackingLabel}>
-                  {favorites.find(f => f.stop_id === currentStop.id)?.custom_name || currentStop.name || `Stop #${currentStop.id}`}
+                  {(activeTab === "favorites" && favorites.find(f => f.stop_id === currentStop.id)?.custom_name) || currentStop.name || `Stop #${currentStop.id}`}
                 </span>
               )}
             </div>
@@ -863,7 +926,7 @@ function App() {
           )}
         </div>
 
-        <div className={styles.desktopContent}>
+        <div className={styles.desktopContent} ref={contentRef}>
           {/* Nearby map — mobile only (desktop uses mapPanel) */}
           {activeTab === "nearby" && (!arrivals || arrivalsTab !== "nearby") && (
             <div className={styles.mobileMapOnly}>
