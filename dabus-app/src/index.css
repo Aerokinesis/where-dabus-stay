@@ -30,7 +30,7 @@
 
   --control-h: 44px;
 
-  /* WCAG 1.4.3 text-safe variants */
+  /* WCAG 1.4.3 text-safe variants (docs/accessibility-audit-2026-07-08.md) */
   --primary-text: #4f9fd8;
   --accent-text: #e8b84b;
   --danger: #f87171;
