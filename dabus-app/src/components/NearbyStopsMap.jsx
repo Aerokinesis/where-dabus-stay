@@ -31,16 +31,19 @@ function MapMoveTracker({ onMapMove }) {
   return null;
 }
 
-function MapRecenter({ center }) {
+// Flies to each new location fix flagged `recenter` that arrives while the map
+// is mounted (app open, refresh button, resume). The fix the map mounted with
+// is skipped, as are background re-fixes, so the user's panning is kept.
+function FollowLocation({ location }) {
   const map = useMap();
-  const hasSet = useRef(false);
+  const lastLocation = useRef(location);
 
   useEffect(() => {
-    if (center && !hasSet.current) {
-      map.setView(center);
-      hasSet.current = true;
+    if (location?.recenter && location !== lastLocation.current) {
+      map.flyTo([location.lat, location.lon], Math.max(map.getZoom(), 15), { duration: 0.6 });
     }
-  }, [center]);
+    lastLocation.current = location;
+  }, [location, map]);
 
   return null;
 }
@@ -79,9 +82,7 @@ function NearbyStopsMap({
         style={{ height: "100%", width: "100%" }}
       >
         <MapMoveTracker onMapMove={onMapMove} />
-        {!mapCenter && userLocation && (
-          <MapRecenter center={[userLocation.lat, userLocation.lon]} />
-        )}
+        <FollowLocation location={userLocation} />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
