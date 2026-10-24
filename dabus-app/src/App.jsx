@@ -22,7 +22,7 @@ import SearchInput from "./components/SearchInput";
 import BackButton from "./components/BackButton";
 import { useArrivals } from "./hooks/useArrivals";
 import { useFavorites } from "./hooks/useFavorites";
-import { useNearbyStops } from "./hooks/useNearbyStops";
+import { useNearbyStops, loadLastLocation } from "./hooks/useNearbyStops";
 import { useBusTracking } from "./hooks/useBusTracking";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import PullToRefreshIndicator from "./components/PullToRefreshIndicator";
@@ -208,7 +208,8 @@ function App() {
     !!arrivals,
   );
 
-  const [mapCenter, setMapCenter] = useState(null);
+  // Open on the last known location (if any) while a new fix is found.
+  const [mapCenter, setMapCenter] = useState(loadLastLocation);
   const [trackingMapCenter, setTrackingMapCenter] = useState(null);
 
   // Refetch nearby stops whenever the radius or user's location changes.
@@ -259,7 +260,7 @@ function App() {
         hiddenAt = Date.now();
       } else if (hiddenAt && Date.now() - hiddenAt > RELOCATE_AFTER_MS && hasLocationRef.current) {
         hiddenAt = null;
-        findNearbyStopsRef.current();
+        findNearbyStopsRef.current({ fresh: true });
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
@@ -962,7 +963,7 @@ function App() {
                 mapCenter={mapCenter}
                 onMapMove={setMapCenter}
                 searchRadius={settings.searchRadius}
-                onRefreshLocation={() => findNearbyStops()}
+                onRefreshLocation={() => findNearbyStops({ fresh: true })}
                 locating={locating}
               />
             </div>
