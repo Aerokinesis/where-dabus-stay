@@ -154,6 +154,11 @@ function NearbyStopsMap({
         />
       </MapContainer>
 
+      {/* Always rendered so it can fade out once the fix arrives */}
+      <div
+        className={`${styles.locatingShade} ${findingLocation ? styles.locatingShadeOn : ""}`}
+        aria-hidden="true"
+      />
       {findingLocation && (
         <div className={styles.locatingPill} role="status">
           <span className={styles.locatingDot} aria-hidden="true" />
