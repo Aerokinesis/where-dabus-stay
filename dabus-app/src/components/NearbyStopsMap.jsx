@@ -40,7 +40,13 @@ function FollowLocation({ location }) {
 
   useEffect(() => {
     if (location?.recenter && location !== lastLocation.current) {
-      map.flyTo([location.lat, location.lon], Math.max(map.getZoom(), 15), { duration: 0.6 });
+      const target = [location.lat, location.lon];
+      const zoom = Math.max(map.getZoom(), 15);
+      // Only one of the mobile/desktop maps is visible; flyTo on the hidden,
+      // zero-size one throws (NaN LatLng), so just jump it there.
+      const { x, y } = map.getSize();
+      if (x > 0 && y > 0) map.flyTo(target, zoom, { duration: 0.6 });
+      else map.setView(target, zoom, { animate: false });
     }
     lastLocation.current = location;
   }, [location, map]);
