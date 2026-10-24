@@ -1,6 +1,29 @@
 import { useState, useCallback } from "react";
 import { API_BASE } from "../constants";
 
+// The last location fix, kept on the device so the Nearby map can open where
+// the user was last time while a new fix is found.
+const LAST_LOCATION_KEY = "dabus-last-location";
+const STALE_FIX_MS = 60 * 1000;
+
+export function loadLastLocation() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LAST_LOCATION_KEY));
+    if (Number.isFinite(saved?.lat) && Number.isFinite(saved?.lng)) return saved;
+  } catch {
+    // localStorage may be unavailable (Safari private mode, etc.) — ignore
+  }
+  return null;
+}
+
+function saveLastLocation(lat, lng) {
+  try {
+    localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ lat, lng }));
+  } catch {
+    // localStorage may be unavailable (Safari private mode, etc.) — ignore
+  }
+}
+
 export function useNearbyStops(setError, searchRadius = 0.25) {
   const [nearbyStops, setNearbyStops] = useState(null);
   const [nearbyStopsMap, setNearbyStopsMap] = useState(null);
@@ -36,7 +59,10 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
 
   // `recenter` rides along on the fix so the map knows whether to fly to it
   // (false for background re-fixes that shouldn't undo the user's panning).
-  const findNearbyStops = ({ recenter = true } = {}) => {
+  // `fresh` insists on a new GPS fix (refresh button, resume). Otherwise the
+  // device may answer instantly from a fix up to 5 min old; if the one it
+  // returns is over a minute old, a fresh fix follows quietly to correct it.
+  const findNearbyStops = ({ recenter = true, fresh = false, quiet = false } = {}) => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
       return;
@@ -47,10 +73,18 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
         setUserLocation({ lat, lon, recenter });
+        saveLastLocation(lat, lon);
+        const stale = !fresh && Date.now() - position.timestamp > STALE_FIX_MS;
+        if (stale) findNearbyStops({ recenter, fresh: true, quiet: true });
         await refindNearbyStops(lat, lon, searchRadius);
-        setLocating(false);
+        if (!stale) setLocating(false);
       },
       (err) => {
+        // A failed follow-up fix keeps the position we already have.
+        if (quiet) {
+          setLocating(false);
+          return;
+        }
         if (err.code === 1) {
           setError("Location access denied. Enable it in your browser settings, or search for a stop above.");
         } else if (err.code === 2) {
@@ -60,7 +94,7 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
         }
         setLocating(false);
       },
-      { maximumAge: 60000, timeout: 10000 }
+      { maximumAge: fresh ? 0 : 5 * 60 * 1000, timeout: 10000 }
     );
   };
 
