@@ -31,7 +31,7 @@ function MapMoveTracker({ onMapMove }) {
   return null;
 }
 
-// Moves to each new location fix flagged `recenter` that arrives while the map
+// Flies to each new location fix flagged `recenter` that arrives while the map
 // is mounted (app open, refresh button, resume). The fix the map mounted with
 // is skipped, as are background re-fixes, so the user's panning is kept.
 function FollowLocation({ location }) {
@@ -42,13 +42,11 @@ function FollowLocation({ location }) {
     if (location?.recenter && location !== lastLocation.current) {
       const target = [location.lat, location.lon];
       const zoom = Math.max(map.getZoom(), 15);
-      // A quick slide rather than flyTo, whose zoom-out-and-back reads as slow
-      // for the usual short hop; Leaflet jumps instead when it's far. Only one
-      // of the mobile/desktop maps is visible, and animating the hidden,
-      // zero-size one throws (NaN LatLng), so that one just jumps.
+      // Only one of the mobile/desktop maps is visible; flyTo on the hidden,
+      // zero-size one throws (NaN LatLng), so just jump it there.
       const { x, y } = map.getSize();
-      const visible = x > 0 && y > 0;
-      map.setView(target, zoom, visible ? { animate: true, duration: 0.25 } : { animate: false });
+      if (x > 0 && y > 0) map.flyTo(target, zoom, { duration: 0.6 });
+      else map.setView(target, zoom, { animate: false });
     }
     lastLocation.current = location;
   }, [location, map]);
