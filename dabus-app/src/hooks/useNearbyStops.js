@@ -30,6 +30,9 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
   const [userLocation, setUserLocation] = useState(null);
   const [searchingAddress, setSearchingAddress] = useState(false);
   const [locating, setLocating] = useState(false);
+  // True only while waiting on a GPS fix the user can see is pending (not the
+  // stops fetch after it, and not a quiet follow-up), for the map's indicator.
+  const [findingLocation, setFindingLocation] = useState(false);
 
   const searchByAddress = async (query) => {
     setSearchingAddress(true);
@@ -68,34 +71,47 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
       return;
     }
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        setUserLocation({ lat, lon, recenter });
-        saveLastLocation(lat, lon);
-        const stale = !fresh && Date.now() - position.timestamp > STALE_FIX_MS;
-        if (stale) findNearbyStops({ recenter, fresh: true, quiet: true });
-        await refindNearbyStops(lat, lon, searchRadius);
-        if (!stale) setLocating(false);
-      },
-      (err) => {
-        // A failed follow-up fix keeps the position we already have.
-        if (quiet) {
-          setLocating(false);
-          return;
-        }
-        if (err.code === 1) {
-          setError("Location access denied. Enable it in your browser settings, or search for a stop above.");
-        } else if (err.code === 2) {
-          setError("Unable to determine your location. You can search for a stop or address above.");
-        } else {
-          setError("Location request timed out. You can search for a stop or address above.");
-        }
+    if (!quiet) setFindingLocation(true);
+    const onFix = async (position) => {
+      setFindingLocation(false);
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      setUserLocation({ lat, lon, recenter });
+      saveLastLocation(lat, lon);
+      const stale = !fresh && Date.now() - position.timestamp > STALE_FIX_MS;
+      if (stale) findNearbyStops({ recenter, fresh: true, quiet: true });
+      await refindNearbyStops(lat, lon, searchRadius);
+      if (!stale) setLocating(false);
+    };
+    const onError = (err) => {
+      setFindingLocation(false);
+      // A failed follow-up fix keeps the position we already have.
+      if (quiet) {
         setLocating(false);
-      },
-      { maximumAge: fresh ? 0 : 5 * 60 * 1000, timeout: 10000 }
-    );
+        return;
+      }
+      if (err.code === 1) {
+        setError("Location access denied. Enable it in your browser settings, or search for a stop above.");
+      } else if (err.code === 2) {
+        setError("Unable to determine your location. You can search for a stop or address above.");
+      } else {
+        setError("Location request timed out. You can search for a stop or address above.");
+      }
+      setLocating(false);
+    };
+
+    // index.html may already have a request in flight from before the app
+    // loaded; the first non-fresh call uses its answer instead of asking again.
+    const early = !fresh && window.__earlyLocation;
+    if (early) {
+      window.__earlyLocation = null;
+      early.then(({ position, error }) => (position ? onFix(position) : onError(error)));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(onFix, onError, {
+      maximumAge: fresh ? 0 : 5 * 60 * 1000,
+      timeout: 10000,
+    });
   };
 
   return {
@@ -104,6 +120,7 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
     userLocation,
     searchingAddress,
     locating,
+    findingLocation,
     searchByAddress,
     findNearbyStops,
     refindNearbyStops,

@@ -81,3 +81,43 @@
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
+
+/* Shown over the map while waiting on a GPS fix */
+.locatingPill {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.locatingDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #1a6faf;
+  animation: locatingPulse 1.2s ease-out infinite;
+}
+
+@keyframes locatingPulse {
+  0% { box-shadow: 0 0 0 0 rgba(26, 111, 175, 0.6); }
+  100% { box-shadow: 0 0 0 10px rgba(26, 111, 175, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .locatingDot {
+    animation: none;
+  }
+}

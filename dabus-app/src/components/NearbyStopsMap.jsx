@@ -65,6 +65,7 @@ function NearbyStopsMap({
   searchRadius = 0.25,
   onRefreshLocation,
   locating = false,
+  findingLocation = false,
 }) {
   const [recenterTrigger, setRecenterTrigger] = useState(0);
 
@@ -152,6 +153,13 @@ function NearbyStopsMap({
           center={userLocation ? [userLocation.lat, userLocation.lon] : null}
         />
       </MapContainer>
+
+      {findingLocation && (
+        <div className={styles.locatingPill} role="status">
+          <span className={styles.locatingDot} aria-hidden="true" />
+          Finding your location…
+        </div>
+      )}
 
       {userLocation && Array.isArray(nearbyStopsMap) && nearbyStopsMap.length === 0 && (
         <div className={styles.noStopsBanner}>

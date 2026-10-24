@@ -12,6 +12,29 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="WhereDaBusStay" />
     <title>WhereDaBusStay</title>
+    <script>
+      // Start the location request now instead of after the app bundle has
+      // downloaded and rendered, so the fix is often ready by the time the
+      // Nearby map mounts (useNearbyStops picks this up). Only for returning
+      // users whose location has worked before, so a first-time visitor isn't
+      // shown the permission prompt over a blank page.
+      (function () {
+        try {
+          if (!navigator.geolocation) return
+          if (!localStorage.getItem('dabus-last-location')) return
+          if (location.pathname.replace(/\/+$/, '') === '/admin') return
+        } catch (e) {
+          return
+        }
+        window.__earlyLocation = new Promise(function (resolve) {
+          navigator.geolocation.getCurrentPosition(
+            function (position) { resolve({ position: position }) },
+            function (error) { resolve({ error: error }) },
+            { maximumAge: 5 * 60 * 1000, timeout: 10000 }
+          )
+        })
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
