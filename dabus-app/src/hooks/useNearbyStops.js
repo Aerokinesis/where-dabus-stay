@@ -30,6 +30,9 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
   const [userLocation, setUserLocation] = useState(null);
   const [searchingAddress, setSearchingAddress] = useState(false);
   const [locating, setLocating] = useState(false);
+  // True only while waiting on a GPS fix the user can see is pending (not the
+  // stops fetch after it, and not a quiet follow-up), for the map's indicator.
+  const [findingLocation, setFindingLocation] = useState(false);
 
   const searchByAddress = async (query) => {
     setSearchingAddress(true);
@@ -68,7 +71,9 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
       return;
     }
     setLocating(true);
+    if (!quiet) setFindingLocation(true);
     const onFix = async (position) => {
+      setFindingLocation(false);
       const lat = position.coords.latitude;
       const lon = position.coords.longitude;
       setUserLocation({ lat, lon, recenter });
@@ -79,6 +84,7 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
       if (!stale) setLocating(false);
     };
     const onError = (err) => {
+      setFindingLocation(false);
       // A failed follow-up fix keeps the position we already have.
       if (quiet) {
         setLocating(false);
@@ -114,6 +120,7 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
     userLocation,
     searchingAddress,
     locating,
+    findingLocation,
     searchByAddress,
     findNearbyStops,
     refindNearbyStops,

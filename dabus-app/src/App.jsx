@@ -164,6 +164,7 @@ function App() {
     userLocation,
     searchingAddress,
     locating,
+    findingLocation,
     searchByAddress,
     findNearbyStops,
     refindNearbyStops,
@@ -965,6 +966,8 @@ function App() {
                 searchRadius={settings.searchRadius}
                 onRefreshLocation={() => findNearbyStops({ fresh: true })}
                 locating={locating}
+              findingLocation={findingLocation}
+                findingLocation={findingLocation}
               />
             </div>
           )}
