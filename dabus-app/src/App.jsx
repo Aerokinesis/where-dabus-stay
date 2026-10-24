@@ -233,15 +233,38 @@ function App() {
     }
   }, [busLocation]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Seed mapCenter from userLocation the first time we get a fix so the map
-  // never resets to the user's position on remount (Leaflet doesn't fire
-  // moveend when setView is called with the same coordinates, so we can't rely
-  // on the MapRecenter component to populate mapCenter).
+  // Recentering fixes (app open, refresh button, resume) move mapCenter to the
+  // user, so a map that mounts later opens on them too; a mounted map flies
+  // there itself (NearbyStopsMap). The background re-fix the Home map requests
+  // when it remounts doesn't, so panning survives a trip to arrivals and back.
   useEffect(() => {
-    if (userLocation && !mapCenter) {
+    if (userLocation?.recenter) {
       setMapCenter({ lat: userLocation.lat, lng: userLocation.lon });
     }
-  }, [userLocation]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [userLocation]);
+
+  // Reopening the installed app resumes it instead of reloading, so the map
+  // would stay wherever it was left. Re-locate after it's been in the
+  // background a while. Skipped until location has worked once, so a denied
+  // permission doesn't re-show its error on every resume.
+  const findNearbyStopsRef = useRef(findNearbyStops);
+  findNearbyStopsRef.current = findNearbyStops;
+  const hasLocationRef = useRef(false);
+  hasLocationRef.current = !!userLocation;
+  useEffect(() => {
+    const RELOCATE_AFTER_MS = 60 * 1000;
+    let hiddenAt = null;
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        hiddenAt = Date.now();
+      } else if (hiddenAt && Date.now() - hiddenAt > RELOCATE_AFTER_MS && hasLocationRef.current) {
+        hiddenAt = null;
+        findNearbyStopsRef.current();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
 
   useEffect(() => {
     if (userLocation) {
@@ -935,11 +958,11 @@ function App() {
                 userLocation={userLocation}
                 nearbyStopsMap={nearbyStopsMap}
                 onSelectStop={(stopId) => handleFetchArrivals(stopId, "nearby")}
-                onMount={findNearbyStops}
+                onMount={() => findNearbyStops({ recenter: !userLocation })}
                 mapCenter={mapCenter}
                 onMapMove={setMapCenter}
                 searchRadius={settings.searchRadius}
-                onRefreshLocation={findNearbyStops}
+                onRefreshLocation={() => findNearbyStops()}
                 locating={locating}
               />
             </div>

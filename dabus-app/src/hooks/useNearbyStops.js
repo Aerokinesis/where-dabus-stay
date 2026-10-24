@@ -34,7 +34,9 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
     }
   }, [setError]);
 
-  const findNearbyStops = () => {
+  // `recenter` rides along on the fix so the map knows whether to fly to it
+  // (false for background re-fixes that shouldn't undo the user's panning).
+  const findNearbyStops = ({ recenter = true } = {}) => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
       return;
@@ -44,7 +46,7 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
       async (position) => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
-        setUserLocation({ lat, lon });
+        setUserLocation({ lat, lon, recenter });
         await refindNearbyStops(lat, lon, searchRadius);
         setLocating(false);
       },
