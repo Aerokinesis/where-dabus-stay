@@ -82,6 +82,38 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
+/* First-time visitors: asks for location on a tap instead of on page load */
+.locateTapBtn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 999px;
+  background: #1a6faf;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+}
+
+.locateTapBtn:active {
+  opacity: 0.85;
+}
+
+.locateTapBtn:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
 /* Shown over the map while waiting on a GPS fix */
 .locatingPill {
   position: absolute;

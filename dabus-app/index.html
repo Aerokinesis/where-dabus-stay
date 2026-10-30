@@ -12,12 +12,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="WhereDaBusStay" />
     <title>WhereDaBusStay</title>
+    <meta name="description" content="Real-time TheBus arrivals for Oahu. Find bus stops near you on a map, see live arrival times, track your bus, and save your favorite stops." />
     <script>
       // Start the location request now instead of after the app bundle has
       // downloaded and rendered, so the fix is often ready by the time the
-      // Nearby map mounts (useNearbyStops picks this up). Only for returning
-      // users whose location has worked before, so a first-time visitor isn't
-      // shown the permission prompt over a blank page.
+      // Nearby map mounts (useNearbyStops picks this up). Only when location
+      // is already allowed, so nobody sees a permission prompt on page load;
+      // first-time visitors tap "Show stops near me" instead. Resolves to null
+      // when it didn't ask. Its hash is in vercel.json's CSP: if you edit this
+      // script, the build prints the new hash to paste there.
       (function () {
         try {
           if (!navigator.geolocation) return
@@ -27,10 +30,17 @@
           return
         }
         window.__earlyLocation = new Promise(function (resolve) {
-          navigator.geolocation.getCurrentPosition(
-            function (position) { resolve({ position: position }) },
-            function (error) { resolve({ error: error }) },
-            { maximumAge: 5 * 60 * 1000, timeout: 10000 }
+          function request() {
+            navigator.geolocation.getCurrentPosition(
+              function (position) { resolve({ position: position }) },
+              function (error) { resolve({ error: error }) },
+              { maximumAge: 5 * 60 * 1000, timeout: 10000 }
+            )
+          }
+          if (!navigator.permissions || !navigator.permissions.query) return request()
+          navigator.permissions.query({ name: 'geolocation' }).then(
+            function (status) { status.state === 'granted' ? request() : resolve(null) },
+            request
           )
         })
       })()
@@ -39,21 +49,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    <script>
-      // The service worker is normally skipped in local dev — its cache-first
-      // asset handling fights Vite's HMR. But Chrome refuses to fire
-      // beforeinstallprompt without a registered SW, so install can't be
-      // tested locally at all while it's off. ?sw=1 opts back in for that.
-      (function () {
-        if (!('serviceWorker' in navigator)) return
-        var isLocal =
-          location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-        var forced = new URLSearchParams(location.search).has('sw')
-        if (isLocal && !forced) return
-        window.addEventListener('load', function () {
-          navigator.serviceWorker.register('/sw.js')
-        })
-      })()
-    </script>
   </body>
 </html>
