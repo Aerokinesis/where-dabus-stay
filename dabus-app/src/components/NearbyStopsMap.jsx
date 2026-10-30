@@ -75,6 +75,8 @@ function NearbyStopsMap({
     if (onMount) onMount();
   }, []);
 
+  // index.html preloads the centre tile for this view; keep its centre, zoom
+  // and tile URL in step if these change.
   const defaultCenter = [21.3069, -157.8583];
   const initialCenter = mapCenter
     ? [mapCenter.lat, mapCenter.lng]

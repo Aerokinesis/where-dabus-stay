@@ -1,11 +1,11 @@
-const SHELL_CACHE = 'dabus-shell-v3'
+const SHELL_CACHE = 'dabus-shell-v4'
 const STOPS_CACHE = 'dabus-stops-v1'
 
 // Pre-cached on install. index.html MUST be here: it's the offline fallback
 // for navigations — when Android discards the PWA from recents and restores
 // it on a flaky network, this cache is the only thing standing between the
 // user and a blank screen.
-const SHELL_ASSETS = ['/', '/index.html', '/dabus-icon.png', '/manifest.json']
+const SHELL_ASSETS = ['/', '/index.html', '/dabus-icon-128.png', '/manifest.json']
 
 const STOPS_PATTERNS = [
   '/api/nearby-stops-by-coords',

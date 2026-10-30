@@ -30,7 +30,7 @@ function InstallBanner({ platform, onInstall, onDismiss }) {
         </svg>
       </button>
 
-      <img src="/dabus-icon.png" alt="" className={styles.icon} />
+      <img src="/dabus-icon-128.png" alt="" className={styles.icon} />
 
       <div className={styles.body}>
         {platform === "other" && (
