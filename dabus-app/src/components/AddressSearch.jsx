@@ -36,7 +36,6 @@ function AddressSearch({
   const touchStateRef = useRef({ startY: 0, scrolled: false });
 
   const hasMatches = Boolean(nearbyStops && nearbyStops.length > 0);
-  const hasNoMatches = Boolean(nearbyStops && nearbyStops.length === 0);
   // Recents only show before any address search has been submitted
   // (nearbyStops is null until searchByAddress runs) and only while the
   // field is empty and focused — typing or a submitted search takes over.
@@ -47,7 +46,7 @@ function AddressSearch({
       recentStops &&
       recentStops.length > 0,
   );
-  const dropdownOpen = hasMatches || hasNoMatches || showRecent;
+  const dropdownOpen = hasMatches || showRecent;
   const previewRecent = showRecent ? recentStops.slice(0, RECENT_PREVIEW_COUNT) : [];
   const hasMoreRecent = showRecent && recentStops.length > previewRecent.length;
 
@@ -92,10 +91,11 @@ function AddressSearch({
       const clickedInsideContainer = containerRef.current?.contains(e.target);
       const clickedInsideResults = resultsRef.current?.contains(e.target);
       if (clickedInsideContainer || clickedInsideResults) return;
-      // Real search results (or a submitted-but-empty search) get dismissed
-      // through the parent's onClear, same as always. The recents dropdown
-      // has nothing to clear — a submitted query — so it just closes locally.
-      if (hasMatches || hasNoMatches) onClear();
+      // Real search results get dismissed through the parent's onClear, same
+      // as always. The recents dropdown has nothing to clear — a submitted
+      // query — so it just closes locally. (A search that finds nothing shows
+      // the app's error message instead of a dropdown.)
+      if (hasMatches) onClear();
       else if (showRecent) setFocused(false);
     };
 
@@ -106,7 +106,7 @@ function AddressSearch({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [dropdownOpen, hasMatches, hasNoMatches, showRecent, onClear]);
+  }, [dropdownOpen, hasMatches, showRecent, onClear]);
 
   const handleChange = (value) => {
     setQuery(value);
@@ -130,7 +130,6 @@ function AddressSearch({
       />
 
       {searching && <p className={styles.status}>Searching...</p>}
-      {hasNoMatches && <p className={styles.status}>No stops found.</p>}
 
       {hasMatches &&
         createPortal(
