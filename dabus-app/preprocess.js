@@ -152,10 +152,27 @@ for (const [shapeId, trip] of Object.entries(tripsByShape)) {
     }).filter(s => !isNaN(s.stop_lat) && !isNaN(s.stop_lon))
 }
 
-// Compute travel bearing per stop using circular averaging across all route directions.
+// Compute the travel direction shown by each stop's map arrow.
 // Bearing 0 = North, 90 = East, etc.
+//
+// For each route direction serving a stop, take the heading of the route's
+// road shape where it passes the stop (not a straight line to the next stop,
+// which cuts across loops and transit-center bays). Stops are projected onto
+// the shape in order, so a route passing the same spot twice resolves to the
+// right pass. If the shape doesn't come within STOP_SHAPE_MAX_M of the stop,
+// fall back to the straight line.
+//
+// A stop's arrow follows the buses that depart from it: a route that ends at
+// the stop only counts when no route departs from it (otherwise every
+// terminal would average arrivals and departures, which usually point
+// opposite ways). Headings are averaged on the circle; if they don't mostly
+// agree (resultant length below MIN_BEARING_AGREEMENT, e.g. a rail platform
+// served in both directions, or a transit center with buses leaving every
+// way), the stop gets no arrow rather than a misleading one.
 const toRad = (deg) => deg * Math.PI / 180
 const toDeg = (rad) => rad * 180 / Math.PI
+const STOP_SHAPE_MAX_M = 40
+const MIN_BEARING_AGREEMENT = 0.6
 
 function computeBearing(lat1, lon1, lat2, lon2) {
     const dLon = toRad(lon2 - lon1)
@@ -166,23 +183,78 @@ function computeBearing(lat1, lon1, lat2, lon2) {
     return (toDeg(Math.atan2(y, x)) + 360) % 360
 }
 
+// Distance in metres from point p to segment a-b ([lat, lon] pairs), using a
+// local flat projection (fine at stop-to-road scale).
+function distToSegmentM(p, a, b) {
+    const kx = Math.cos(toRad(p[0]))
+    const ax = a[1] * kx, ay = a[0], bx = b[1] * kx, by = b[0], px = p[1] * kx, py = p[0]
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy
+    const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy)) * 111320
+}
+
+// Road heading at each stop of a route direction, or null where the shape
+// isn't close enough to trust.
+//
+// Each stop matches the FIRST stretch of shape (after the previous stop's
+// match) that comes within STOP_SHAPE_MAX_M, at that stretch's closest point.
+// Taking the overall closest segment instead picks the wrong pass on roads a
+// route runs out and back along: the shape traces one centreline for both
+// directions, so the return pass is often a hair closer, which flips the
+// arrow and pushes every later stop's search past its real pass.
+function shapeHeadings(rd) {
+    const shape = shapes[rd.shape_id]
+    if (!shape || shape.length < 2) return rd.stops.map(() => null)
+    let from = 0
+    return rd.stops.map((st) => {
+        const p = [st.stop_lat, st.stop_lon]
+        let best = -1, bestDist = Infinity
+        for (let i = from; i < shape.length - 1; i++) {
+            const d = distToSegmentM(p, shape[i], shape[i + 1])
+            if (best >= 0 && d > bestDist) break // past this stretch's closest point
+            if (d <= STOP_SHAPE_MAX_M && d < bestDist) { bestDist = d; best = i }
+        }
+        if (best < 0) return null
+        from = best
+        // Skip zero-length segments (repeated points) to get a real heading.
+        let j = best
+        while (j < shape.length - 2 && shape[j][0] === shape[j + 1][0] && shape[j][1] === shape[j + 1][1]) j++
+        const [a, b] = [shape[j], shape[j + 1]]
+        if (a[0] === b[0] && a[1] === b[1]) return null
+        return computeBearing(a[0], a[1], b[0], b[1])
+    })
+}
+
+const angleBetween = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d }
+
 console.log("Computing stop bearings...")
-const bearingAccum = {}
+const bearingAccum = {} // stop_id -> { departing: [deg], arriving: [deg] }
 for (const rd of routeDirections) {
     const s = rd.stops
     if (s.length < 2) continue
+    const road = shapeHeadings(rd)
     for (let i = 0; i < s.length; i++) {
-        const b = i < s.length - 1
-            ? computeBearing(s[i].stop_lat, s[i].stop_lon, s[i + 1].stop_lat, s[i + 1].stop_lon)
-            : computeBearing(s[i - 1].stop_lat, s[i - 1].stop_lon, s[i].stop_lat, s[i].stop_lon)
-        if (!bearingAccum[s[i].stop_id]) bearingAccum[s[i].stop_id] = { s: 0, c: 0 }
-        bearingAccum[s[i].stop_id].s += Math.sin(toRad(b))
-        bearingAccum[s[i].stop_id].c += Math.cos(toRad(b))
+        const last = i === s.length - 1
+        const chord = last
+            ? computeBearing(s[i - 1].stop_lat, s[i - 1].stop_lon, s[i].stop_lat, s[i].stop_lon)
+            : computeBearing(s[i].stop_lat, s[i].stop_lon, s[i + 1].stop_lat, s[i + 1].stop_lon)
+        // A road heading nearly opposite the way to the next stop means the
+        // shape match went wrong (e.g. matched the other direction's pass);
+        // fall back to the straight line.
+        const b = road[i] != null && angleBetween(road[i], chord) <= 135 ? road[i] : chord
+        const acc = (bearingAccum[s[i].stop_id] ||= { departing: [], arriving: [] })
+        acc[last ? "arriving" : "departing"].push(b)
     }
 }
 const stopBearings = {}
-for (const [id, { s, c }] of Object.entries(bearingAccum)) {
-    stopBearings[id] = Math.round((toDeg(Math.atan2(s, c)) + 360) % 360)
+for (const [id, { departing, arriving }] of Object.entries(bearingAccum)) {
+    const bs = departing.length ? departing : arriving
+    let sin = 0, cos = 0
+    for (const b of bs) { sin += Math.sin(toRad(b)); cos += Math.cos(toRad(b)) }
+    const agreement = Math.hypot(sin, cos) / bs.length
+    stopBearings[id] = agreement >= MIN_BEARING_AGREEMENT
+        ? Math.round((toDeg(Math.atan2(sin, cos)) + 360) % 360)
+        : null
 }
 
 const out = { routeDirections, shapes, shapeStops, stopBearings, feedInfo }
