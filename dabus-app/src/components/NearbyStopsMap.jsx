@@ -13,17 +13,17 @@ import {
 import MapRecenterControl from "./MapRecenterControl";
 import MapFab from "./MapFab";
 
-// Stop marker size. The arrow icon is drawn in a 20x28 viewBox with the dot
-// centred at (10, 21); everything scales from that, and the anchor/rotation
-// origin stay on the dot's centre so it sits exactly on the stop.
-const STOP_ICON_SCALE = 1.4;
-const ARROW_W = 20 * STOP_ICON_SCALE;
-const ARROW_H = 28 * STOP_ICON_SCALE;
-const ARROW_CX = 10 * STOP_ICON_SCALE;
-const ARROW_CY = 21 * STOP_ICON_SCALE;
-// Plain dot (stops with no known bearing): 16px with a 2px border, scaled.
-const DOT = 16 * STOP_ICON_SCALE;
-const DOT_BORDER = 2 * STOP_ICON_SCALE;
+// Stop dot size: 18px across, outline included, for both marker kinds.
+const DOT = 18;
+const DOT_BORDER = 2;
+// Direction-arrow marker: the arrow keeps its original size above the dot.
+// Drawn 1:1 in px; the anchor and rotation origin are the dot's centre so the
+// dot sits exactly on the stop and the arrow swings around it.
+const ARROW_W = 20;
+const ARROW_CX = ARROW_W / 2;
+const ARROW_CY = 21;
+const ARROW_H = ARROW_CY + DOT / 2 + 1;
+const DOT_R = (DOT - DOT_BORDER) / 2; // circle radius; the stroke straddles it
 
 function MapMoveTracker({ onMapMove }) {
   const lastCenter = useRef(null);
@@ -136,12 +136,12 @@ function NearbyStopsMap({
                 className: "",
                 html: stop.bearing != null
                   ? `<div style="width:${ARROW_W}px;height:${ARROW_H}px;transform:rotate(${stop.bearing}deg);transform-origin:${ARROW_CX}px ${ARROW_CY}px;">
-                       <svg width="${ARROW_W}" height="${ARROW_H}" viewBox="0 0 20 28" xmlns="http://www.w3.org/2000/svg">
+                       <svg width="${ARROW_W}" height="${ARROW_H}" viewBox="0 0 ${ARROW_W} ${ARROW_H}" xmlns="http://www.w3.org/2000/svg">
                          <polygon points="10,2 15,11 5,11" fill="#e8b84b" stroke="#1a1a1a" stroke-width="1.5" stroke-linejoin="round"/>
-                         <circle cx="10" cy="21" r="7" fill="#e8b84b" stroke="#1a1a1a" stroke-width="2"/>
+                         <circle cx="${ARROW_CX}" cy="${ARROW_CY}" r="${DOT_R}" fill="#e8b84b" stroke="#1a1a1a" stroke-width="${DOT_BORDER}"/>
                        </svg>
                      </div>`
-                  : `<div style="width:${DOT}px;height:${DOT}px;background:#e8b84b;border:${DOT_BORDER}px solid #1a1a1a;border-radius:50%;cursor:pointer;"></div>`,
+                  : `<div style="width:${DOT}px;height:${DOT}px;background:#e8b84b;border:${DOT_BORDER}px solid #1a1a1a;border-radius:50%;box-sizing:border-box;cursor:pointer;"></div>`,
                 iconSize: stop.bearing != null ? [ARROW_W, ARROW_H] : [DOT, DOT],
                 iconAnchor: stop.bearing != null ? [ARROW_CX, ARROW_CY] : [DOT / 2, DOT / 2],
               })}
