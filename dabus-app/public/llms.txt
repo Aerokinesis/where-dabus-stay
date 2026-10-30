@@ -1,0 +1,13 @@
+# WhereDaBusStay
+
+> Real-time TheBus arrivals and stop info for Oahu, Hawaiʻi. Find nearby bus stops on a map, see live arrival times, track buses, save favorite stops, and read rider announcements and service alerts.
+
+WhereDaBusStay is a free, installable web app for riders of TheBus, Oahu's public bus system. Arrival times come from TheBus real-time data; stop and route information comes from TheBus GTFS schedule data.
+
+## App
+
+- [WhereDaBusStay](https://wheredabusstay.com/): Nearby stops map, stop search, live arrivals, routes, favorites, news and settings
+
+## Data sources
+
+- [TheBus](https://www.thebus.org/): Oahu's public bus system, operator of the routes and stops shown

@@ -1,28 +1,46 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from "react";
 import styles from "./App.module.css";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
 import NearbyStopsMap from "./components/NearbyStopsMap";
 import AddressSearch from "./components/AddressSearch";
 import ArrivalsList from "./components/ArrivalsList";
-import BusTrackingMap from "./components/BusTrackingMap";
 import ErrorBoundary from "./components/ErrorBoundary";
+// Screens that aren't on the first view load on demand, keeping them out of
+// the startup bundle. preloadLazyScreens() fetches them once the app is idle
+// so they're ready (and cached by the service worker for offline use).
+const lazyScreens = {
+  BusTrackingMap: () => import("./components/BusTrackingMap"),
+  RoutesTab: () => import("./components/RoutesTab"),
+  RouteMap: () => import("./components/RouteMap"),
+  SettingsTab: () => import("./components/SettingsTab"),
+  AnnouncementsTab: () => import("./components/AnnouncementsTab"),
+  FaqScreen: () => import("./components/FaqScreen"),
+  ContactScreen: () => import("./components/ContactScreen"),
+};
+const BusTrackingMap = lazy(lazyScreens.BusTrackingMap);
+const RoutesTab = lazy(lazyScreens.RoutesTab);
+const RouteMap = lazy(lazyScreens.RouteMap);
+const SettingsTab = lazy(lazyScreens.SettingsTab);
+const AnnouncementsTab = lazy(lazyScreens.AnnouncementsTab);
+const FaqScreen = lazy(lazyScreens.FaqScreen);
+const ContactScreen = lazy(lazyScreens.ContactScreen);
+function preloadLazyScreens() {
+  Object.values(lazyScreens).forEach((load) => load().catch(() => {}));
+}
 import Favorites from "./components/Favorites";
 import SaveStopModal from "./components/SaveStopModal";
 import ConfirmDialog from "./components/ConfirmDialog";
 import RecentStopsSheet from "./components/RecentStopsSheet";
-import RoutesTab from "./components/RoutesTab";
-import RouteMap from "./components/RouteMap";
-import SettingsTab from "./components/SettingsTab";
-import AnnouncementsTab from "./components/AnnouncementsTab";
-import FaqScreen from "./components/FaqScreen";
-import ContactScreen from "./components/ContactScreen";
 import Toast from "./components/Toast";
 import SearchInput from "./components/SearchInput";
 import BackButton from "./components/BackButton";
 import { useArrivals } from "./hooks/useArrivals";
 import { useFavorites } from "./hooks/useFavorites";
-import { useNearbyStops, loadLastLocation } from "./hooks/useNearbyStops";
+import { useNearbyStops, loadLastLocation, geolocationPermission } from "./hooks/useNearbyStops";
 import { useBusTracking } from "./hooks/useBusTracking";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import PullToRefreshIndicator from "./components/PullToRefreshIndicator";
@@ -41,11 +59,12 @@ import { useAppMeta } from "./hooks/useAppMeta";
 import { API_BASE } from "./constants";
 
 delete L.Icon.Default.prototype._getIconUrl;
+// Bundled with the app rather than fetched from unpkg: one less third-party
+// origin, and they get the app's long-lived asset caching.
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
 });
 
 // Back button + "Route N — destination" label row shared by the desktop
@@ -244,6 +263,32 @@ function App() {
       setMapCenter({ lat: userLocation.lat, lng: userLocation.lon });
     }
   }, [userLocation]);
+
+  // Only ask for location without a tap when it's already been allowed (or
+  // the browser can't tell us). First-time visitors get a "Show stops near
+  // me" button on the map instead of a permission prompt the moment the page
+  // opens. A denied permission still goes through findNearbyStops, which
+  // shows the "Location access denied" message without prompting.
+  const [needsLocationTap, setNeedsLocationTap] = useState(false);
+  const autoLocate = async (options) => {
+    if ((await geolocationPermission()) === "prompt") {
+      setNeedsLocationTap(true);
+      return;
+    }
+    findNearbyStops(options);
+  };
+  const locateOnTap = () => {
+    setNeedsLocationTap(false);
+    findNearbyStops();
+  };
+
+  // Fetch the on-demand screens a few seconds after startup, once the browser
+  // is idle, so they don't compete with the first view.
+  useEffect(() => {
+    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 0));
+    const t = setTimeout(() => idle(preloadLazyScreens), 4000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Reopening the installed app resumes it instead of reloading, so the map
   // would stay wherever it was left. Re-locate after it's been in the
@@ -960,24 +1005,30 @@ function App() {
                 userLocation={userLocation}
                 nearbyStopsMap={nearbyStopsMap}
                 onSelectStop={(stopId) => handleFetchArrivals(stopId, "nearby")}
-                onMount={() => findNearbyStops({ recenter: !userLocation })}
+                onMount={() => autoLocate({ recenter: !userLocation })}
                 mapCenter={mapCenter}
                 onMapMove={setMapCenter}
                 searchRadius={settings.searchRadius}
-                onRefreshLocation={() => findNearbyStops({ fresh: true })}
+                onRefreshLocation={() => {
+                  setNeedsLocationTap(false);
+                  findNearbyStops({ fresh: true });
+                }}
                 locating={locating}
                 findingLocation={findingLocation}
+                needsLocationTap={needsLocationTap}
+                onLocateTap={locateOnTap}
               />
             </div>
           )}
 
-          {tabContent}
+          <Suspense fallback={null}>{tabContent}</Suspense>
         </div>
       </main>
 
       {/* Desktop map panel */}
       <div className={styles.mapPanel}>
         <ErrorBoundary>
+          <Suspense fallback={null}>
           {trackingView && busLocation ? (
             <>
               <div className={styles.desktopSearch}>
@@ -1014,6 +1065,8 @@ function App() {
               nearbyStopsMap={nearbyStopsMap}
               locating={locating}
               findingLocation={findingLocation}
+              needsLocationTap={needsLocationTap}
+              onLocateTap={locateOnTap}
               onSelectStop={(stopId) => {
                 if (activeTab !== "nearby") setActiveTab("nearby");
                 handleFetchArrivals(stopId, "nearby");
@@ -1025,12 +1078,14 @@ function App() {
               searchRadius={settings.searchRadius}
             />
           )}
+          </Suspense>
         </ErrorBoundary>
       </div>
 
       {/* Mobile bus tracking overlay — only mount on mobile so the hidden
           Leaflet container on desktop doesn't error on init */}
       <ErrorBoundary>
+        <Suspense fallback={null}>
         {isMobile && trackingView && busLocation && (
           <MobileOverlay className={styles.mobileTrackingOverlay}>
             <div className={styles.topBar}>
@@ -1058,10 +1113,12 @@ function App() {
             </div>
           </MobileOverlay>
         )}
+        </Suspense>
       </ErrorBoundary>
 
       {/* Mobile route-map overlay */}
       <ErrorBoundary>
+        <Suspense fallback={null}>
         {isMobile && routeMapView && selectedRoute && (
           <MobileOverlay>
             <div className={styles.topBar}>
@@ -1082,6 +1139,7 @@ function App() {
             </div>
           </MobileOverlay>
         )}
+        </Suspense>
       </ErrorBoundary>
 
       {/* Nav */}

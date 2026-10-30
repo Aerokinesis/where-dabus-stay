@@ -24,6 +24,17 @@ function saveLastLocation(lat, lng) {
   }
 }
 
+// Whether the location permission is already "granted", "denied", or still
+// "prompt" (never asked). "unknown" where the Permissions API isn't available.
+export async function geolocationPermission() {
+  try {
+    const status = await navigator.permissions.query({ name: "geolocation" });
+    return status.state;
+  } catch {
+    return "unknown";
+  }
+}
+
 export function useNearbyStops(setError, searchRadius = 0.25) {
   const [nearbyStops, setNearbyStops] = useState(null);
   const [nearbyStopsMap, setNearbyStopsMap] = useState(null);
@@ -100,18 +111,26 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
       setLocating(false);
     };
 
+    const request = () =>
+      navigator.geolocation.getCurrentPosition(onFix, onError, {
+        maximumAge: fresh ? 0 : 5 * 60 * 1000,
+        timeout: 10000,
+      });
+
     // index.html may already have a request in flight from before the app
-    // loaded; the first non-fresh call uses its answer instead of asking again.
+    // loaded; the first non-fresh call uses its answer instead of asking again
+    // (null means it didn't ask, so ask now).
     const early = !fresh && window.__earlyLocation;
     if (early) {
       window.__earlyLocation = null;
-      early.then(({ position, error }) => (position ? onFix(position) : onError(error)));
+      early.then((result) => {
+        if (!result) request();
+        else if (result.position) onFix(result.position);
+        else onError(result.error);
+      });
       return;
     }
-    navigator.geolocation.getCurrentPosition(onFix, onError, {
-      maximumAge: fresh ? 0 : 5 * 60 * 1000,
-      timeout: 10000,
-    });
+    request();
   };
 
   return {
