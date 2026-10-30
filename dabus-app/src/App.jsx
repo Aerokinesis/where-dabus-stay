@@ -966,7 +966,6 @@ function App() {
                 searchRadius={settings.searchRadius}
                 onRefreshLocation={() => findNearbyStops({ fresh: true })}
                 locating={locating}
-              findingLocation={findingLocation}
                 findingLocation={findingLocation}
               />
             </div>
@@ -1014,6 +1013,7 @@ function App() {
               userLocation={userLocation}
               nearbyStopsMap={nearbyStopsMap}
               locating={locating}
+              findingLocation={findingLocation}
               onSelectStop={(stopId) => {
                 if (activeTab !== "nearby") setActiveTab("nearby");
                 handleFetchArrivals(stopId, "nearby");

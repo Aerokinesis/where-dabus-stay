@@ -82,6 +82,22 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
+/* Dims the map while waiting on a GPS fix, under the pill and map controls.
+   Doesn't block panning or zooming. */
+.locatingShade {
+  position: absolute;
+  inset: 0;
+  z-index: 900;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.locatingShadeOn {
+  opacity: 1;
+}
+
 /* Shown over the map while waiting on a GPS fix */
 .locatingPill {
   position: absolute;
@@ -119,5 +135,8 @@
 @media (prefers-reduced-motion: reduce) {
   .locatingDot {
     animation: none;
+  }
+  .locatingShade {
+    transition: none;
   }
 }
