@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 import { API_BASE } from "../constants";
 
-function formatStopName(raw, stopId) {
+export function formatStopName(raw, stopId) {
   return raw
     ? raw.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
     : `Stop #${stopId}`;
