@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { API_BASE } from "../constants";
 
 // The last location fix, kept on the device so the Nearby map can open where
@@ -76,25 +76,43 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
   // `fresh` insists on a new GPS fix (refresh button, resume). Otherwise the
   // device may answer instantly from a fix up to 5 min old; if the one it
   // returns is over a minute old, a fresh fix follows quietly to correct it.
+  // A non-fresh request made while another is still waiting joins it instead
+  // of asking again (if either wants to recenter, the fix recenters). Two
+  // requests in flight can resolve in the same tick, and React would then
+  // batch their fixes so only the last one's `recenter` is ever seen, e.g.
+  // tapping Home (recenter) racing the Home map's own background re-fix.
+  const pendingRequest = useRef(null);
+
   const findNearbyStops = ({ recenter = true, fresh = false, quiet = false } = {}) => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
       return;
     }
+    if (pendingRequest.current && !fresh) {
+      if (recenter) pendingRequest.current.recenter = true;
+      return;
+    }
+    const req = { recenter };
+    pendingRequest.current = req;
+    const settle = () => {
+      if (pendingRequest.current === req) pendingRequest.current = null;
+    };
     setLocating(true);
     if (!quiet) setFindingLocation(true);
     const onFix = async (position) => {
+      settle();
       setFindingLocation(false);
       const lat = position.coords.latitude;
       const lon = position.coords.longitude;
-      setUserLocation({ lat, lon, recenter });
+      setUserLocation({ lat, lon, recenter: req.recenter });
       saveLastLocation(lat, lon);
       const stale = !fresh && Date.now() - position.timestamp > STALE_FIX_MS;
-      if (stale) findNearbyStops({ recenter, fresh: true, quiet: true });
+      if (stale) findNearbyStops({ recenter: req.recenter, fresh: true, quiet: true });
       await refindNearbyStops(lat, lon, searchRadius);
       if (!stale) setLocating(false);
     };
     const onError = (err) => {
+      settle();
       setFindingLocation(false);
       // A failed follow-up fix keeps the position we already have.
       if (quiet) {
