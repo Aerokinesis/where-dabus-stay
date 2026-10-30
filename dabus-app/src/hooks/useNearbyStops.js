@@ -53,6 +53,10 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
       const res = await fetch(`${API_BASE}/api/search-stops?q=${encodeURIComponent(query)}`);
       const data = await res.json();
       if (data.error) setError(data.error);
+      // Shown the same way as an unknown stop number rather than as a quiet
+      // "No stops found." under the search bar.
+      else if (!data.stops?.length)
+        setError(`No stops found for "${query}". Check the address and try again.`);
       else setNearbyStops(data.stops);
     } catch {
       setError("Could not search for stops. Try again.");
