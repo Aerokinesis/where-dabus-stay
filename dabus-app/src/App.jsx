@@ -420,6 +420,11 @@ function App() {
       setActiveTab("nearby");
       return;
     }
+    // Home is a fresh start, so land on where the user is now. (Back from a
+    // stop instead keeps the map where it was left: the re-fix the map makes
+    // when it reappears is a background one. If that re-fix starts while this
+    // request is still waiting, it joins it, so this one still recenters.)
+    autoLocate({ recenter: true });
     clearBusTracking();
     setTrackingView(false);
     clearArrivals();
