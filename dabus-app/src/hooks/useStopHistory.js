@@ -9,8 +9,13 @@ export function useStopHistory() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Only stops that actually loaded go in history. fetchArrivals resolves to
+  // the stop's name on success (always set: it falls back to "Stop #N") and
+  // to null/undefined when the stop doesn't exist or the request failed, so a
+  // mistyped stop number never shows up under Recent.
   const addToHistory = (stopId, stopName) => {
-    const entry = { stopId, stopName: stopName || null };
+    if (!stopName) return;
+    const entry = { stopId, stopName };
     const updated = [
       entry,
       ...stopHistory.filter((s) => s.stopId !== stopId),
