@@ -1150,7 +1150,9 @@ function App() {
       {/* Nav */}
       <nav className={styles.bottomNav}>
         <div className={styles.brandMark}>
-          <img src="/dabus-icon.png" alt="" role="presentation" />
+          {/* Lazy: the brand mark is desktop-only (display: none on phones),
+              and lazy images that aren't displayed are never fetched. */}
+          <img src="/dabus-icon-128.png" alt="" role="presentation" loading="lazy" width="128" height="128" />
         </div>
         <button
           className={`${styles.navBtn} ${activeTab === "nearby" ? styles.active : ""}`}

@@ -44,6 +44,29 @@
           )
         })
       })()
+
+      // Start downloading the map tile at the centre of where the Nearby map
+      // will open (the saved last location, else the map's default centre)
+      // now, instead of only once the app bundle has loaded and Leaflet asks
+      // for it. That tile is usually the page's Largest Contentful Paint.
+      // Keep the centre, zoom and tile URL in step with NearbyStopsMap.jsx.
+      ;(function () {
+        if (location.pathname.replace(/\/+$/, '') === '/admin') return
+        var lat = 21.3069, lng = -157.8583, z = 15
+        try {
+          var saved = JSON.parse(localStorage.getItem('dabus-last-location'))
+          if (saved && isFinite(saved.lat) && isFinite(saved.lng)) { lat = saved.lat; lng = saved.lng }
+        } catch (e) {}
+        var n = Math.pow(2, z), r = lat * Math.PI / 180
+        var x = Math.floor((lng + 180) / 360 * n)
+        var y = Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n)
+        var link = document.createElement('link')
+        link.rel = 'preload'
+        link.as = 'image'
+        link.href = 'https://tile.openstreetmap.org/' + z + '/' + x + '/' + y + '.png'
+        link.fetchPriority = 'high'
+        document.head.appendChild(link)
+      })()
     </script>
   </head>
   <body>

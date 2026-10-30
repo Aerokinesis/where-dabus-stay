@@ -34,7 +34,7 @@ function LoginForm({ onError }) {
 
   return (
     <form className={styles.loginCard} onSubmit={submit}>
-      <img src="/dabus-icon.png" alt="" className={styles.loginIcon} />
+      <img src="/dabus-icon-128.png" alt="" className={styles.loginIcon} />
       <h1 className={styles.loginTitle}>News admin</h1>
       <p className={styles.loginSub}>Sign in to post updates to the app.</p>
       <label className={styles.field}>
@@ -168,7 +168,7 @@ export default function AdminPage() {
       {session && (
         <header className={styles.header}>
           <a href="/" className={styles.brand} title="Back to the app">
-            <img src="/dabus-icon.png" alt="" />
+            <img src="/dabus-icon-128.png" alt="" />
             <span>News admin</span>
           </a>
           <div className={styles.who}>
