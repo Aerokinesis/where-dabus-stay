@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { API_BASE } from "../constants";
 
@@ -8,6 +8,33 @@ export function useBusTracking(setError) {
   const [busShape, setBusShape] = useState(null);
   const [tripStops, setTripStops] = useState(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
+
+  // Schedule adherence for the tracked bus (from /api/vehicle, which wraps
+  // TheBus's vehicle API). Merged into busLocation only if that bus is still
+  // the one being tracked when the response lands.
+  const loadVehicleStatus = async (number) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/vehicle/${number}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setBusLocation((current) =>
+        current && current.number === number
+          ? { ...current, adherence: data.adherence, adherenceAgeS: data.last_message_age_s }
+          : current,
+      );
+    } catch {
+      // No badge this round; the next refresh tries again.
+    }
+  };
+
+  // Keep the badge current while tracking stays open, on the same 30 s
+  // cadence as the arrivals list.
+  const trackedNumber = selectedBus?.vehicle;
+  useEffect(() => {
+    if (!trackedNumber) return;
+    const id = setInterval(() => loadVehicleStatus(trackedNumber), 30000);
+    return () => clearInterval(id);
+  }, [trackedNumber]);
 
   const fetchBusLocation = async (bus) => {
     if (bus.estimated !== "1") return;
@@ -36,7 +63,9 @@ export function useBusTracking(setError) {
       route_short_name: bus.route,
       headsign: bus.headsign,
       adherence: null,
+      adherenceAgeS: null,
     });
+    loadVehicleStatus(bus.vehicle);
 
     const [shapeRes, tripRes] = await Promise.allSettled([
       fetch(`${API_BASE}/api/shape/${bus.shape}`),

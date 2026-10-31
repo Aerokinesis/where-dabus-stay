@@ -38,6 +38,7 @@ import RecentStopsSheet from "./components/RecentStopsSheet";
 import Toast from "./components/Toast";
 import SearchInput from "./components/SearchInput";
 import BackButton from "./components/BackButton";
+import AdherenceBadge from "./components/AdherenceBadge";
 import { useArrivals } from "./hooks/useArrivals";
 import { useFavorites } from "./hooks/useFavorites";
 import { useNearbyStops, loadLastLocation, geolocationPermission } from "./hooks/useNearbyStops";
@@ -68,12 +69,14 @@ L.Icon.Default.mergeOptions({
 });
 
 // Back button + "Route N — destination" label row shared by the desktop
-// tracking panel and both mobile fullscreen overlays.
-function PanelHeader({ backLabel, onBack, title }) {
+// tracking panel and both mobile fullscreen overlays. `badge` is an optional
+// trailing element (the tracked bus's schedule adherence).
+function PanelHeader({ backLabel, onBack, title, badge }) {
   return (
     <div className={styles.topBarSearch}>
       <BackButton label={backLabel} onClick={onBack} />
       <span className={styles.trackingLabel}>{title}</span>
+      {badge}
     </div>
   );
 }
@@ -1041,6 +1044,7 @@ function App() {
                   backLabel="Back to map"
                   onBack={exitTracking}
                   title={`Route ${busLocation.route_short_name} — ${busLocation.headsign}`}
+                  badge={<AdherenceBadge adherence={busLocation.adherence} ageS={busLocation.adherenceAgeS} />}
                 />
               </div>
               <div style={{ flex: 1, minHeight: 0 }}>
@@ -1098,6 +1102,7 @@ function App() {
                 backLabel="Back to arrivals"
                 onBack={exitTracking}
                 title={`Route ${busLocation.route_short_name} — ${busLocation.headsign}`}
+                  badge={<AdherenceBadge adherence={busLocation.adherence} ageS={busLocation.adherenceAgeS} />}
               />
             </div>
             <div style={{ flex: 1, height: 0 }}>
