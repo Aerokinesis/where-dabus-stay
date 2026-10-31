@@ -61,6 +61,21 @@ export function useArrivals() {
           return null;
         }
 
+        // The stop is real but the times couldn't be fetched (TheBus refused
+        // the request, or was unreachable). Say so, rather than letting an
+        // empty list read as "No upcoming buses". On a refresh of the same
+        // stop, its last good times stay up under the message; a different
+        // stop's times are cleared so they can't be mistaken for this one's.
+        if (!arrivalsRes.ok) {
+          setError("Couldn't load arrival times right now. Try again in a moment.");
+          if (lastStopRef.current !== stopId) {
+            setArrivals(null);
+            setCurrentStop(null);
+            resetRetention();
+          }
+          return null;
+        }
+
         const arrivalsData = await arrivalsRes.json();
         const stopData = await stopRes.json();
         const stopName = formatStopName(stopData.stop_name, stopId);

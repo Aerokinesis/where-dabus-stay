@@ -135,6 +135,15 @@ app.get("/api/arrivals", async (req, res) => {
     try {
         const response = await fetch(url.toString(), { signal: AbortSignal.timeout(5000) })
         const data = await response.json()
+        // TheBus refuses a request (e.g. "Invalid or unspecified API key") with
+        // an errorMessage and no arrivals list. Passed through, that reads as
+        // an empty list: "No upcoming buses" at every stop. Log the real reason
+        // for us and tell the app it's an error. (An unknown stop number is
+        // not an error here: TheBus just returns an empty list for it.)
+        if (data.errorMessage) {
+            console.error(`TheBus arrivals error for stop ${stop}: ${data.errorMessage}`)
+            return res.status(502).json({ error: "Arrival times are unavailable right now" })
+        }
         res.json(data)
     } catch {
         res.status(500).json({ error: "Failed to fetch arrivals" })
