@@ -6,6 +6,7 @@ import fetch from "node-fetch"
 import dotenv from "dotenv"
 import fs from "fs"
 import { parse } from "csv-parse/sync"
+import * as cheerio from "cheerio"
 import http from "http"
 import https from "https"
 import { parseListingAlerts, parseDisruptionAlerts, mergeAlerts } from "./alerts.js"
@@ -137,6 +138,78 @@ app.get("/api/arrivals", async (req, res) => {
         res.json(data)
     } catch {
         res.status(500).json({ error: "Failed to fetch arrivals" })
+    }
+})
+
+// Live status for one bus from TheBus's vehicle API, for the tracking view's
+// "5 min late" badge. (TheBus documents a vehicleJSON variant too, but it
+// 404s on the live server; the XML one at /vehicle/ works.) Only the fields the app uses are passed on; the
+// feed's `driver` (an operator's employee number) deliberately is not.
+// Cached briefly per bus so several riders tracking the same bus, or quick
+// re-opens, don't each hit TheBus.
+const VEHICLE_CACHE_MS = 15 * 1000
+const vehicleCache = new Map() // vehicle number -> { at, body }
+
+// TheBus timestamps look like "12/27/2022 2:25:11 PM" (local time, no zone).
+// Both values compared below come from the same response, so treating them as
+// UTC only matters for the difference, which is all we use.
+function parseTheBusTime(text) {
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4}) (\d{1,2}):(\d{2}):(\d{2}) (AM|PM)$/.exec(String(text || "").trim())
+    if (!m) return null
+    const [, mo, d, y, h, mi, s, ap] = m
+    const hour = (Number(h) % 12) + (ap === "PM" ? 12 : 0)
+    return Date.UTC(Number(y), Number(mo) - 1, Number(d), hour, Number(mi), Number(s))
+}
+
+app.get("/api/vehicle/:num", async (req, res) => {
+    const num = req.params.num
+    if (!/^\d+$/.test(num)) {
+        return res.status(400).json({ error: "Invalid vehicle number" })
+    }
+    const hit = vehicleCache.get(num)
+    if (hit && Date.now() - hit.at < VEHICLE_CACHE_MS) return res.json(hit.body)
+
+    const url = new URL("http://api.thebus.org/vehicle/")
+    url.searchParams.set("key", process.env.THEBUS_API_KEY)
+    url.searchParams.set("num", num)
+    try {
+        const response = await fetch(url.toString(), { signal: AbortSignal.timeout(5000) })
+        const $ = cheerio.load(await response.text(), { xml: true })
+        const field = (name) => $("vehicles > vehicle").first().children(name).text().trim()
+        const errorMessage = $("vehicles > errorMessage").text().trim()
+        if (!response.ok || errorMessage || $("vehicles > vehicle").length === 0) {
+            return res.status(404).json({ error: errorMessage || "Vehicle not found" })
+        }
+        const v = {
+            number: field("number"),
+            trip: field("trip"),
+            route_short_name: field("route_short_name"),
+            headsign: field("headsign"),
+            latitude: field("latitude"),
+            longitude: field("longitude"),
+            adherence: field("adherence"),
+            last_message: field("last_message"),
+        }
+        const data = { timestamp: $("vehicles > timestamp").text().trim() }
+        // adherence: minutes off schedule, positive = early, negative = late.
+        const adherence = Number.parseInt(v.adherence, 10)
+        const reported = parseTheBusTime(v.last_message)
+        const now = parseTheBusTime(data.timestamp)
+        const body = {
+            number: v.number,
+            trip: v.trip,
+            route_short_name: v.route_short_name,
+            headsign: v.headsign,
+            latitude: v.latitude,
+            longitude: v.longitude,
+            adherence: Number.isFinite(adherence) ? adherence : null,
+            // Seconds since the bus last reported in; null if unparseable.
+            last_message_age_s: reported != null && now != null ? Math.max(0, Math.round((now - reported) / 1000)) : null,
+        }
+        vehicleCache.set(num, { at: Date.now(), body })
+        res.json(body)
+    } catch {
+        res.status(500).json({ error: "Failed to fetch vehicle" })
     }
 })
 

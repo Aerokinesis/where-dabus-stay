@@ -1,0 +1,23 @@
+/* Schedule-adherence pill in the bus-tracking header. Uses existing
+   contrast-checked text tokens; magenta stays reserved for "Arrived". */
+.badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.late {
+  color: var(--accent-text);
+}
+
+.early {
+  color: var(--primary-text);
+}
+
+.onTime {
+  color: var(--text-muted);
+}
