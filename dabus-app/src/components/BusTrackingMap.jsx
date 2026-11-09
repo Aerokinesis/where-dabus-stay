@@ -62,13 +62,20 @@ function BusTrackingMap({ busLocation, userLocation, selectedBus, busShape, trip
           style={{ height: "100%", width: "100%" }}
         >
           {onMapMove && <MapMoveTracker onMapMove={onMapMove} />}
+          {/* Distinct keys so toggling remounts the layer: react-leaflet only
+              updates the URL of a reused TileLayer, so the road layer's
+              className (the dark-mode filter) would stick to the satellite
+              imagery. */}
           {satelliteView ? (
             <TileLayer
+              key="satellite"
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
               attribution="Tiles &copy; Esri"
             />
           ) : (
             <TileLayer
+              key="road"
+              className="map-tiles"
               url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             />

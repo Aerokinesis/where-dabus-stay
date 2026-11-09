@@ -64,6 +64,56 @@ body {
   z-index: 0 !important;
 }
 
+/* Dark map. OpenStreetMap only publishes light tiles, so in dark mode the
+   road-map layers (TileLayer className="map-tiles") are flipped: invert, then
+   rotate hues back so water stays blue and parks green. Markers, route lines
+   and the tracking map's satellite photos aren't affected. The selector
+   matches the colour tokens above: dark unless the rider chose Light. */
+:root:not([data-theme="light"]) .map-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
+}
+
+/* Leaflet's own chrome to match the dark theme: the background shown while
+   tiles load, zoom buttons, attribution bar and popups. */
+:root:not([data-theme="light"]) .leaflet-container {
+  background: var(--bg);
+}
+
+:root:not([data-theme="light"]) .leaflet-bar a {
+  background: var(--surface);
+  color: var(--text);
+  border-bottom-color: var(--border);
+}
+
+:root:not([data-theme="light"]) .leaflet-bar a:hover,
+:root:not([data-theme="light"]) .leaflet-bar a:focus {
+  background: var(--bg);
+}
+
+:root:not([data-theme="light"]) .leaflet-bar a.leaflet-disabled {
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+:root:not([data-theme="light"]) .leaflet-control-attribution {
+  background: rgba(24, 24, 27, 0.8);
+  color: var(--text-muted);
+}
+
+:root:not([data-theme="light"]) .leaflet-control-attribution a {
+  color: var(--primary-text);
+}
+
+:root:not([data-theme="light"]) .leaflet-popup-content-wrapper,
+:root:not([data-theme="light"]) .leaflet-popup-tip {
+  background: var(--surface);
+  color: var(--text);
+}
+
+:root:not([data-theme="light"]) .leaflet-container a.leaflet-popup-close-button {
+  color: var(--text-muted);
+}
+
 h1,
 h2,
 h3 {

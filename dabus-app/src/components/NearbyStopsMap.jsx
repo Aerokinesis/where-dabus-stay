@@ -107,6 +107,7 @@ function NearbyStopsMap({
         <MapMoveTracker onMapMove={onMapMove} />
         <FollowLocation location={userLocation} />
         <TileLayer
+          className="map-tiles"
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
