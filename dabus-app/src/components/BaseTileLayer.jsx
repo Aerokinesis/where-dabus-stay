@@ -21,7 +21,9 @@ const CARTO_DARK = {
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
     '&copy; <a href="https://carto.com/attribution/">CARTO</a>',
   subdomains: "abcd",
-  maxZoom: 20,
+  // CARTO serves raster tiles only up to zoom 18 (zoom 19+ is refused with a
+  // 403), the same cap as OpenStreetMap's layer.
+  maxZoom: 18,
 };
 
 // The road map for every map in the app: CARTO Dark Matter in dark mode,
