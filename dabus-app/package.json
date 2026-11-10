@@ -12,10 +12,11 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
+    "@vercel/analytics": "^2.0.1",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "cheerio": "^1.0.0",
     "cors": "^2.8.6",
-    "csv-parse": "^6.2.1",
+    "csv-parse": "^7.0.3",
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
     "express-rate-limit": "^7.5.0",

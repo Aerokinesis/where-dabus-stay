@@ -1,5 +1,6 @@
 import { StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
+import { Analytics } from '@vercel/analytics/react'
 import './index.css'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
@@ -27,6 +28,17 @@ if ('serviceWorker' in navigator) {
   }
 }
 
+// Vercel Web Analytics (cookie-free page view and visitor counts, viewed in
+// the Vercel dashboard). Only the path is reported: the query string is
+// dropped so the stop or route a rider opened (?stop=…, ?route=…) isn't
+// recorded, and the editors' /admin page isn't counted at all. It only
+// sends data from a deployed site, not from local dev.
+const analyticsBeforeSend = (event) => {
+  const url = new URL(event.url)
+  if (url.pathname.replace(/\/+$/, '') === '/admin') return null
+  return { ...event, url: url.origin + url.pathname }
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     {/* Root boundary: a crash anywhere outside the inner boundaries would
@@ -41,5 +53,6 @@ createRoot(document.getElementById('root')).render(
         <App />
       )}
     </ErrorBoundary>
+    <Analytics beforeSend={analyticsBeforeSend} />
   </StrictMode>,
 )
