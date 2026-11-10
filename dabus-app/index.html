@@ -50,8 +50,16 @@
       // now, instead of only once the app bundle has loaded and Leaflet asks
       // for it. That tile is usually the page's Largest Contentful Paint.
       // Keep the centre, zoom and tile URL in step with NearbyStopsMap.jsx.
+      // Light theme only: in dark mode the map uses CARTO Dark Matter tiles
+      // (BaseTileLayer.jsx), so an OpenStreetMap tile would go unused.
       ;(function () {
         if (location.pathname.replace(/\/+$/, '') === '/admin') return
+        try {
+          var settings = JSON.parse(localStorage.getItem('dabus-settings'))
+          if (!settings || settings.theme !== 'light') return
+        } catch (e) {
+          return
+        }
         var lat = 21.3069, lng = -157.8583, z = 15
         try {
           var saved = JSON.parse(localStorage.getItem('dabus-last-location'))

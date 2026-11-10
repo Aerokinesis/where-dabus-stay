@@ -3,7 +3,6 @@ import styles from "./RouteMap.module.css";
 import { useEffect, useState } from "react";
 import {
   MapContainer,
-  TileLayer,
   Marker,
   Popup,
   Polyline,
@@ -11,6 +10,7 @@ import {
 } from "react-leaflet";
 import MapRecenterControl from "./MapRecenterControl";
 import MapFab from "./MapFab";
+import BaseTileLayer from "./BaseTileLayer";
 
 // Fit the map to the route's bounding box on mount or when the shape changes.
 function FitToRoute({ shape }) {
@@ -59,11 +59,7 @@ function RouteMap({
         zoom={13}
         style={{ height: "100%", width: "100%" }}
       >
-        <TileLayer
-          className="map-tiles"
-          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        />
+        <BaseTileLayer />
 
         <FitToRoute shape={shape} />
 

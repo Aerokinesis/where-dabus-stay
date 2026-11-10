@@ -3,7 +3,6 @@ import styles from "./NearbyStopsMap.module.css";
 import { useEffect, useRef, useState } from "react";
 import {
   MapContainer,
-  TileLayer,
   Marker,
   Popup,
   Circle,
@@ -12,6 +11,7 @@ import {
 } from "react-leaflet";
 import MapRecenterControl from "./MapRecenterControl";
 import MapFab from "./MapFab";
+import BaseTileLayer from "./BaseTileLayer";
 
 // Stop dot size: 18px across, outline included, for both marker kinds.
 const DOT = 18;
@@ -106,11 +106,7 @@ function NearbyStopsMap({
       >
         <MapMoveTracker onMapMove={onMapMove} />
         <FollowLocation location={userLocation} />
-        <TileLayer
-          className="map-tiles"
-          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        />
+        <BaseTileLayer />
         {userLocation && (
           <>
             <Marker position={[userLocation.lat, userLocation.lon]} zIndexOffset={-1000}>

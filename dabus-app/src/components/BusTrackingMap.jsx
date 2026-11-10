@@ -11,6 +11,7 @@ import L from "leaflet";
 import styles from "./BusTrackingMap.module.css";
 import MapRecenterControl from "./MapRecenterControl";
 import MapFab from "./MapFab";
+import BaseTileLayer from "./BaseTileLayer";
 
 function MapMoveTracker({ onMapMove }) {
   useMapEvents({ moveend: (e) => onMapMove(e.target.getCenter()) });
@@ -73,12 +74,7 @@ function BusTrackingMap({ busLocation, userLocation, selectedBus, busShape, trip
               attribution="Tiles &copy; Esri"
             />
           ) : (
-            <TileLayer
-              key="road"
-              className="map-tiles"
-              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            />
+            <BaseTileLayer key="road" />
           )}
           <Marker
             position={[
