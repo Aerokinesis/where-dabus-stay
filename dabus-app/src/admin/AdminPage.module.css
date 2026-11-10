@@ -1091,3 +1091,109 @@ details.listSection[open] > summary {
   color: var(--danger);
   font-size: 13px;
 }
+
+/* ── Roles: tabs, read-only rows, users ─────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.tab {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab:focus-visible,
+.roleSelect:focus-visible {
+  outline: 2px solid var(--primary-text);
+  outline-offset: 2px;
+}
+
+.tabOn,
+.tabOn:hover {
+  border-color: var(--primary);
+  color: var(--text);
+  background: color-mix(in srgb, var(--primary) 15%, var(--bg));
+}
+
+/* Rows that can't be opened (admin posts for editors, posts in Trash). */
+.postMainStatic {
+  cursor: default;
+}
+
+.postMainStatic:hover .postTitle {
+  text-decoration: none;
+}
+
+.userList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.userText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.userEmail {
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.userYou {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.roleSelect {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.roleBadge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-text);
+}

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { supabase, supabaseConfigured } from "../lib/supabase";
 import ConfirmDialog from "../components/ConfirmDialog";
 import PostEditor, { BUCKET } from "./PostEditor";
 import PostList from "./PostList";
+import UsersPanel from "./UsersPanel";
 import styles from "./AdminPage.module.css";
 
 // The main app sets data-theme from the rider's saved setting; /admin mounts
@@ -61,8 +62,14 @@ function LoginForm({ onError }) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 // Editor dashboard at /admin. Talks to Supabase directly (auth + posts +
-// storage); RLS enforces that only editor/admin profiles can write. The rider
-// app never loads this — main.jsx mounts it only for that path.
+// storage). The rider app never loads this — main.jsx mounts it only for that
+// path.
+//
+// Roles (enforced by RLS in supabase/0002_roles_and_trash.sql — the checks
+// here only decide which buttons to show):
+//   editor  write posts; edit / pin / end posts written by editors
+//   admin   everything, plus Trash (delete / restore / delete forever) and
+//           the Users screen for granting editor access
 export default function AdminPage() {
   const [session, setSession] = useState(undefined); // undefined = still checking
   const [profile, setProfile] = useState(null);
@@ -71,7 +78,11 @@ export default function AdminPage() {
   const [loadedAt, setLoadedAt] = useState(0);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
-  const [confirmDelete, setConfirmDelete] = useState(null);
+  // { kind: "trash" | "purge", post } while a confirm dialog is open.
+  const [confirm, setConfirm] = useState(null);
+  const [people, setPeople] = useState([]);
+  const [peopleLoading, setPeopleLoading] = useState(true);
+  const [view, setView] = useState("posts"); // "posts" | "users" (admin only)
   // null = list view; { post: null } = new post; { post } = editing that post.
   const [editing, setEditing] = useState(null);
 
@@ -85,7 +96,9 @@ export default function AdminPage() {
       if (!s) {
         setProfile(null);
         setPosts([]);
+        setPeople([]);
         setEditing(null);
+        setView("posts");
       }
     });
     return () => sub.subscription.unsubscribe();
@@ -103,6 +116,15 @@ export default function AdminPage() {
     else setPosts(data || []);
   }, []);
 
+  // Profiles this account may see: everyone for the admin, the staff list for
+  // editors. Used for "By …" on posts, read-only admin posts, and Users.
+  const loadPeople = useCallback(async () => {
+    const { data, error: err } = await supabase.from("profiles").select("id, email, role, created_at");
+    setPeopleLoading(false);
+    if (err) setError(err.message);
+    else setPeople(data || []);
+  }, []);
+
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
@@ -111,11 +133,12 @@ export default function AdminPage() {
       if (cancelled) return;
       setProfile(data || { role: "viewer" });
       loadPosts();
+      loadPeople();
     })();
     return () => {
       cancelled = true;
     };
-  }, [session, loadPosts]);
+  }, [session, loadPosts, loadPeople]);
 
   // Auto-dismiss notices.
   useEffect(() => {
@@ -129,28 +152,68 @@ export default function AdminPage() {
     window.scrollTo(0, 0);
   }, [editing]);
 
-  const deletePost = async (p) => {
-    setConfirmDelete(null);
+  // Updates/deletes that RLS refuses come back as "0 rows", not an error —
+  // ask for the row back so a refusal is reported instead of looking saved.
+  const changed = ({ data, error: err }) => {
+    if (!err && data?.length) return true;
+    setError(err ? err.message : "That didn't go through — you may not have permission, or the post changed.");
+    return false;
+  };
+
+  const trashPost = async (p) => {
+    setConfirm(null);
+    const res = await supabase
+      .from("posts")
+      .update({ deleted_at: new Date().toISOString(), deleted_by: session.user.id })
+      .eq("id", p.id)
+      .select("id");
+    if (!changed(res)) return;
+    setNotice("Moved to Trash");
+    loadPosts();
+  };
+
+  const restorePost = async (p) => {
+    const res = await supabase.from("posts").update({ deleted_at: null, deleted_by: null }).eq("id", p.id).select("id");
+    if (!changed(res)) return;
+    setNotice("Post restored");
+    loadPosts();
+  };
+
+  const purgePost = async (p) => {
+    setConfirm(null);
     const paths = (p.images || []).map((i) => i.path).filter(Boolean);
-    const { error: err } = await supabase.from("posts").delete().eq("id", p.id);
-    if (err) return setError(err.message);
+    const res = await supabase.from("posts").delete().eq("id", p.id).select("id");
+    if (!changed(res)) return;
     if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
-    setNotice("Post deleted");
+    setNotice("Post deleted forever");
     loadPosts();
   };
 
   const endNow = async (p) => {
-    const { error: err } = await supabase.from("posts").update({ ends_at: new Date().toISOString() }).eq("id", p.id);
-    if (err) return setError(err.message);
+    const res = await supabase.from("posts").update({ ends_at: new Date().toISOString() }).eq("id", p.id).select("id");
+    if (!changed(res)) return;
     setNotice("Post ended — it's no longer shown in the app");
     loadPosts();
   };
 
   const togglePin = async (p) => {
-    const { error: err } = await supabase.from("posts").update({ pinned: !p.pinned }).eq("id", p.id);
-    if (err) return setError(err.message);
+    const res = await supabase.from("posts").update({ pinned: !p.pinned }).eq("id", p.id).select("id");
+    if (!changed(res)) return;
     setNotice(p.pinned ? "Unpinned" : "Pinned to top");
     loadPosts();
+  };
+
+  const isAdmin = profile?.role === "admin";
+  const peopleById = useMemo(() => new Map(people.map((x) => [x.id, x])), [people]);
+
+  // Editors can change any post except the admin's.
+  const canModify = (post) => isAdmin || peopleById.get(post.created_by)?.role !== "admin";
+
+  const authorLabel = (post) => {
+    if (!post.created_by) return "";
+    if (post.created_by === session?.user.id) return "you";
+    const author = peopleById.get(post.created_by);
+    return author?.email ? author.email.split("@")[0] : "";
   };
 
   if (!supabaseConfigured) {
@@ -219,13 +282,44 @@ export default function AdminPage() {
 
       {session && canEdit && !editing && (
         <>
+          {isAdmin && (
+            <nav className={styles.tabs} aria-label="Admin sections">
+              {[
+                ["posts", "Posts"],
+                ["users", "Users"],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`${styles.tab} ${view === key ? styles.tabOn : ""}`}
+                  aria-current={view === key ? "page" : undefined}
+                  onClick={() => setView(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+          )}
           <div className={styles.listHeader}>
-            <h2 className={styles.viewTitle}>Posts</h2>
-            <button type="button" className={styles.primaryBtn} onClick={() => setEditing({ post: null })}>
-              + New post
-            </button>
+            <h2 className={styles.viewTitle}>{isAdmin && view === "users" ? "Users" : "Posts"}</h2>
+            {!(isAdmin && view === "users") && (
+              <button type="button" className={styles.primaryBtn} onClick={() => setEditing({ post: null })}>
+                + New post
+              </button>
+            )}
           </div>
-          {!postsLoading && posts.length === 0 ? (
+          {isAdmin && view === "users" ? (
+            <UsersPanel
+              people={people}
+              loading={peopleLoading}
+              currentUserId={session.user.id}
+              onChanged={(msg) => {
+                setNotice(msg);
+                loadPeople();
+              }}
+              onError={setError}
+            />
+          ) : !postsLoading && posts.length === 0 ? (
             <div className={styles.emptyState}>
               <p>No posts yet. Your first one shows up in the app's News tab right away.</p>
               <button type="button" className={styles.primaryBtn} onClick={() => setEditing({ post: null })}>
@@ -237,8 +331,13 @@ export default function AdminPage() {
               posts={posts}
               loading={postsLoading}
               now={loadedAt}
+              isAdmin={isAdmin}
+              canModify={canModify}
+              authorLabel={authorLabel}
               onEdit={(post) => setEditing({ post })}
-              onDelete={setConfirmDelete}
+              onTrash={(post) => setConfirm({ kind: "trash", post })}
+              onRestore={restorePost}
+              onPurge={(post) => setConfirm({ kind: "purge", post })}
               onEndNow={endNow}
               onTogglePin={togglePin}
             />
@@ -250,13 +349,23 @@ export default function AdminPage() {
         {notice && <div className={styles.toast}>{notice}</div>}
       </div>
 
-      {confirmDelete && (
+      {confirm?.kind === "trash" && (
         <ConfirmDialog
-          title="Delete this post?"
-          message={`“${confirmDelete.title}” and its photos will be removed for everyone. To just hide it, use End now instead.`}
-          confirmLabel="Delete"
-          onConfirm={() => deletePost(confirmDelete)}
-          onCancel={() => setConfirmDelete(null)}
+          title="Move this post to Trash?"
+          message={`“${confirm.post.title}” disappears from the app right away. You can restore it from Trash.`}
+          confirmLabel="Move to Trash"
+          onConfirm={() => trashPost(confirm.post)}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
+
+      {confirm?.kind === "purge" && (
+        <ConfirmDialog
+          title="Delete this post forever?"
+          message={`“${confirm.post.title}” and its photos will be permanently removed. This can't be undone.`}
+          confirmLabel="Delete forever"
+          onConfirm={() => purgePost(confirm.post)}
+          onCancel={() => setConfirm(null)}
         />
       )}
     </div>
