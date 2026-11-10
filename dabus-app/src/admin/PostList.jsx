@@ -16,66 +16,101 @@ const SECTIONS = [
   { key: "live", title: "Live", empty: "Nothing is live right now." },
   { key: "scheduled", title: "Scheduled" },
   { key: "ended", title: "Ended", collapsed: true },
+  { key: "trash", title: "Trash", collapsed: true },
 ];
 
-function PostRow({ post, status, onEdit, onDelete, onEndNow, onTogglePin }) {
+function PostRow({ post, status, canModify, isAdmin, authorLabel, onEdit, onTrash, onRestore, onPurge, onEndNow, onTogglePin }) {
   const cover = post.images?.[0]?.url;
+  const inTrash = status === "trash";
+  const editable = !inTrash && canModify(post);
+  const author = authorLabel(post);
   const targets = [
     post.route_ids?.length ? `${post.route_ids.length === 1 ? "Route" : "Routes"} ${post.route_ids.join(", ")}` : "",
     post.stop_ids?.length ? `${post.stop_ids.length === 1 ? "Stop" : "Stops"} ${post.stop_ids.join(", ")}` : "",
   ].filter(Boolean);
+  const sub = [
+    ...targets,
+    inTrash ? `Deleted ${when(post.deleted_at)}` : range(post),
+    author ? `By ${author}` : "",
+  ].filter(Boolean);
+
+  const main = (
+    <>
+      <span className={`${styles.postThumb} ${styles[`thumb_${post.category}`] || ""}`} aria-hidden="true">
+        {cover ? <img src={cover} alt="" loading="lazy" /> : categoryLabel(post.category).charAt(0)}
+        {post.images?.length > 1 && <span className={styles.thumbCount}>{post.images.length}</span>}
+      </span>
+      <span className={styles.postText}>
+        <span className={styles.postMeta}>
+          <span className={styles.postCat}>{categoryLabel(post.category)}</span>
+          {post.pinned && <span className={styles.pinBadge}>Pinned</span>}
+          {!inTrash && !editable && <span>Admin post · read-only</span>}
+        </span>
+        <span className={styles.postTitle}>{post.title}</span>
+        <span className={styles.postSub}>{sub.join(" · ")}</span>
+      </span>
+    </>
+  );
 
   return (
-    <li className={`${styles.postRow} ${status === "ended" ? styles.postRowEnded : ""}`}>
-      <button type="button" className={styles.postMain} onClick={() => onEdit(post)} aria-label={`Edit “${post.title}”`}>
-        <span className={`${styles.postThumb} ${styles[`thumb_${post.category}`] || ""}`} aria-hidden="true">
-          {cover ? <img src={cover} alt="" loading="lazy" /> : categoryLabel(post.category).charAt(0)}
-          {post.images?.length > 1 && <span className={styles.thumbCount}>{post.images.length}</span>}
-        </span>
-        <span className={styles.postText}>
-          <span className={styles.postMeta}>
-            <span className={styles.postCat}>{categoryLabel(post.category)}</span>
-            {post.pinned && <span className={styles.pinBadge}>Pinned</span>}
-          </span>
-          <span className={styles.postTitle}>{post.title}</span>
-          <span className={styles.postSub}>
-            {[...targets, range(post)].join(" · ")}
-          </span>
-        </span>
-      </button>
-      <div className={styles.postActions}>
-        <button type="button" onClick={() => onEdit(post)}>
-          Edit
+    <li className={`${styles.postRow} ${status === "ended" || inTrash ? styles.postRowEnded : ""}`}>
+      {editable ? (
+        <button type="button" className={styles.postMain} onClick={() => onEdit(post)} aria-label={`Edit “${post.title}”`}>
+          {main}
         </button>
-        <button type="button" onClick={() => onTogglePin(post)}>
-          {post.pinned ? "Unpin" : "Pin"}
-        </button>
-        {status === "live" && (
-          <button type="button" onClick={() => onEndNow(post)}>
-            End now
+      ) : (
+        <div className={`${styles.postMain} ${styles.postMainStatic}`}>{main}</div>
+      )}
+      {inTrash ? (
+        <div className={styles.postActions}>
+          <button type="button" onClick={() => onRestore(post)}>
+            Restore
           </button>
-        )}
-        <button type="button" className={styles.danger} onClick={() => onDelete(post)}>
-          Delete
-        </button>
-      </div>
+          <button type="button" className={styles.danger} onClick={() => onPurge(post)}>
+            Delete forever
+          </button>
+        </div>
+      ) : (
+        editable && (
+          <div className={styles.postActions}>
+            <button type="button" onClick={() => onEdit(post)}>
+              Edit
+            </button>
+            <button type="button" onClick={() => onTogglePin(post)}>
+              {post.pinned ? "Unpin" : "Pin"}
+            </button>
+            {status === "live" && (
+              <button type="button" onClick={() => onEndNow(post)}>
+                End now
+              </button>
+            )}
+            {isAdmin && (
+              <button type="button" className={styles.danger} onClick={() => onTrash(post)}>
+                Delete
+              </button>
+            )}
+          </div>
+        )
+      )}
     </li>
   );
 }
 
-// All posts, grouped Live / Scheduled / Ended. Ended is collapsed by default —
-// it's history, and would otherwise grow forever above nothing useful.
+// All posts, grouped Live / Scheduled / Ended (+ Trash for the admin). Ended
+// and Trash are collapsed by default — they're history, and would otherwise
+// grow forever above nothing useful.
 // `now` is when the list was last loaded, so grouping is stable across renders.
-export default function PostList({ posts, loading, now, ...actions }) {
-  const grouped = { live: [], scheduled: [], ended: [] };
-  for (const p of posts) grouped[postStatus(p, now)].push(p);
+export default function PostList({ posts, loading, now, ...rowProps }) {
+  const grouped = { live: [], scheduled: [], ended: [], trash: [] };
+  for (const p of posts) grouped[p.deleted_at ? "trash" : postStatus(p, now)].push(p);
   // Pinned first, then newest start first (posts arrive in that order already,
   // but re-sort in case a pin toggle changed it locally).
-  for (const k of Object.keys(grouped)) {
+  for (const k of ["live", "scheduled", "ended"]) {
     grouped[k].sort((a, b) => Number(b.pinned) - Number(a.pinned) || new Date(b.starts_at) - new Date(a.starts_at));
   }
-  // Scheduled reads better soonest-first.
+  // Scheduled reads better soonest-first; Trash most-recently-deleted first.
   grouped.scheduled.sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+  grouped.trash.sort((a, b) => new Date(b.deleted_at) - new Date(a.deleted_at));
 
   if (loading && posts.length === 0) return <p className={styles.empty}>Loading posts…</p>;
 
@@ -90,7 +125,7 @@ export default function PostList({ posts, loading, now, ...actions }) {
           ) : (
             <ul className={styles.postList}>
               {list.map((p) => (
-                <PostRow key={p.id} post={p} status={s.key} {...actions} />
+                <PostRow key={p.id} post={p} status={s.key} {...rowProps} />
               ))}
             </ul>
           );

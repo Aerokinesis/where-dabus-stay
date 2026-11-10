@@ -231,13 +231,15 @@ export default function PostEditor({ user, post, onSaved, onCancel, onError }) {
       ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
     };
 
-    const { error } = isEdit
-      ? await supabase.from("posts").update(row).eq("id", post.id)
+    // .select() on the update: a save RLS refuses (post trashed or not yours
+    // to edit) comes back as zero rows rather than an error.
+    const { data: saved, error } = isEdit
+      ? await supabase.from("posts").update(row).eq("id", post.id).select("id")
       : await supabase.from("posts").insert({ ...row, created_by: user.id });
 
-    if (error) {
+    if (error || (isEdit && !saved?.length)) {
       setBusy(false);
-      return onError(error.message);
+      return onError(error ? error.message : "Couldn't save — this post was deleted or you can't edit it.");
     }
     newUploads.current.clear();
     if (removedExisting.length) await supabase.storage.from(BUCKET).remove(removedExisting);
