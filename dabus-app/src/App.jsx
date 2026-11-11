@@ -1237,9 +1237,10 @@ function App() {
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z" />
-              <path d="M15.5 8.5a5 5 0 0 1 0 7" />
-              <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+              {/* Megaphone: "announcements" (the old speaker-with-waves icon
+                  read as a volume control). */}
+              <path d="m3 11 18-5v12L3 14v-3z" />
+              <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
             </svg>
             {announcementsUnread > 0 && activeTab !== "announcements" && (
               <span className={styles.navDot} aria-hidden="true" />
