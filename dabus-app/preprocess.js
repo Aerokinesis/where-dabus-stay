@@ -58,6 +58,16 @@ const tripsByRoute = trips.reduce((acc, trip) => {
     return acc
 }, {})
 
+// A route is express when its name says so ("... Express", "CountryExpress!
+// C") or when every one of its trips is signed EXPRESS on the bus. The second
+// test catches routes like 94, 95 and 98, which run as peak-hour freeway
+// expresses but aren't named that way in routes.txt. It has to hold for every
+// trip: named express routes have a few trips signed otherwise, so a per-trip
+// test would flag the same route differently depending on the trip.
+const isExpressRoute = (route, routeTrips) =>
+    /express/i.test(route.route_long_name || "") ||
+    (routeTrips.length > 0 && routeTrips.every(t => /^\s*express\b/i.test(t.trip_headsign || "")))
+
 // shape_id -> ordered stop list (for bus tracking endpoint)
 const shapeStops = {}
 
@@ -65,6 +75,7 @@ const routeDirections = []
 for (const [routeId, routeTrips] of Object.entries(tripsByRoute)) {
     const route = routes.find(r => r.route_id === routeId)
     if (!route) continue
+    const express = isExpressRoute(route, routeTrips)
 
     // Pick the trip with the MOST stops per direction, not the first one found.
     // Some routes (notably Skyline) have short-turn/partial trips; if one of
@@ -116,6 +127,7 @@ for (const [routeId, routeTrips] of Object.entries(tripsByRoute)) {
             route_short_name: route.route_short_name,
             route_long_name: route.route_long_name,
             headsign: trip.trip_headsign,
+            express,
             shape_id: trip.shape_id,
             stops: dirStops,
         })
