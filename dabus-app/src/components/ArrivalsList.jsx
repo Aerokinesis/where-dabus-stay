@@ -377,6 +377,9 @@ function ArrivalsList({
                         className={styles.mapBtn}
                         onClick={() => onShowMap(bus)}
                         disabled={trackingLoading}
+                        // Every card's button reads "Track"; say which bus, as
+                        // the grouped view's tiles do.
+                        aria-label={`Track route ${bus.route} to ${bus.headsign}, bus #${bus.vehicle}, ${getMinutesUntil(bus.stopTime, bus.date)}, ${bus.stopTime}`}
                       >
                         Track
                       </button>

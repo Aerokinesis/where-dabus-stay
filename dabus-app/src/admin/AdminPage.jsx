@@ -6,17 +6,10 @@ import PostEditor, { BUCKET } from "./PostEditor";
 import PostList from "./PostList";
 import UsersPanel from "./UsersPanel";
 import styles from "./AdminPage.module.css";
+import { followTheme, savedThemeSetting } from "../theme";
 
 // The main app sets data-theme from the rider's saved setting; /admin mounts
-// without App, so apply the same setting here or it's always dark.
-const applySavedTheme = () => {
-  try {
-    const theme = JSON.parse(localStorage.getItem("dabus-settings") || "{}").theme;
-    if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
-  } catch {
-    // unreadable settings — fall back to the default theme
-  }
-};
+// without App, so follow the same setting here (including "system").
 
 // ── Login ────────────────────────────────────────────────────────────────────
 
@@ -86,7 +79,7 @@ export default function AdminPage() {
   // null = list view; { post: null } = new post; { post } = editing that post.
   const [editing, setEditing] = useState(null);
 
-  useEffect(applySavedTheme, []);
+  useEffect(() => followTheme(savedThemeSetting()), []);
 
   useEffect(() => {
     if (!supabase) return;

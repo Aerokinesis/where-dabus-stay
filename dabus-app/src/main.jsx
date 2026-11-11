@@ -2,9 +2,14 @@ import { StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Analytics } from '@vercel/analytics/react'
 import './index.css'
+import { applyTheme, savedThemeSetting } from './theme'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import AdminPage from './admin/AdminLazy.jsx'
+
+// Set the theme before the first render so a light-theme device doesn't
+// flash the dark default while the app loads.
+applyTheme(savedThemeSetting())
 
 // /admin is the editors' announcements dashboard. Lazy so its Supabase
 // client never lands in the rider-facing bundle. (vercel.json rewrites every
