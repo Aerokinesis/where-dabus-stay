@@ -169,10 +169,21 @@ for (const [shapeId, trip] of Object.entries(tripsByShape)) {
 // agree (resultant length below MIN_BEARING_AGREEMENT, e.g. a rail platform
 // served in both directions, or a transit center with buses leaving every
 // way), the stop gets no arrow rather than a misleading one.
+//
+// One exception. The straight line to the next stop is a poor guide when the
+// next stop is far away or round a corner (an express leg, a loop back onto
+// the parallel street, a route that starts by circling the block), and can
+// point nearly opposite to the road, which makes an ordinary one-way street
+// stop look like its routes disagree. So when the headings disagree, look at
+// the road headings alone: if every route's shape passes the stop the same
+// way (ROAD_ONLY_AGREEMENT) and at least one of them was confirmed by its own
+// next stop, that is the stop's direction. Stops whose shapes really do pass
+// in different directions stay arrowless.
 const toRad = (deg) => deg * Math.PI / 180
 const toDeg = (rad) => rad * 180 / Math.PI
 const STOP_SHAPE_MAX_M = 40
 const MIN_BEARING_AGREEMENT = 0.6
+const ROAD_ONLY_AGREEMENT = 0.9
 
 function computeBearing(lat1, lon1, lat2, lon2) {
     const dLon = toRad(lon2 - lon1)
@@ -241,20 +252,28 @@ for (const rd of routeDirections) {
         // A road heading nearly opposite the way to the next stop means the
         // shape match went wrong (e.g. matched the other direction's pass);
         // fall back to the straight line.
-        const b = road[i] != null && angleBetween(road[i], chord) <= 135 ? road[i] : chord
+        const confirmed = road[i] != null && angleBetween(road[i], chord) <= 135
         const acc = (bearingAccum[s[i].stop_id] ||= { departing: [], arriving: [] })
-        acc[last ? "arriving" : "departing"].push(b)
+        acc[last ? "arriving" : "departing"].push({ b: confirmed ? road[i] : chord, road: road[i], confirmed })
     }
 }
-const stopBearings = {}
-for (const [id, { departing, arriving }] of Object.entries(bearingAccum)) {
-    const bs = departing.length ? departing : arriving
+// Circular mean of headings, or null if they agree less than minAgreement.
+function meanBearing(bs, minAgreement) {
     let sin = 0, cos = 0
     for (const b of bs) { sin += Math.sin(toRad(b)); cos += Math.cos(toRad(b)) }
-    const agreement = Math.hypot(sin, cos) / bs.length
-    stopBearings[id] = agreement >= MIN_BEARING_AGREEMENT
+    return bs.length && Math.hypot(sin, cos) / bs.length >= minAgreement
         ? Math.round((toDeg(Math.atan2(sin, cos)) + 360) % 360)
         : null
+}
+
+const stopBearings = {}
+for (const [id, { departing, arriving }] of Object.entries(bearingAccum)) {
+    const hs = departing.length ? departing : arriving
+    let bearing = meanBearing(hs.map(h => h.b), MIN_BEARING_AGREEMENT)
+    if (bearing == null && hs.some(h => h.confirmed)) {
+        bearing = meanBearing(hs.filter(h => h.road != null).map(h => h.road), ROAD_ONLY_AGREEMENT)
+    }
+    stopBearings[id] = bearing
 }
 
 const out = { routeDirections, shapes, shapeStops, stopBearings, feedInfo }
