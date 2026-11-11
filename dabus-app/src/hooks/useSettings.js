@@ -5,6 +5,7 @@ const STORAGE_KEY = "dabus-settings";
 const defaults = {
   theme: "system",
   searchRadius: 0.25,
+  arrivalsView: "list", // "list" | "grouped"
 };
 
 export function useSettings() {

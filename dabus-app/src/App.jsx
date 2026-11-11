@@ -833,6 +833,8 @@ function App() {
             }}
             lastUpdated={lastUpdated}
             onRefresh={() => fetchArrivals(currentStop.id)}
+            view={settings.arrivalsView}
+            onChangeView={(v) => updateSetting("arrivalsView", v)}
             arrivalsTab={arrivalsTab}
             routeShortName={arrivalsTab === "routes" ? selectedRoute?.route_short_name : null}
             alerts={(() => {
