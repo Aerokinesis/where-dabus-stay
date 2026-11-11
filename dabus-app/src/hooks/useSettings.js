@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { followTheme } from "../theme";
 
 const STORAGE_KEY = "dabus-settings";
 
@@ -24,16 +25,9 @@ export function useSettings() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
-  useEffect(() => {
-    const root = document.documentElement;
-    if (settings.theme === "dark") {
-      root.setAttribute("data-theme", "dark");
-    } else if (settings.theme === "light") {
-      root.setAttribute("data-theme", "light");
-    } else {
-      root.removeAttribute("data-theme");
-    }
-  }, [settings.theme]);
+  // "system" used to just drop data-theme, which always meant dark; now it
+  // follows the device's light/dark appearance (see theme.js).
+  useEffect(() => followTheme(settings.theme), [settings.theme]);
 
   return { settings, updateSetting };
 }
