@@ -18,3 +18,7 @@
 *.zip   binary
 *.woff  binary
 *.woff2 binary
+
+# Database setup scripts, run by hand in the Supabase SQL editor. Keep them
+# out of GitHub's language stats — they aren't app code.
+dabus-app/supabase/*.sql linguist-documentation
