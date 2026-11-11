@@ -249,13 +249,14 @@ app.get("/api/trip/:tripId/stops", (req, res) => {
 // All routes endpoint — one entry per direction
 app.get("/api/routes", (req, res) => {
     res.json({
-        routes: routeDirections.map(({ id, route_short_name, route_long_name, headsign }) => ({
+        routes: routeDirections.map(({ id, route_short_name, route_long_name, headsign, express }) => ({
             route_id: id,
             route_short_name: route_short_name || route_long_name || "–",
             route_long_name: headsign
                 ? headsign.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
                 : route_long_name,
             route_description: route_long_name,
+            express: express === true,
         }))
     })
 })
