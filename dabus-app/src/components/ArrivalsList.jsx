@@ -16,6 +16,8 @@ function ArrivalsList({
   hiddenAlerts,
   onDismissAlert,
   onRestoreAlerts,
+  view = "list",
+  onChangeView,
 }) {
   const [refreshing, setRefreshing] = useState(false);
   const getMinutesUntil = (stopTime, date) => {
@@ -31,7 +33,47 @@ function ArrivalsList({
     return `${hours} hr ${mins} min`;
   };
 
+  // Compact form of getMinutesUntil for the grouped tiles: a big value and
+  // a small unit under it.
+  const getTileTime = (stopTime, date) => {
+    const diff = Math.round((new Date(`${date} ${stopTime}`) - new Date()) / 60000);
+    if (diff <= 0) return { value: "Now", unit: "" };
+    if (diff < 60) return { value: diff, unit: diff === 1 ? "minute" : "minutes" };
+    const mins = diff % 60;
+    return { value: `${Math.floor(diff / 60)}h${mins ? ` ${mins}m` : ""}`, unit: "" };
+  };
+
+  const getStatus = (bus) => {
+    const isArrived = bus.arrived === true;
+    const isLive = bus.estimated === "1";
+    // TheBus sometimes leaves the canceled flag set on a block that a
+    // vehicle is still running. Live GPS means a bus really is coming,
+    // so it overrides the flag; canceled + no GPS is exactly what a
+    // real cancellation looks like (a canceled trip has no vehicle
+    // transmitting), so that's when we trust it.
+    const isCanceled = bus.canceled === "1" && !isLive;
+    return { isArrived, isLive, isCanceled };
+  };
+
   const safeArrivals = arrivals || [];
+  const isGrouped = view === "grouped";
+
+  // One group per route + headsign, in order of each group's soonest bus
+  // (the feed is already chronological, so first appearance wins).
+  const groups = [];
+  if (isGrouped) {
+    const byKey = new Map();
+    for (const bus of safeArrivals) {
+      const key = `${bus.route}|${bus.headsign}`;
+      let group = byKey.get(key);
+      if (!group) {
+        group = { key, route: bus.route, headsign: bus.headsign, buses: [] };
+        byKey.set(key, group);
+        groups.push(group);
+      }
+      group.buses.push(bus);
+    }
+  }
 
   const routesByDirection = safeArrivals.reduce((acc, bus) => {
     if (bus.arrived || !bus.direction) return acc;
@@ -74,12 +116,14 @@ function ArrivalsList({
         </div>
       )}
 
-      {lastUpdated && (
+      {(lastUpdated || onChangeView) && (
         <div className={styles.lastUpdatedRow}>
-          <span className={styles.lastUpdated}>
-            Updated {lastUpdated.toLocaleTimeString()}
-          </span>
-          {onRefresh && (
+          {lastUpdated && (
+            <span className={styles.lastUpdated}>
+              Updated {lastUpdated.toLocaleTimeString()}
+            </span>
+          )}
+          {lastUpdated && onRefresh && (
             <button
               className={styles.refreshBtn}
               aria-label="Refresh arrivals"
@@ -107,6 +151,23 @@ function ArrivalsList({
                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
               </svg>
             </button>
+          )}
+          {onChangeView && (
+            <div className={styles.viewSeg} role="group" aria-label="Arrivals view">
+              {[
+                ["list", "List"],
+                ["grouped", "Grouped"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  className={`${styles.viewSegBtn} ${view === value ? styles.viewSegActive : ""}`}
+                  onClick={() => onChangeView(value)}
+                  aria-pressed={view === value}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -145,16 +206,72 @@ function ArrivalsList({
         </div>
       )}
 
+      {isGrouped && (
+        <div className={styles.list}>
+          {groups.map((group) => {
+            const shown = group.buses.slice(0, 3);
+            const extra = group.buses.length - shown.length;
+            return (
+              <div key={group.key} className={styles.card}>
+                <div className={styles.cardTop}>
+                  <div className={styles.routeBadge}>{group.route}</div>
+                  <div className={styles.headsign}>{group.headsign}</div>
+                  {extra > 0 && (
+                    <span className={styles.moreCount}>+{extra} later</span>
+                  )}
+                </div>
+                <div className={styles.tiles}>
+                  {shown.map((bus) => {
+                    const { isArrived, isLive, isCanceled } = getStatus(bus);
+                    const isTracking = selectedBus?.id === bus.id;
+                    const { value, unit } = isArrived
+                      ? { value: "✓", unit: "Arrived" }
+                      : isCanceled
+                        ? { value: "—", unit: "Canceled" }
+                        : getTileTime(bus.stopTime, bus.date);
+                    const canTrack = isLive && !isArrived;
+                    const Tile = canTrack ? "button" : "div";
+                    return (
+                      <Tile
+                        key={bus.id}
+                        className={`${styles.tile} ${isArrived ? styles.tileArrived : ""} ${isCanceled ? styles.tileCanceled : ""} ${isTracking ? styles.tileTracking : ""}`}
+                        {...(canTrack && {
+                          type: "button",
+                          onClick: () => onShowMap(bus),
+                          disabled: trackingLoading || isTracking,
+                          "aria-label": `Track route ${group.route} bus #${bus.vehicle}, ${value} ${unit}, ${bus.stopTime}`,
+                        })}
+                      >
+                        <span className={styles.tileValue}>{value}</span>
+                        {unit && <span className={styles.tileUnit}>{unit}</span>}
+                        <span className={styles.tileClock}>{bus.stopTime}</span>
+                        {!isArrived && !isCanceled && (
+                          <span
+                            className={`${styles.liveTag} ${isLive ? styles.live : styles.scheduled}`}
+                          >
+                            {isTracking
+                              ? trackingLoading
+                                ? "Loading..."
+                                : "● Tracking"
+                              : isLive
+                                ? "● Live · Track"
+                                : "○ Scheduled"}
+                          </span>
+                        )}
+                      </Tile>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {!isGrouped && (
       <div className={styles.list}>
         {safeArrivals.map((bus) => {
-          const isArrived = bus.arrived === true;
-          const isLive = bus.estimated === "1";
-          // TheBus sometimes leaves the canceled flag set on a block that a
-          // vehicle is still running. Live GPS means a bus really is coming,
-          // so it overrides the flag; canceled + no GPS is exactly what a
-          // real cancellation looks like (a canceled trip has no vehicle
-          // transmitting), so that's when we trust it.
-          const isCanceled = bus.canceled === "1" && !isLive;
+          const { isArrived, isLive, isCanceled } = getStatus(bus);
 
           return (
           <div
@@ -220,6 +337,7 @@ function ArrivalsList({
           );
         })}
       </div>
+      )}
     </div>
   );
 }
