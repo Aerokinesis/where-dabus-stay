@@ -20,6 +20,14 @@ function ArrivalsList({
   onChangeView,
 }) {
   const [refreshing, setRefreshing] = useState(false);
+  // Grouped view: keys of the cards opened up to show every arrival.
+  const [expanded, setExpanded] = useState(() => new Set());
+  const toggleExpanded = (key) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
   const getMinutesUntil = (stopTime, date) => {
     const now = new Date();
     const arrival = new Date(`${date} ${stopTime}`);
@@ -209,58 +217,101 @@ function ArrivalsList({
       {isGrouped && (
         <div className={styles.list}>
           {groups.map((group) => {
-            const shown = group.buses.slice(0, 3);
-            const extra = group.buses.length - shown.length;
+            const isOpen = expanded.has(group.key);
+            const shown = isOpen ? group.buses : group.buses.slice(0, 3);
+            const extra = group.buses.length - 3;
+            const last = group.buses[group.buses.length - 1];
             return (
               <div key={group.key} className={styles.card}>
                 <div className={styles.cardTop}>
                   <div className={styles.routeBadge}>{group.route}</div>
+                  <span className={styles.groupArrow} aria-hidden="true">→</span>
                   <div className={styles.headsign}>{group.headsign}</div>
-                  {extra > 0 && (
-                    <span className={styles.moreCount}>+{extra} later</span>
-                  )}
                 </div>
-                <div className={styles.tiles}>
-                  {shown.map((bus) => {
-                    const { isArrived, isLive, isCanceled } = getStatus(bus);
-                    const isTracking = selectedBus?.id === bus.id;
-                    const { value, unit } = isArrived
-                      ? { value: "✓", unit: "Arrived" }
-                      : isCanceled
-                        ? { value: "—", unit: "Canceled" }
-                        : getTileTime(bus.stopTime, bus.date);
-                    const canTrack = isLive && !isArrived;
-                    const Tile = canTrack ? "button" : "div";
-                    return (
-                      <Tile
-                        key={bus.id}
-                        className={`${styles.tile} ${isArrived ? styles.tileArrived : ""} ${isCanceled ? styles.tileCanceled : ""} ${isTracking ? styles.tileTracking : ""}`}
-                        {...(canTrack && {
-                          type: "button",
-                          onClick: () => onShowMap(bus),
-                          disabled: trackingLoading || isTracking,
-                          "aria-label": `Track route ${group.route} bus #${bus.vehicle}, ${value} ${unit}, ${bus.stopTime}`,
-                        })}
-                      >
-                        <span className={styles.tileValue}>{value}</span>
-                        {unit && <span className={styles.tileUnit}>{unit}</span>}
-                        <span className={styles.tileClock}>{bus.stopTime}</span>
-                        {!isArrived && !isCanceled && (
-                          <span
-                            className={`${styles.liveTag} ${isLive ? styles.live : styles.scheduled}`}
-                          >
-                            {isTracking
-                              ? trackingLoading
-                                ? "Loading..."
-                                : "● Tracking"
-                              : isLive
-                                ? "● Live · Track"
-                                : "○ Scheduled"}
+                <div className={styles.groupBody}>
+                  <div className={styles.tiles}>
+                    {shown.map((bus) => {
+                      const { isArrived, isLive, isCanceled } = getStatus(bus);
+                      const isTracking = selectedBus?.id === bus.id;
+                      // Same wording as the list ("5 mins"); hours use the
+                      // compact form so they fit a tile.
+                      const { value, unit } = getTileTime(bus.stopTime, bus.date);
+                      const chipText = isArrived
+                        ? "Arrived"
+                        : isCanceled
+                          ? "—"
+                          : unit
+                            ? getMinutesUntil(bus.stopTime, bus.date)
+                            : value;
+                      const canTrack = isLive && !isArrived;
+                      const Tile = canTrack ? "button" : "div";
+                      return (
+                        <Tile
+                          key={bus.id}
+                          className={`${styles.tile} ${isCanceled ? styles.tileCanceled : ""} ${isTracking ? styles.tileTracking : ""}`}
+                          {...(canTrack && {
+                            type: "button",
+                            onClick: () => onShowMap(bus),
+                            disabled: trackingLoading || isTracking,
+                            "aria-label": `Track route ${group.route} bus #${bus.vehicle}, live, ${chipText}, ${bus.stopTime}`,
+                          })}
+                        >
+                          <span className={isArrived ? styles.arrivedTime : styles.time}>
+                            {chipText}
                           </span>
-                        )}
-                      </Tile>
-                    );
-                  })}
+                          <span className={styles.tileClock}>{bus.stopTime}</span>
+                          {!isArrived && (
+                            <span
+                              className={`${styles.liveTag} ${isLive ? styles.live : isCanceled ? styles.canceledPill : styles.scheduled}`}
+                            >
+                              {isTracking
+                                ? trackingLoading
+                                  ? "Loading..."
+                                  : "● Tracking"
+                                : isLive
+                                  ? "● Live"
+                                  : isCanceled
+                                    ? "○ Canceled"
+                                    : "○ Scheduled"}
+                            </span>
+                          )}
+                        </Tile>
+                      );
+                    })}
+                  </div>
+                  <div className={styles.groupSide}>
+                    <span className={styles.groupLastLabel}>Last</span>
+                    <span className={styles.groupLastTime}>{last.stopTime}</span>
+                    {extra > 0 && (
+                      <button
+                        type="button"
+                        className={styles.groupMore}
+                        onClick={() => toggleExpanded(group.key)}
+                        aria-expanded={isOpen}
+                        aria-label={
+                          isOpen
+                            ? `Show fewer route ${group.route} arrivals`
+                            : `Show ${extra} more route ${group.route} arrivals`
+                        }
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          className={isOpen ? styles.groupMoreOpen : ""}
+                        >
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

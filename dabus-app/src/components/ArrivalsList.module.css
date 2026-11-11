@@ -341,14 +341,26 @@
   border-radius: 7px;
 }
 
-/* Grouped view: one card per route + headsign, next three buses as tiles. */
-.moreCount {
-  font-size: 11px;
+/* Grouped view: one card per route + headsign. Same card, badge, time chip
+   and Live/Scheduled pills as the list; below the header the next three
+   buses sit side by side as tiles, with the last listed time and a "more"
+   chevron in a narrow column on the right. */
+.groupArrow {
+  font-size: 14px;
   color: var(--text-muted);
   flex-shrink: 0;
+  margin: 0 -4px;
+}
+
+.groupBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .tiles {
+  flex: 1;
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
@@ -358,12 +370,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
-  padding: 8px 4px;
+  padding: 8px 2px;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--text);
   font-family: inherit;
   text-align: center;
@@ -381,36 +393,28 @@ button.tile:not(:disabled):active {
   background: var(--border);
 }
 
-.tileValue {
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1.1;
+/* The list's chips and pills, a notch smaller so three fit across. */
+.tile .time,
+.tile .arrivedTime {
+  font-size: 14px;
+  padding: 2px 8px;
+  white-space: nowrap;
 }
 
-.tileUnit {
-  font-size: 11px;
-  color: var(--text-muted);
+.tile .liveTag {
+  font-size: 10px;
+  padding: 2px 5px;
+  white-space: nowrap;
 }
 
 .tileClock {
   font-size: 12px;
   color: var(--text-muted);
-  margin-bottom: 2px;
-}
-
-.tile .liveTag {
-  font-size: 10px;
   white-space: nowrap;
 }
 
 .tileTracking {
-  background: var(--live-bg);
   border-color: var(--live-text);
-}
-
-.tileArrived .tileValue,
-.tileArrived .tileUnit {
-  color: var(--arrived-text);
 }
 
 .tileCanceled {
@@ -419,4 +423,47 @@ button.tile:not(:disabled):active {
 
 .tileCanceled .tileClock {
   text-decoration: line-through;
+}
+
+.groupSide {
+  flex-shrink: 0;
+  width: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-top: 6px;
+}
+
+.groupLastLabel {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.groupLastTime {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.groupMore {
+  margin: 0 -15px -8px 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.groupMore svg {
+  transition: transform 0.15s;
+}
+
+.groupMoreOpen {
+  transform: rotate(90deg);
 }
