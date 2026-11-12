@@ -550,8 +550,13 @@ function App() {
     }
   };
 
-  // The search both stop-search bars run while the user is still typing.
-  const searchAsTyped = (q) => searchByAddress(q, { quiet: true });
+  // The search both stop-search bars run while the user is still typing. A
+  // stop number is left for Enter, which opens that stop directly, so it only
+  // drops whatever street results were showing.
+  const searchAsTyped = (q) => {
+    if (/^\d+$/.test(q)) clearNearbyStops();
+    else searchByAddress(q, { quiet: true });
+  };
 
   const handleSearch = () => {
     const target = tabForSearchResults();

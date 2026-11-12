@@ -81,8 +81,11 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
       if (quiet && !res.ok) return;
       const data = await res.json();
       if (!isLatest()) return;
-      if (data.stops?.length) setNearbyStops(data.stops);
-      else if (quiet) setNearbyStops(null);
+      if (data.stops?.length) {
+        // Results replace an earlier "No stops found" left by Enter.
+        if (quiet) setError(null);
+        setNearbyStops(data.stops);
+      } else if (quiet) setNearbyStops(null);
       else if (data.error) setError(data.error);
       // Shown the same way as an unknown stop number rather than as a quiet
       // "No stops found." under the search bar.

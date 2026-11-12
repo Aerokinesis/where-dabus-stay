@@ -114,19 +114,27 @@ function AddressSearch({
     };
   }, [dropdownOpen, hasMatches, showRecent, onClear]);
 
-  // Search-as-you-type: a street name is searched once typing pauses. A stop
-  // number is left for Enter, which opens that stop directly.
+  // Search-as-you-type: the text is handed to onType once typing pauses.
+  // The search is skipped if the field no longer holds that text by then:
+  // the parent changes it when a stop is opened some other way (a tap on the
+  // map, the other search bar), and the list must not reopen after that.
   const typeTimer = useRef(null);
   const cancelTypedSearch = () => clearTimeout(typeTimer.current);
   useEffect(() => cancelTypedSearch, []);
+  const latestQuery = useRef(query);
+  useEffect(() => {
+    latestQuery.current = query;
+  }, [query]);
 
   const handleChange = (value) => {
     setQuery(value);
     cancelTypedSearch();
     const q = value.trim();
     if (value === "") onClear();
-    else if (onType && q && !/^\d+$/.test(q))
-      typeTimer.current = setTimeout(() => onType(q), TYPE_PAUSE_MS);
+    else if (onType && q)
+      typeTimer.current = setTimeout(() => {
+        if (latestQuery.current === value) onType(q);
+      }, TYPE_PAUSE_MS);
   };
 
   // Anything that settles the search drops a typed search still waiting, so
