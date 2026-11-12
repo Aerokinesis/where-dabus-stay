@@ -295,8 +295,9 @@ function App() {
 
   // Reopening the installed app resumes it instead of reloading, so the map
   // would stay wherever it was left. Re-locate after it's been in the
-  // background a while. Skipped until location has worked once, so a denied
-  // permission doesn't re-show its error on every resume.
+  // background a while: quietly (no indicator, no error), and recentering
+  // only if the user has actually moved, so coming back to a desktop tab
+  // doesn't undo their panning. Skipped until location has worked once.
   const findNearbyStopsRef = useRef(findNearbyStops);
   findNearbyStopsRef.current = findNearbyStops;
   const hasLocationRef = useRef(false);
@@ -309,7 +310,7 @@ function App() {
         hiddenAt = Date.now();
       } else if (hiddenAt && Date.now() - hiddenAt > RELOCATE_AFTER_MS && hasLocationRef.current) {
         hiddenAt = null;
-        findNearbyStopsRef.current({ fresh: true });
+        findNearbyStopsRef.current({ fresh: true, quiet: true, recenter: "ifMoved" });
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
