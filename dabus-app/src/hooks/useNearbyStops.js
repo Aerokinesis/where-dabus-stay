@@ -5,6 +5,19 @@ import { API_BASE } from "../constants";
 // the user was last time while a new fix is found.
 const LAST_LOCATION_KEY = "dabus-last-location";
 const STALE_FIX_MS = 60 * 1000;
+// How far a resume fix must be from the previous one before the map recenters.
+// Wide enough to ignore the jitter of Wi-Fi positioning on a desktop.
+const MOVED_M = 150;
+
+function metersBetween(a, b) {
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLon = (b.lon - a.lon) * rad;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h));
+}
 
 export function loadLastLocation() {
   try {
@@ -85,7 +98,11 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
   // requests in flight can resolve in the same tick, and React would then
   // batch their fixes so only the last one's `recenter` is ever seen, e.g.
   // tapping Home (recenter) racing the Home map's own background re-fix.
+  // `recenter: "ifMoved"` recenters only when the fix is a real distance from
+  // the previous one (resume: the user may have travelled, or may just have
+  // switched tabs for a while and come back to a map they had panned).
   const pendingRequest = useRef(null);
+  const lastFix = useRef(null);
 
   const findNearbyStops = ({ recenter = true, fresh = false, quiet = false } = {}) => {
     if (!navigator.geolocation) {
@@ -93,7 +110,7 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
       return;
     }
     if (pendingRequest.current && !fresh) {
-      if (recenter) pendingRequest.current.recenter = true;
+      if (recenter === true) pendingRequest.current.recenter = true;
       return;
     }
     const req = { recenter };
@@ -108,10 +125,15 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
       setFindingLocation(false);
       const lat = position.coords.latitude;
       const lon = position.coords.longitude;
-      setUserLocation({ lat, lon, recenter: req.recenter });
+      const recenterNow =
+        req.recenter === "ifMoved"
+          ? !lastFix.current || metersBetween(lastFix.current, { lat, lon }) > MOVED_M
+          : req.recenter;
+      lastFix.current = { lat, lon };
+      setUserLocation({ lat, lon, recenter: recenterNow });
       saveLastLocation(lat, lon);
       const stale = !fresh && Date.now() - position.timestamp > STALE_FIX_MS;
-      if (stale) findNearbyStops({ recenter: req.recenter, fresh: true, quiet: true });
+      if (stale) findNearbyStops({ recenter: recenterNow, fresh: true, quiet: true });
       await refindNearbyStops(lat, lon, searchRadius);
       if (!stale) setLocating(false);
     };
