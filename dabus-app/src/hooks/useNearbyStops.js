@@ -58,23 +58,42 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
   // stops fetch after it, and not a quiet follow-up), for the map's indicator.
   const [findingLocation, setFindingLocation] = useState(false);
 
-  const searchByAddress = async (query) => {
-    setSearchingAddress(true);
-    setError(null);
-    setNearbyStops(null);
+  // `quiet` is the search made while the user is still typing: it keeps the
+  // current list on screen until the new one arrives, a miss just leaves no
+  // list rather than raising an error mid-word, and a failed request changes
+  // nothing. Enter still runs the loud version.
+  // Answers can arrive out of order while typing, so only the latest search
+  // (and none at all once the list has been cleared) may set the results.
+  const searchSeq = useRef(0);
+
+  const searchByAddress = async (query, { quiet = false } = {}) => {
+    const seq = ++searchSeq.current;
+    const isLatest = () => seq === searchSeq.current;
+    if (!quiet) {
+      setSearchingAddress(true);
+      setError(null);
+      setNearbyStops(null);
+    }
     try {
       const res = await fetch(`${API_BASE}/api/search-stops?q=${encodeURIComponent(query)}`);
+      // A typed search the server refused (rate limit, server error) is not
+      // "no matches": keep the list that is already showing.
+      if (quiet && !res.ok) return;
       const data = await res.json();
-      if (data.error) setError(data.error);
+      if (!isLatest()) return;
+      if (data.stops?.length) {
+        // Results replace an earlier "No stops found" left by Enter.
+        if (quiet) setError(null);
+        setNearbyStops(data.stops);
+      } else if (quiet) setNearbyStops(null);
+      else if (data.error) setError(data.error);
       // Shown the same way as an unknown stop number rather than as a quiet
       // "No stops found." under the search bar.
-      else if (!data.stops?.length)
-        setError(`No stops found for "${query}". Check the address and try again.`);
-      else setNearbyStops(data.stops);
+      else setError(`No stops found for "${query}". Check the address and try again.`);
     } catch {
-      setError("Could not search for stops. Try again.");
+      if (!quiet && isLatest()) setError("Could not search for stops. Try again.");
     } finally {
-      setSearchingAddress(false);
+      if (!quiet) setSearchingAddress(false);
     }
   };
 
@@ -187,6 +206,9 @@ export function useNearbyStops(setError, searchRadius = 0.25) {
     searchByAddress,
     findNearbyStops,
     refindNearbyStops,
-    clearNearbyStops: () => setNearbyStops(null),
+    clearNearbyStops: () => {
+      searchSeq.current++;
+      setNearbyStops(null);
+    },
   };
 }
