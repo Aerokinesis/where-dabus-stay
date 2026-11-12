@@ -287,15 +287,31 @@ app.get("/api/route/:routeId/stops", (req, res) => {
 
 // Stop name search endpoint. Each typed term only has to be the START of a
 // word in the stop name ("kapio" finds Kapiolani), so the app can search
-// while the user is still typing.
+// while the user is still typing. Text that is only digits is the start of a
+// stop NUMBER instead ("13" finds #13, #130, #131, ...), lowest number first
+// so an exact match leads.
 app.get("/api/search-stops", (req, res) => {
-    const query = normalizeQuery(req.query.q ?? "")
+    const query = normalizeQuery(String(req.query.q ?? "")).trim()
     if (!query) return res.status(400).json({ error: "No search query provided" })
 
-    const terms = query.split(/\s+/).filter(Boolean)
-        .map(term => new RegExp(`\\b${escapeRegex(term)}`, "i"))
-    const results = stops
-        .filter(stop => terms.every(term => term.test(stop.stop_name)))
+    let matches
+    if (/^\d+$/.test(query)) {
+        const seen = new Set()
+        matches = stops
+            .filter(stop => {
+                const id = displayStopId(stop.stop_id)
+                if (!id.startsWith(query) || seen.has(id)) return false
+                seen.add(id)
+                return true
+            })
+            .sort((a, b) => byRouteNumber(displayStopId(a.stop_id), displayStopId(b.stop_id)))
+    } else {
+        const terms = query.split(/\s+/).filter(Boolean)
+            .map(term => new RegExp(`\\b${escapeRegex(term)}`, "i"))
+        matches = stops.filter(stop => terms.every(term => term.test(stop.stop_name)))
+    }
+
+    const results = matches
         .map(stop => ({
             stop_id: displayStopId(stop.stop_id),
             stop_name: stop.stop_name,
