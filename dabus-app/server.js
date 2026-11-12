@@ -19,10 +19,22 @@ const app = express()
 // Security headers
 app.use(helmet())
 
-// Rate limit: 60 requests per minute per IP across all /api routes
+// Rate limit: 60 requests per minute per IP across all /api routes, except
+// the stop-name search. The app searches while the user types (a few requests
+// per street name), so it gets its own, larger bucket: typing can't use up
+// the budget for arrivals, and it is only an in-memory filter.
+const isStopSearch = (req) => req.path === "/search-stops"
 app.use("/api", rateLimit({
     windowMs: 60 * 1000,
     max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests, slow down." },
+    skip: isStopSearch,
+}))
+app.use("/api/search-stops", rateLimit({
+    windowMs: 60 * 1000,
+    max: 180,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Too many requests, slow down." },
@@ -273,18 +285,17 @@ app.get("/api/route/:routeId/stops", (req, res) => {
     res.json({ stops: entry.stops, shape })
 })
 
-// Stop name search endpoint
+// Stop name search endpoint. Each typed term only has to be the START of a
+// word in the stop name ("kapio" finds Kapiolani), so the app can search
+// while the user is still typing.
 app.get("/api/search-stops", (req, res) => {
     const query = normalizeQuery(req.query.q ?? "")
     if (!query) return res.status(400).json({ error: "No search query provided" })
 
     const terms = query.split(/\s+/).filter(Boolean)
+        .map(term => new RegExp(`\\b${escapeRegex(term)}`, "i"))
     const results = stops
-        .filter(stop =>
-            terms.every(term =>
-                new RegExp(`\\b${escapeRegex(term)}(\\s|$)`, "i").test(stop.stop_name)
-            )
-        )
+        .filter(stop => terms.every(term => term.test(stop.stop_name)))
         .map(stop => ({
             stop_id: displayStopId(stop.stop_id),
             stop_name: stop.stop_name,
@@ -299,10 +310,10 @@ app.get("/api/search-stops", (req, res) => {
 
 // ── Stop suggestions (admin editor) ─────────────────────────────────────────
 // Typeahead for the /admin "Stops" field. Different from /api/search-stops on
-// purpose: that one needs whole words, so it finds nothing mid-word ("beret")
-// and nothing for "S Beretania St + Punchbowl St" because of the "+". Here
-// every typed term only has to be the START of a word in the stop name, and
-// punctuation is ignored ("S." and "S" match the same stop).
+// purpose: that one matches the typed text literally, so it finds nothing for
+// "S Beretania St + Punchbowl St" because of the "+". Here punctuation is
+// ignored ("S." and "S" match the same stop); as there, every typed term only
+// has to be the START of a word in the stop name.
 //
 // Stops served by the routes the editor already entered (?routes=2,13) rank
 // first — at Beretania + Punchbowl there are two stops (#45 and #4860) and the

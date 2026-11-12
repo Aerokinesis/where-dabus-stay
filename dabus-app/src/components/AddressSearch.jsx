@@ -10,10 +10,16 @@ const RECENT_PREVIEW_COUNT = 5;
 // Gap between the search bar and the results/recents dropdown below it.
 const DROPDOWN_GAP = 6;
 
+// How long typing must pause before the street-name search runs.
+const TYPE_PAUSE_MS = 250;
+
 function AddressSearch({
   query,
   setQuery,
   onSearch,
+  // Called with the trimmed text once typing pauses (optional; without it the
+  // search only runs on Enter).
+  onType,
   onClear,
   searching,
   nearbyStops,
@@ -108,14 +114,39 @@ function AddressSearch({
     };
   }, [dropdownOpen, hasMatches, showRecent, onClear]);
 
+  // Search-as-you-type: a street name is searched once typing pauses. A stop
+  // number is left for Enter, which opens that stop directly.
+  const typeTimer = useRef(null);
+  const cancelTypedSearch = () => clearTimeout(typeTimer.current);
+  useEffect(() => cancelTypedSearch, []);
+
   const handleChange = (value) => {
     setQuery(value);
+    cancelTypedSearch();
+    const q = value.trim();
     if (value === "") onClear();
+    else if (onType && q && !/^\d+$/.test(q))
+      typeTimer.current = setTimeout(() => onType(q), TYPE_PAUSE_MS);
+  };
+
+  // Anything that settles the search drops a typed search still waiting, so
+  // it can't reopen the list afterwards.
+  const handleSubmit = () => {
+    cancelTypedSearch();
+    onSearch();
+  };
+  const handleClear = () => {
+    cancelTypedSearch();
+    onClear();
+  };
+  const selectStop = (stopId) => {
+    cancelTypedSearch();
+    onSelectStop(stopId);
   };
 
   const selectRecent = (stopId) => {
     setFocused(false);
-    onSelectStop(stopId);
+    selectStop(stopId);
   };
 
   return (
@@ -124,8 +155,8 @@ function AddressSearch({
         value={query}
         onChange={handleChange}
         placeholder="Stop number or street name"
-        onClear={onClear}
-        onSubmit={onSearch}
+        onClear={handleClear}
+        onSubmit={handleSubmit}
         onFocus={() => setFocused(true)}
       />
 
@@ -145,11 +176,11 @@ function AddressSearch({
                 key={stop.stop_id}
                 type="button"
                 className="dabus-result-item"
-                onMouseDown={(e) => { e.preventDefault(); onSelectStop(stop.stop_id); }}
+                onMouseDown={(e) => { e.preventDefault(); selectStop(stop.stop_id); }}
                 onClick={(e) => {
                   // Keyboard Enter/Space dispatches click with detail 0; mouse
                   // taps were already handled by onMouseDown above (detail > 0).
-                  if (e.detail === 0) onSelectStop(stop.stop_id);
+                  if (e.detail === 0) selectStop(stop.stop_id);
                 }}
                 onTouchStart={(e) => {
                   touchStateRef.current = { startY: e.touches[0].clientY, scrolled: false };
@@ -163,7 +194,7 @@ function AddressSearch({
                   // Let it pass through so the list keeps scrolling normally.
                   if (touchStateRef.current.scrolled) return;
                   e.preventDefault();
-                  onSelectStop(stop.stop_id);
+                  selectStop(stop.stop_id);
                 }}
                 role="option"
                 aria-selected="false"

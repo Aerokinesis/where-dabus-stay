@@ -550,6 +550,9 @@ function App() {
     }
   };
 
+  // The search both stop-search bars run while the user is still typing.
+  const searchAsTyped = (q) => searchByAddress(q, { quiet: true });
+
   const handleSearch = () => {
     const target = tabForSearchResults();
     if (target !== activeTab) setActiveTab(target);
@@ -565,6 +568,7 @@ function App() {
     query: searchQuery,
     setQuery: setSearchQuery,
     onSearch: handleSearch,
+    onType: searchAsTyped,
     searching: searchingAddress,
     nearbyStops,
     onSelectStop: (stopId) => {
@@ -590,6 +594,7 @@ function App() {
     query: stopSearchQuery,
     setQuery: setStopSearchQuery,
     onSearch: submitStopSearch,
+    onType: searchAsTyped,
     searching: searchingAddress,
     nearbyStops,
     onSelectStop: (stopId) => {
